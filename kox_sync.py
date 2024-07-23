@@ -135,7 +135,6 @@ def login(
 def download(
     session: requests.Session,
     volume: Volume,
-    resume_from: int = 0,
     callback: Callable[[Volume], None] = None
 ) -> str:
     """
@@ -157,17 +156,27 @@ def download(
         print(f"{filename} already exists")
         return None
     
-    with session.get(url = volume.url, stream=True) as r:
+    headers = {}
+    
+    resume_from = 0
+    if os.path.exists(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}'):
+        resume_from = os.path.getsize(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}')
+    
+    if resume_from:
+        headers['Range'] = f'bytes={resume_from}-'
+        
+    with session.get(url = volume.url, stream=True, headers=headers) as r:
         r.raise_for_status()
         
-        total_size_in_bytes = int(r.headers.get('Content-Length', 0))
+        total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
         block_size = 8192
         
-        with open(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}', 'wb') as f:
-            with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f'{filename}') as progress_bar:
+        with open(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}', 'ab') as f:
+            with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=filename, initial=resume_from) as progress_bar:
                 for chunk in r.iter_content(chunk_size=block_size):
-                    f.write(chunk)
-                    progress_bar.update(len(chunk))
+                    if chunk:
+                        f.write(chunk)
+                        progress_bar.update(len(chunk))
         
         # 下载完成后，重命名文件
         os.rename(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}', f'{argparser.parse_args().dest}/{sub_dir}/{filename}')
