@@ -297,8 +297,8 @@ def main():
     ## 定义下载完成后的回调函数
     callback: Callable[[Volume], None] = lambda v: print(f"callback: wow! {v.name} downloaded!")   
 
-    # 尝试次数，默认为 1
-    max_retry = argparser.parse_args().retry if argparser.parse_args().retry else 1
+    # 重试次数，默认为 3
+    max_retry = argparser.parse_args().retry if argparser.parse_args().retry else 3
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(volumes))) as executor:
         features = {executor.submit(download, session, volume, callback): volume for volume in volumes}
@@ -306,7 +306,7 @@ def main():
         for feature in concurrent.futures.as_completed(features):
             volume = features[feature]
             retry_count = 0
-            while retry_count < max_retry:
+            while retry_count < max_retry + 1:
                 try:
                     error = feature.result()
                     if error:
