@@ -175,7 +175,7 @@ def download(
     tmp_file_path = f'{download_path}/{filename_downloading}'
     
     if not os.path.exists(download_path):
-        os.makedirs(download_path)
+        os.makedirs(download_path, exist_ok=True)
         
     if argparser.parse_args().overwrite == False and os.path.exists(file_path):
         print(f"\n{filename} already exists")
