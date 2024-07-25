@@ -205,6 +205,14 @@ def download(
                         if chunk:
                             f.write(chunk)
                             progress_bar.update(len(chunk))
+            
+            if (os.path.getsize(tmp_file_path) == total_size_in_bytes):
+                # 下载完成后，重命名文件
+                os.rename(tmp_file_path, file_path)
+                
+                # 下载完成后，执行回调函数
+                if callback:
+                    callback(volume)
     except Exception as e:
         print(f"\n{type(e).__name__}: {e} occurred while downloading {volume.name}")
         if retry_times > 0:
@@ -214,14 +222,6 @@ def download(
         else:
             print(f"\n[{threading.get_ident()}]Meet max retry times, download failed")
             raise e
-        
-    if (os.path.getsize(tmp_file_path) == total_size_in_bytes):
-        # 下载完成后，重命名文件
-        os.rename(tmp_file_path, file_path)
-        
-        # 下载完成后，执行回调函数
-        if callback:
-            callback(volume)
     
 def main():
     argparser.parse_args()
