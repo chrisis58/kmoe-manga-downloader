@@ -29,6 +29,13 @@ MY_FOLLOW_URL = 'https://kox.moe/myfollow.php'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
+FILE_NAME = '.koxsync'
+CALLBACK_PROMPT = """
+Usage:
+>> --call-back "echo {v.name} downloaded!"
+>> --call-back "python3 callback.py {v.name}"
+>> -c "echo {v.book.name} {v.name} downloaded!"
+"""
 ## ------------------- ##
 
 
@@ -44,10 +51,13 @@ download_parser.add_argument('-v','--volume', type=str, help='Volume(s), split u
 download_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files', required=False)
 download_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
 download_parser.add_argument('-r', '--retry', type=int, help='Retry times', required=False)
+download_parser.add_argument('--call-back', '-c', type=str, help='Callback sctipt, use as `echo {v.name} downloaded!`', required=False)
 
 login_parser = subparsers.add_parser('login', help='Login to kox.moe')
 login_parser.add_argument('-u', '--username', type=str, help='Your username', required=True)
 login_parser.add_argument('-p', '--password', type=str, help='Your password', required=True)
+
+status_parser = subparsers.add_parser('status', help='Show status of account and script')
 #### ---- argparse parse ---- ####
 
 
@@ -104,7 +114,7 @@ def get_cookie(
     response.raise_for_status()
     
     # 保存 cookie
-    with open(os.path.join(os.path.expanduser("~"), 'kox-cookie.json'), 'w') as f:
+    with open(os.path.join(os.path.expanduser("~"), FILE_NAME), 'w') as f:
         json.dump(session.cookies.get_dict(), f)
     
     return session.cookies.get_dict()
@@ -124,68 +134,94 @@ def login(
     response = session.get(url = PROFILE_URL)
     response.raise_for_status()
     
-    threading.Thread(target=lambda: print(f"=========================\n\nlogged in as {BeautifulSoup(response.text, 'html.parser').find('div', id='div_nickname_display').text.strip().split(' ')[0]}\n\n=========================\n")).start()
-    # profile = BeautifulSoup(response.text, 'html.parser')
-    # profile = profile.find('div', id='div_nickname_display')
-    # print(f"=========================\n\nLogged in as {profile.text.strip().split(' ')[0]}\n\n=========================\n")
+    threading.Thread(target=lambda: show_status(response)).start()
     
     return session
+
+def show_status(
+    response: requests.Response,
+    show_quota: bool = False
+):
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    nickname = soup.find('div', id='div_nickname_display').text.strip().split(' ')[0]
+    print(f"=========================\n\nLogged in as {nickname}\n\n=========================\n")
+    
+    if show_quota:
+        quota = soup.find('div', id='div_user_vip').text.strip()
+        print(f"=========================\n\n{quota}\n\n=========================\n")
 
     
 def download(
     session: requests.Session,
     volume: Volume,
-    callback: Callable[[Volume], None] = None
-) -> str:
+    callback: Callable[[Volume], None] = None,
+    retry_times: int = 3
+) -> None:
     """
     下载指定卷
     
     :param session: 用于下载的会话
     :param volume: 等待下载的卷
     :param callback: 下载完成后的回调函数
-    :return: error
+    :param retry_times: 重试次数
     """
     sub_dir = f'{volume.book.name}'
+    download_path = f'{argparser.parse_args().dest}/{sub_dir}'
     filename = f'[Kox][{volume.book.name}]{volume.name}.epub'
     filename_downloading = f'{filename}.downloading'
     
-    if os.path.exists(f'{argparser.parse_args().dest}/{sub_dir}') == False:
-        os.makedirs(f'{argparser.parse_args().dest}/{sub_dir}')
+    file_path = f'{download_path}/{filename}'
+    tmp_file_path = f'{download_path}/{filename_downloading}'
+    
+    if not os.path.exists(download_path):
+        os.makedirs(download_path)
         
-    if argparser.parse_args().overwrite == False and os.path.exists(f'{argparser.parse_args().dest}/{sub_dir}/{filename}'):
-        print(f"{filename} already exists")
-        return None
+    if argparser.parse_args().overwrite == False and os.path.exists(file_path):
+        print(f"\n{filename} already exists")
+        return 
     
     headers = {}
     
     resume_from = 0
-    if os.path.exists(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}'):
-        resume_from = os.path.getsize(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}')
+    total_size_in_bytes = 0
+    
+    if os.path.exists(tmp_file_path):
+        resume_from = os.path.getsize(tmp_file_path)
     
     if resume_from:
         headers['Range'] = f'bytes={resume_from}-'
         
-    with session.get(url = volume.url, stream=True, headers=headers) as r:
-        r.raise_for_status()
+    try:
+        with session.get(url = volume.url, stream=True, headers=headers) as r:
+            r.raise_for_status()
+            
+            total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
+            block_size = 8192
+            
+            with open(tmp_file_path, 'ab') as f:
+                with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f'[{threading.get_ident()}]{filename}', initial=resume_from) as progress_bar:
+                    for chunk in r.iter_content(chunk_size=block_size):
+                        if chunk:
+                            f.write(chunk)
+                            progress_bar.update(len(chunk))
+    except Exception as e:
+        print(f"\n{type(e).__name__}: {e} occurred while downloading {volume.name}")
+        if retry_times > 0:
+            # 重试下载
+            print(f"Retry download {volume.name}...")
+            download(session, volume, callback, retry_times - 1)
+        else:
+            print(f"\n[{threading.get_ident()}]Meet max retry times, download failed")
+            raise e
         
-        total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
-        block_size = 8192
-        
-        with open(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}', 'ab') as f:
-            with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=filename, initial=resume_from) as progress_bar:
-                for chunk in r.iter_content(chunk_size=block_size):
-                    if chunk:
-                        f.write(chunk)
-                        progress_bar.update(len(chunk))
-        
+    if (os.path.getsize(tmp_file_path) == total_size_in_bytes):
         # 下载完成后，重命名文件
-        os.rename(f'{argparser.parse_args().dest}/{sub_dir}/{filename_downloading}', f'{argparser.parse_args().dest}/{sub_dir}/{filename}')
+        os.rename(tmp_file_path, file_path)
         
         # 下载完成后，执行回调函数
         if callback:
             callback(volume)
-            
-        return None
     
 def main():
     argparser.parse_args()
@@ -202,7 +238,7 @@ def main():
         print("Login success")
         exit(0)
     
-    with open(os.path.join(os.path.expanduser("~"), 'kox-cookie.json'), 'r') as f:
+    with open(os.path.join(os.path.expanduser("~"), FILE_NAME), 'r') as f:
         cookies = json.load(f)
         
     if argparser.parse_args().proxy:
@@ -295,38 +331,30 @@ def main():
         exit(1)
 
     ## 定义下载完成后的回调函数
-    callback: Callable[[Volume], None] = lambda v: print(f"callback: wow! {v.name} downloaded!")   
+    callback: Callable[[Volume], None] = None
+    if argparser.parse_args().call_back:
+        try:
+            # 使用 os.system 执行回调函数
+            callback = lambda v: os.system(argparser.parse_args().call_back.format(v=v))  
+        except Exception as e:
+            print(CALLBACK_PROMPT)
+            exit(1)
 
     # 重试次数，默认为 3
     max_retry = argparser.parse_args().retry if argparser.parse_args().retry else 3
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(volumes))) as executor:
-        features = {executor.submit(download, session, volume, callback): volume for volume in volumes}
-        
-        for feature in concurrent.futures.as_completed(features):
-            volume = features[feature]
-            retry_count = 0
-            while retry_count < max_retry + 1:
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(volumes))) as executor:
+            features = {executor.submit(download, session, volume, callback, max_retry): volume for volume in volumes}
+            
+            for feature in concurrent.futures.as_completed(features):
                 try:
-                    error = feature.result()
-                    if error:
-                        print(f"An error occurred while downloading {volume.name}: {error}")
-                        retry_count += 1
-                        print(f"Retrying download of {volume.name} (Retry {retry_count})")
-                        feature = executor.submit(download, session, volume, callback)
-                    else:
-                        break
-                except KeyboardInterrupt:
-                    print("Download interrupted")
-                    exit(1)
+                    feature.result()
                 except Exception as e:
                     print(f"An error occurred: {e}")
-                    retry_count += 1
-                    print(f"Retrying download of {volume.name} (Retry {retry_count})")
-                    feature = executor.submit(download, session, volume, callback)
-            
-            if retry_count == max_retry:
-                print(f"Failed to download {volume.name} after {max_retry} retries")
+    except KeyboardInterrupt:
+        print("Download interrupted")
+        exit(1)
 
     
 if __name__ == '__main__':
