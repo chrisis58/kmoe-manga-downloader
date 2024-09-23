@@ -58,6 +58,7 @@ login_parser.add_argument('-u', '--username', type=str, help='Your username', re
 login_parser.add_argument('-p', '--password', type=str, help='Your password', required=True)
 
 status_parser = subparsers.add_parser('status', help='Show status of account and script')
+status_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
 #### ---- argparse parse ---- ####
 
 
@@ -240,6 +241,17 @@ def main():
     
     with open(os.path.join(os.path.expanduser("~"), FILE_NAME), 'r') as f:
         cookies = json.load(f)
+        
+    if argparser.parse_args().command == 'status':
+        if argparser.parse_args().proxy:
+            session = login(cookies, proxy = {'http': argparser.parse_args().proxy, 'https': argparser.parse_args().proxy})
+        else:
+            session = login(cookies)
+        
+        response = session.get(url = PROFILE_URL)
+        response.raise_for_status()
+        show_status(response, show_quota=True)
+        exit(0)
         
     if argparser.parse_args().proxy:
         session = login(cookies, proxy = {'http': argparser.parse_args().proxy, 'https': argparser.parse_args().proxy})
