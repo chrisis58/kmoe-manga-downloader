@@ -65,7 +65,7 @@ status_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', requi
 @dataclass
 class Book:
     name: str = None
-    book_id: int = None
+    book_id: str = None
     url: str = None
     author: str = None
     status: str = None
@@ -268,7 +268,7 @@ def main():
         followed_rows = BeautifulSoup(session.get(url = MY_FOLLOW_URL).text, 'html.parser').find_all('tr', style='height:36px;')
         mapped = map(lambda x: x.find_all('td'), followed_rows)
         filterd = filter(lambda x: '書名' not in x[1].text, mapped)
-        books = map(lambda x: Book(name = x[1].text, url = x[1].find('a')['href'], author = x[2].text, status = x[-1].text, last_update = x[-2].text, book_id = int(re.search(r'\d+', x[1].find('a')['href']).group(0))), filterd)
+        books = map(lambda x: Book(name = x[1].text, url = x[1].find('a')['href'], author = x[2].text, status = x[-1].text, last_update = x[-2].text, book_id = str(re.search(r'\d+', x[1].find('a')['href']).group(0))), filterd)
         books = list(books)
         
         if argparser.parse_args().book_name:
