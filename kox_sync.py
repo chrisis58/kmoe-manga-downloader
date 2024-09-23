@@ -45,7 +45,7 @@ subparsers = argparser.add_subparsers(title='subcommands', dest='command')
 
 download_parser = subparsers.add_parser('download', help='Download books')
 download_parser.add_argument('-d', '--dest', type=str, help='Download destination', required=True)
-download_parser.add_argument('--book-id', type=int, help='Book id', required=False)
+download_parser.add_argument('--book-id', type=str, help='Book id', required=False)
 download_parser.add_argument('--book-name', type=str, help='Book name (searching only in followed)', required=False)
 download_parser.add_argument('-v','--volume', type=str, help='Volume(s), split using commas, `all` for all', required=False)
 download_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files', required=False)
