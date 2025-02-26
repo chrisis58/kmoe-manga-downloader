@@ -1,8 +1,8 @@
 """
 author: @chrisis58
 description: A simple script to download manga from kox.moe
-usage: python kox_sync.py login -u your_username -p your_password
-usage: python kox_sync.py download -d /path/to/download/destination --book-id 123 --volume 1,2,3
+usage: python koxdl.py login -u your_username -p your_password
+usage: python koxdl.py download -d /path/to/download/destination --book-id 123 --volume 1,2,3
 """
 
 
@@ -29,18 +29,18 @@ MY_FOLLOW_URL = 'https://kox.moe/myfollow.php'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
-FILE_NAME = '.koxsync'
+FILE_NAME = '.koxdl'
 CALLBACK_PROMPT = """
 Usage:
->> --call-back "echo {v.name} downloaded!"
->> --call-back "python3 callback.py {v.name}"
->> -c "echo {v.book.name} {v.name} downloaded!"
+>> --call-back "echo '{v.name} downloaded!'"
+>> --call-back "python3 callback.py '{v.name}'"
+>> -c "echo '{v.book.name} {v.name} downloaded!'"
 """
 ## ------------------- ##
 
 
 #### ---- argparse init ---- ####
-argparser = argparse.ArgumentParser(description='Kox Sync')
+argparser = argparse.ArgumentParser(description='Kox Downloader')
 subparsers = argparser.add_subparsers(title='subcommands', dest='command')
 
 download_parser = subparsers.add_parser('download', help='Download books')
