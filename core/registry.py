@@ -12,14 +12,26 @@ class Registry(Generic[T]):
 
     def register(self,
             hasattrs: set[str] = frozenset(),
+            containattrs: set[str] = frozenset(),
             hasvalues: dict[str, any] = dict(),
             predicate: Optional[Callable[[any], bool]] = None,
             order: int = 0,
             name: Optional[str] = None
     ):
+        """
+        注册一个模块到注册表中。
+
+        :param hasattrs: 模块处理的参数集合，必须全部匹配。如果未提供，则从类的 __init__ 方法中获取不可缺省的参数
+        :param containattrs: 模块处理的可选参数集合，只要满足其中一个即可。
+        :param hasvalues: 模块处理的属性值集合，必须全部满足。
+        :param predicate: 可以提供预定义以外的条件，只要满足该条件就视为匹配。
+        :param order: 模块的优先级，数字越小优先级越高。
+        :param name: 模块的名称，如果未提供，则使用类名。
+        """
 
         def wrapper(cls):
             nonlocal hasattrs
+            nonlocal containattrs
             nonlocal hasvalues
             nonlocal name
             nonlocal predicate
@@ -41,6 +53,7 @@ class Registry(Generic[T]):
             predication = Predication(
                 cls=cls,
                 hasattrs=frozenset(hasattrs),
+                containattrs=frozenset(containattrs),
                 hasvalues=hasvalues,
                 predicate=predicate,
                 order=order
@@ -57,13 +70,20 @@ class Registry(Generic[T]):
         return wrapper
         
     def get(self, condition: Namespace) -> T:
+        if not self._modules or len(self._modules) == 0:
+            raise ValueError(f'{self._name} has no registered modules')
+
         if len(self._modules) == 1:
             return self._modules[0].cls(**self._filter_nonone_args(condition))
         
         for module in self._modules:
-            if all(hasattr(condition, attr) for attr in module.hasattrs) and \
-               all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items()) and \
-               (module.predicate is None or module.predicate(condition)):
+            if (module.predicate is None or module.predicate(condition)) or \
+                    all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items()) and \
+                    (all(hasattr(condition, attr) for attr in module.hasattrs) or any(attr in condition for attr in module.containattrs)):
+                
+                # 手动配置的 predicate 优先级最高，只要满足 predicate 条件就返回
+                # hasvalues 配置的属性值必须完全匹配
+                # hasattrs 和 containattrs 二者只需要满足一个
                 
                 return module.cls(**self._filter_nonone_args(condition))
 
@@ -77,6 +97,7 @@ class Predication:
     cls: type
 
     hasattrs: set[str] = frozenset({})
+    containattrs: set[str] = frozenset({})
     hasvalues: dict[str, any] = frozenset({})
     predicate: Optional[Callable[[any], bool]] = None
 
