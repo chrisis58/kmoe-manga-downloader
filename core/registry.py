@@ -58,7 +58,7 @@ class Registry(Generic[T]):
         
     def get(self, condition: Namespace) -> T:
         if len(self._modules) == 1:
-            return self._modules[0].cls
+            return self._modules[0].cls(**self._filter_nonone_args(condition))
         
         for module in self._modules:
             if all(hasattr(condition, attr) for attr in module.hasattrs) and \
