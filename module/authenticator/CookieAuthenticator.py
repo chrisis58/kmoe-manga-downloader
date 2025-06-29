@@ -1,7 +1,8 @@
-from core import Authenticator
+from core import Authenticator, AUTHENTICATOR
 
 from .utils import check_status
 
+@AUTHENTICATOR.register()
 class CookieAuthenticator(Authenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
