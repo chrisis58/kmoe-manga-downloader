@@ -1,18 +1,13 @@
-import os
-import json
-
 from core import Authenticator
+
+from .utils import check_status
 
 class CookieAuthenticator(Authenticator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        with open(os.path.join(os.path.expanduser("~"), '.koxdl'), 'r') as f:
-            self._cookies = json.load(f)
 
     def authenticate(self) -> bool:
-        if not self._cookies:
-            return False
+        cookie = self._configurer.config.cookie
         
-        self._session.cookies.update(self._cookies)
-        return True
+        self._session.cookies.update(cookie)
+        return check_status(self._session, show_quota=False)
