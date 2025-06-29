@@ -6,7 +6,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'login':
-        ...
+        AUTHENTICATOR.get(args).authenticate()
 
     elif args.command == 'status':
         ...

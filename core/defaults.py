@@ -29,7 +29,7 @@ def argument_parser():
 
     login_parser = subparsers.add_parser('login', help='Login to kox.moe')
     login_parser.add_argument('-u', '--username', type=str, help='Your username', required=True)
-    login_parser.add_argument('-p', '--password', type=str, help='Your password', required=True)
+    login_parser.add_argument('-p', '--password', type=str, help='Your password', required=False)
 
     status_parser = subparsers.add_parser('status', help='Show status of account and script')
     status_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
