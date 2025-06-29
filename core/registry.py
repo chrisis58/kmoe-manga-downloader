@@ -28,6 +28,7 @@ class Registry(Generic[T]):
                 name = cls.__name__
 
             if not hasattrs or len(hasattrs) == 0:
+                # 如果没有指定属性，则从类的 __init__ 方法中获取参数
                 if hasattr(cls, '__init__'):
                     init_signature = cls.__init__.__code__.co_varnames[1:cls.__init__.__code__.co_argcount]
                     init_defaults = cls.__init__.__defaults__ or ()
@@ -64,9 +65,12 @@ class Registry(Generic[T]):
                all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items()) and \
                (module.predicate is None or module.predicate(condition)):
                 
-                return module.cls(**vars(condition))
+                return module.cls(**self._filter_nonone_args(condition))
 
         raise ValueError(f'{self._name} does not have a module for {condition}')
+    
+    def _filter_nonone_args(self, condition: Namespace) -> dict[str, any]:
+        return {k: v for k, v in vars(condition).items() if v is not None}
 
 @dataclass(frozen=True)
 class Predication:
