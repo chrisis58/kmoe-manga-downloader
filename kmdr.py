@@ -9,7 +9,7 @@ def main():
         AUTHENTICATOR.get(args).authenticate()
 
     elif args.command == 'status':
-        ...
+        AUTHENTICATOR.get(args).authenticate()
 
     elif args.command == 'download':    
 
