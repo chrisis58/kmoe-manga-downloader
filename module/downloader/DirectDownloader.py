@@ -1,24 +1,30 @@
-from core import Downloader, VolInfo, download_file
+from core import Downloader, BookInfo, VolInfo, download_file, DOWNLOADER
+from core import haskeys, hasvalues
 
+@DOWNLOADER.register(
+    hasvalues={
+        'method': 1
+    }
+)
 class DirectDownloader(Downloader):
-    def __init__(self, dest_dir, book, volumes, callback=None, retry_times=3, *args, **kwargs):
-        super().__init__(dest_dir, book, volumes, callback, retry_times, *args, **kwargs)
+    def __init__(self, dest, callback=None, retry=3, *args, **kwargs):
+        super().__init__(dest, callback, retry, *args, **kwargs)
 
-    def download(self):
+    def download(self, book: BookInfo, volumes: list[VolInfo], *args, **kwargs):
 
-        for volume in self._volumes:
-            self._download(volume, self._retry_times)
+        for volume in volumes:
+            self._download(book, volume, self._retry)
 
-    def _download(self, volume: VolInfo, retry_times: int):
-        sub_dir = f'{self._book.name}'
-        download_path = f'{self._dest_dir}/{sub_dir}'
+    def _download(self, book: BookInfo, volume: VolInfo, retry: int):
+        sub_dir = f'{book.name}'
+        download_path = f'{self._dest}/{sub_dir}'
 
         download_file(
-            self._session, 
+            self._session,
             self.construct_download_url(volume),
             download_path,
             volume.name,
-            retry_times,
+            retry,
             headers={},
             callback=lambda : self._callback(volume) if self._callback else None
         )

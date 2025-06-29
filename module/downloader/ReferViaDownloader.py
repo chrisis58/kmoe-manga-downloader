@@ -1,27 +1,29 @@
-from core import Downloader, VolInfo, download_file
+from core import Downloader, VolInfo, download_file, DOWNLOADER, BookInfo
 
+@DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest_dir, book, volumes, callback=None, retry_times=3, *args, **kwargs):
-        super().__init__(dest_dir, book, volumes, callback, retry_times, *args, **kwargs)
+    def __init__(self, dest, callback=None, retry=3, *args, **kwargs):
+        super().__init__(dest, callback, retry, *args, **kwargs)
 
-    def download(self):
-        for volume in self._volumes:
-            self._download(volume, self._retry_times)
+    def download(self, book: BookInfo, volumes: list[VolInfo], *args, **kwargs):
 
-    def _download(self, volume: VolInfo, retry_times: int):
-        sub_dir = f'{self._book.name}'
-        download_path = f'{self._dest_dir}/{sub_dir}'
+        for volume in volumes:
+            self._download(book, volume, self._retry)
+
+    def _download(self, book: BookInfo, volume: VolInfo, retry: int):
+        sub_dir = f'{book.name}'
+        download_path = f'{self._dest}/{sub_dir}'
 
         download_file(
             self._session,
             self.fetch_download_url(volume),
             download_path,
             volume.name,
-            retry_times,
+            retry,
             headers={
                 "X-Km-From": "kb_http_down"
             },
-            callback=lambda: self._callback(volume) if self._callback else None
+            callback=lambda : self._callback(volume) if self._callback else None
         )
 
     def fetch_download_url(self, volume: VolInfo) -> str:
