@@ -16,7 +16,7 @@ class ReferViaDownloader(Downloader):
 
         download_file(
             self._session,
-            self.fetch_download_url(volume),
+            self.fetch_download_url(book, volume),
             download_path,
             volume.name,
             retry,
@@ -26,8 +26,8 @@ class ReferViaDownloader(Downloader):
             callback=lambda : self._callback(volume) if self._callback else None
         )
 
-    def fetch_download_url(self, volume: VolInfo) -> str:
-        response = self._session.get(f"https://kox.moe/getdownurl.php?b={self._book.id}&v={volume.id}&mobi=2&vip=0&json=1")
+    def fetch_download_url(self, book: BookInfo, volume: VolInfo) -> str:
+        response = self._session.get(f"https://kox.moe/getdownurl.php?b={book.id}&v={volume.id}&mobi=2&vip=0&json=1")
         response.raise_for_status()
         data = response.json()
         if data.get('code') != 200:
