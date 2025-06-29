@@ -1,5 +1,10 @@
+import os
+import json
 from typing import Optional
 import argparse
+
+from core.utils import singleton
+from core.structure import Config
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None
@@ -44,3 +49,22 @@ def parse_args():
         exit(1)
 
     return args
+
+@singleton
+class Configurer:
+
+    def __init__(self):
+        self.__filename = '.kmdr'
+
+        with open(os.path.join(os.path.expanduser("~"), self.__filename), 'r') as f:
+            config = json.load(f)
+
+        self._config = Config(**config)
+
+    @property
+    def config(self) -> 'Config':
+        return self._config
+    
+    def update(self):
+        with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
+            json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)

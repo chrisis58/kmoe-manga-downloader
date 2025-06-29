@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 class VolumeType(Enum):
     VOLUME = "單行本"
@@ -52,4 +53,12 @@ class BookInfo:
     last_update: str
 
 
+@dataclass
+class Config:
+
+    retry_times: Optional[int] = None
+    dest: Optional[str] = None
+    callback: Optional[str] = None
+
+    cookie: dict = frozenset({})
     

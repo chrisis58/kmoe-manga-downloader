@@ -1,54 +1,57 @@
 from typing import Callable, Optional
 
-from .structure import VolInfo, BookInfo
+from .registry import Registry
+from .structure import VolInfo, BookInfo, Config
 from .utils import get_singleton_session
+from .defaults import Configurer
 
 class SessionContext:
 
     def __init__(self, *args, **kwargs):
         self._session = get_singleton_session()
 
-class Authenticator(SessionContext):
+class ConfigContext:
+
+    def __init__(self, *args, **kwargs):
+        self._configurer = Configurer()
+
+class Authenticator(SessionContext, ConfigContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def authenticate(self, *args, **kwargs) -> bool:
-        raise NotImplementedError("Subclasses must implement this method.")
+    def authenticate(self, *args, **kwargs) -> bool: ...
 
 class Lister(SessionContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def list(self, *args, **kwargs) -> list[VolInfo]:
-        raise NotImplementedError("Subclasses must implement this method.")
+    def list(self, *args, **kwargs) -> tuple[BookInfo, list[VolInfo]]: ...
 
 class Picker(SessionContext):
 
-    def __init__(self, volumes: list[VolInfo], *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._volumes = volumes
 
-    def pick(self, *args, **kwargs) -> list[VolInfo]:
-        raise NotImplementedError("Subclasses must implement this method.")
+    def pick(self, volumes: list[VolInfo], *args, **kwargs) -> list[VolInfo]: ...
 
 class Downloader(SessionContext):
 
     def __init__(self, 
-            dest_dir: str,
-            book: BookInfo,
-            volumes: list[VolInfo],
+            dest: str,
             callback: Optional[Callable[[VolInfo], None]] = None,
-            retry_times: int = 3,
+            retry: int = 3,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self._dest_dir: str = dest_dir
-        self._book: BookInfo = book
-        self._volumes: list[VolInfo] = volumes
+        self._dest: str = dest
         self._callback: Optional[Callable[[VolInfo], None]] = callback
-        self._retry_times: int = retry_times
+        self._retry: int = retry
 
-    def download(self):
-        raise NotImplementedError("Subclasses must implement this method.")
+    def download(self, book: BookInfo, volumes: list[VolInfo], *args, **kwargs): ...
+
+AUTHENTICATOR = Registry[Authenticator]('Authenticator')
+LISTERS = Registry[Lister]('Lister')
+PICKERS = Registry[Picker]('Picker')
+DOWNLOADER = Registry[Downloader]('Downloader')

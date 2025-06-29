@@ -10,7 +10,7 @@ from requests import Session
 
 _session_instance: Optional[Session] = None
 
-_session_lock = threading.Lock()\
+_session_lock = threading.Lock()
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -26,6 +26,20 @@ def get_singleton_session() -> Session:
                 _session_instance.headers.update(HEADERS)
 
     return _session_instance
+
+def singleton(cls):
+    """
+    **非线程安全**的单例装饰器
+    """
+
+    instances = {}
+
+    def get_instance(*args, **kwargs):
+        if cls not in instances:
+            instances[cls] = cls(*args, **kwargs)
+        return instances[cls]
+
+    return get_instance
 
 def download_file(
             session: Session, 
@@ -85,3 +99,9 @@ def download_file(
         else:
             print(f"\nMeet max retry times, download failed")
             raise e
+
+def haskeys(obj: dict, keys: list[str]) -> bool:
+    return all(key in obj for key in keys)
+
+def hasvalues(obj: dict, values: dict[str, any]) -> bool:
+    return all(obj.get(key) == value for key, value in values.items())
