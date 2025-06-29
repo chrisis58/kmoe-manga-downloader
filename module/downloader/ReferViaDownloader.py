@@ -18,7 +18,7 @@ class ReferViaDownloader(Downloader):
             self._session,
             self.fetch_download_url(book, volume),
             download_path,
-            volume.name,
+            f'[kmoe][{book.name}][{volume.name}].epub',
             retry,
             headers={
                 "X-Km-From": "kb_http_down"
