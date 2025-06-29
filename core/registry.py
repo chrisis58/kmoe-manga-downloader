@@ -83,6 +83,10 @@ class Predication:
     order: int = 0
 
     def __lt__(self, other: 'Predication') -> bool:
+        if self.order == other.order:
+            # 如果 order 相同，则比较 hasattrs 的长度
+            # 通常情况下，hasattrs 的长度越长，优先级越高
+            return len(self.hasattrs) > len(other.hasattrs)
         return self.order < other.order
     
     def __hash__(self) -> int:
