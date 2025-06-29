@@ -10,7 +10,7 @@ class DirectDownloader(Downloader):
     def __init__(self, dest, callback=None, retry=3, *args, **kwargs):
         super().__init__(dest, callback, retry, *args, **kwargs)
 
-    def download(self, book: BookInfo, volumes: list[VolInfo], *args, **kwargs):
+    def download(self, book: BookInfo, volumes: list[VolInfo]):
 
         for volume in volumes:
             self._download(book, volume, self._retry)

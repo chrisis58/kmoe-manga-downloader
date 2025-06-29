@@ -20,21 +20,21 @@ class Authenticator(SessionContext, ConfigContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def authenticate(self, *args, **kwargs) -> bool: ...
+    def authenticate(self) -> bool: ...
 
 class Lister(SessionContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def list(self, *args, **kwargs) -> tuple[BookInfo, list[VolInfo]]: ...
+    def list(self) -> tuple[BookInfo, list[VolInfo]]: ...
 
 class Picker(SessionContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def pick(self, volumes: list[VolInfo], *args, **kwargs) -> list[VolInfo]: ...
+    def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
 class Downloader(SessionContext):
 
@@ -49,7 +49,7 @@ class Downloader(SessionContext):
         self._callback: Optional[Callable[[VolInfo], None]] = callback
         self._retry: int = retry
 
-    def download(self, book: BookInfo, volumes: list[VolInfo], *args, **kwargs): ...
+    def download(self, book: BookInfo, volumes: list[VolInfo]): ...
 
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
