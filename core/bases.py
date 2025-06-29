@@ -18,7 +18,8 @@ class ConfigContext:
 class Authenticator(SessionContext, ConfigContext):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        SessionContext.__init__(self, *args, **kwargs)
+        ConfigContext.__init__(self, *args, **kwargs)
 
     def authenticate(self) -> bool: ...
 
