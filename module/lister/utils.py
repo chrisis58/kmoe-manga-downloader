@@ -46,7 +46,7 @@ def __extract_volumes(session: Session, book_page: BeautifulSoup) -> list[VolInf
     book_data = filter(lambda x: '單行本' in x, book_data)
     book_data = map(lambda x: x[8:].split(','), book_data)
     
-    volume_data = map(lambda x: VolInfo(
+    volume_data = list(map(lambda x: VolInfo(
             id = x[0],
             extra_info = __extract_extra_info(x[1]),
             is_last = x[2] == '1',
@@ -54,8 +54,8 @@ def __extract_volumes(session: Session, book_page: BeautifulSoup) -> list[VolInf
             index = int(x[4]),
             pages = int(x[6]),
             name = x[5],
-            size = f'{x[11]} M'), book_data)
-    volume_data: list[VolInfo] = list(volume_data)
+            size = float(x[11])), book_data))
+    volume_data: list[VolInfo] = volume_data
 
     return volume_data
 
