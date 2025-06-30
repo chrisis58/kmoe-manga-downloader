@@ -21,7 +21,7 @@ class DirectDownloader(Downloader):
 
         download_file(
             self._session,
-            self.construct_download_url(volume),
+            self.construct_download_url(book, volume),
             download_path,
             f'[kmoe][{book.name}][{volume.name}].epub',
             retry,
@@ -29,5 +29,5 @@ class DirectDownloader(Downloader):
             callback=lambda : self._callback(volume) if self._callback else None
         )
 
-    def construct_download_url(self, volume: VolInfo) -> str:
-        return f'https://kox.moe/dl/{self._book.id}/{volume.id}/1/2/0/'
+    def construct_download_url(self, book: BookInfo, volume: VolInfo) -> str:
+        return f'https://kox.moe/dl/{book.id}/{volume.id}/1/2/0/'
