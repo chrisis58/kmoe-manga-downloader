@@ -15,5 +15,9 @@ class CookieAuthenticator(Authenticator):
     def authenticate(self) -> bool:
         cookie = self._configurer.config.cookie
         
+        if not cookie:
+            print("No cookie found. Please login first.")
+            return False
+        
         self._session.cookies.update(cookie)
         return check_status(self._session, show_quota=self._show_quota)
