@@ -60,5 +60,5 @@ class Config:
     dest: Optional[str] = None
     callback: Optional[str] = None
 
-    cookie: dict = frozenset({})
+    cookie: Optional[dict[str, str]] = None
     
