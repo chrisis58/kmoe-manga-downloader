@@ -15,7 +15,8 @@ class ArgsFilterPicker(Picker):
             return volumes
         else:
             volumes_choice = self._volume.split(',')
+            volumes_choice = [v.strip() for v in volumes_choice]
 
-            volume_data = filter(lambda x: sum([v in x.name for v in volumes_choice]) > 0, volumes)
+            volume_data = filter(lambda x: any([v in x.name for v in volumes_choice]), volumes)
 
             return list(volume_data)
