@@ -3,10 +3,7 @@ from typing import Optional, Callable
 
 from requests import Session
 from tqdm import tqdm
-
 import threading
-import requests
-from requests import Session
 
 _session_instance: Optional[Session] = None
 
@@ -22,7 +19,7 @@ def get_singleton_session() -> Session:
     if _session_instance is None:
         with _session_lock:
             if _session_instance is None:
-                _session_instance = requests.Session()
+                _session_instance = Session()
                 _session_instance.headers.update(HEADERS)
 
     return _session_instance
@@ -103,5 +100,5 @@ def download_file(
 def haskeys(obj: dict, keys: list[str]) -> bool:
     return all(key in obj for key in keys)
 
-def hasvalues(obj: dict, values: dict[str, any]) -> bool:
+def hasvalues(obj: dict, values: dict[str, object]) -> bool:
     return all(obj.get(key) == value for key, value in values.items())
