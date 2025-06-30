@@ -41,7 +41,7 @@ class LoginAuthenticator(Authenticator):
                 print("帳號已經註銷。不會解釋原因，無需提問。")
             elif code == 'e403':
                 print("驗證失效，請刷新頁面重新操作。")
-            exit(1)
+            raise RuntimeError("Authentication failed with code: " + code)
         
         if check_status(self._session, show_quota=True):
             self._configurer.config.cookie = self._session.cookies.get_dict()
