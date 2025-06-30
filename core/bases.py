@@ -1,3 +1,5 @@
+import os
+
 from typing import Callable, Optional
 
 from .registry import Registry
@@ -41,13 +43,13 @@ class Downloader(SessionContext):
 
     def __init__(self, 
             dest: str,
-            callback: Optional[Callable[[VolInfo], None]] = None,
+            callback: Optional[str] = None,
             retry: int = 3,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self._dest: str = dest
-        self._callback: Optional[Callable[[VolInfo], None]] = callback
+        self._callback: Optional[Callable[[BookInfo, VolInfo], int]] = (lambda book, vol: os.system(callback.format(b=book, v=vol))) if callback else None
         self._retry: int = retry
 
     def download(self, book: BookInfo, volumes: list[VolInfo]): ...
