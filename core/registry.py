@@ -11,15 +11,16 @@ class Registry(Generic[T]):
         self._modules: list['Predication'] = list()
 
     def register(self,
-            hasattrs: set[str] = frozenset(),
-            containattrs: set[str] = frozenset(),
-            hasvalues: dict[str, any] = dict(),
-            predicate: Optional[Callable[[any], bool]] = None,
+            hasattrs: frozenset[str] = frozenset(),
+            containattrs: frozenset[str] = frozenset(),
+            hasvalues: dict[str, object] = dict(),
+            predicate: Optional[Callable[[Namespace], bool]] = None,
             order: int = 0,
             name: Optional[str] = None
     ):
         """
         注册一个模块到注册表中。
+        总体的匹配逻辑: `{predicate} or {hasvalues} and ({hasattrs} or {containattrs})`
 
         :param hasattrs: 模块处理的参数集合，必须全部匹配。如果未提供，则从类的 __init__ 方法中获取不可缺省的参数
         :param containattrs: 模块处理的可选参数集合，只要满足其中一个即可。
@@ -89,17 +90,17 @@ class Registry(Generic[T]):
 
         raise ValueError(f'{self._name} does not have a module for {condition}')
     
-    def _filter_nonone_args(self, condition: Namespace) -> dict[str, any]:
+    def _filter_nonone_args(self, condition: Namespace) -> dict[str, object]:
         return {k: v for k, v in vars(condition).items() if v is not None}
 
 @dataclass(frozen=True)
 class Predication:
     cls: type
 
-    hasattrs: set[str] = frozenset({})
-    containattrs: set[str] = frozenset({})
-    hasvalues: dict[str, any] = frozenset({})
-    predicate: Optional[Callable[[any], bool]] = None
+    hasattrs: frozenset[str] = frozenset({})
+    containattrs: frozenset[str] = frozenset({})
+    hasvalues: dict[str, object] = dict()
+    predicate: Optional[Callable[[Namespace], bool]] = None
 
     order: int = 0
 
