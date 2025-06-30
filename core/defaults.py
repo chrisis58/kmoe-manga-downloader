@@ -56,10 +56,14 @@ class Configurer:
     def __init__(self):
         self.__filename = '.kmdr'
 
-        with open(os.path.join(os.path.expanduser("~"), self.__filename), 'r') as f:
-            config = json.load(f)
+        if not os.path.exists(os.path.join(os.path.expanduser("~"), self.__filename)):
+            self._config = Config()
+            self.update()
+        else:
+            with open(os.path.join(os.path.expanduser("~"), self.__filename), 'r') as f:
+                config = json.load(f)
 
-        self._config = Config(**config)
+            self._config = Config(**config)
 
     @property
     def config(self) -> 'Config':
