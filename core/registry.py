@@ -80,8 +80,9 @@ class Registry(Generic[T]):
         for module in self._modules:
             if (module.predicate is not None and module.predicate(condition)) or \
                     all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items()) and \
-                    (all(hasattr(condition, attr) and getattr(condition, attr) is not None for attr in module.hasattrs) or any(attr in condition for attr in module.containattrs)):
-                
+                    (all(hasattr(condition, attr) and getattr(condition, attr) is not None for attr in module.hasattrs) \
+                            or any(hasattr(condition, attr) for attr in module.containattrs)):
+
                 # 手动配置的 predicate 优先级最高，只要满足 predicate 条件就返回
                 # hasvalues 配置的属性值必须完全匹配
                 # hasattrs 和 containattrs 二者只需要满足一个
