@@ -1,5 +1,5 @@
 from typing import Optional, Callable, TypeVar, Generic
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from argparse import Namespace
 
 T = TypeVar('T')
@@ -78,7 +78,7 @@ class Registry(Generic[T]):
             return self._modules[0].cls(**self._filter_nonone_args(condition))
         
         for module in self._modules:
-            if (module.predicate is None or module.predicate(condition)) or \
+            if (module.predicate is not None and module.predicate(condition)) or \
                     all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items()) and \
                     (all(hasattr(condition, attr) for attr in module.hasattrs) or any(attr in condition for attr in module.containattrs)):
                 
@@ -99,7 +99,7 @@ class Predication:
 
     hasattrs: frozenset[str] = frozenset({})
     containattrs: frozenset[str] = frozenset({})
-    hasvalues: dict[str, object] = dict()
+    hasvalues: dict[str, object] = field(default_factory=dict)
     predicate: Optional[Callable[[Namespace], bool]] = None
 
     order: int = 0
