@@ -21,4 +21,5 @@ def check_status(session: Session, show_quota: bool = False) -> bool:
     
     quota = soup.find('div', id='div_user_vip').text.strip()
     print(f"=========================\n\n{quota}\n\n=========================\n")
+    return True
     
