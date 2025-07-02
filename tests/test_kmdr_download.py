@@ -1,5 +1,6 @@
 import os
 
+import time
 import unittest
 from argparse import Namespace
 
@@ -38,6 +39,10 @@ class TestKmdrDownload(unittest.TestCase):
             
             if os.path.exists(dir_path):
                 rmtree(dir_path)
+
+    def tearDown(self):
+        # avoiding rate limit
+        time.sleep(3)
 
     def test_download_multiple_volumes(self):
         dest = f'{BASE_DIR}/{self.test_download_multiple_volumes.__name__}'
