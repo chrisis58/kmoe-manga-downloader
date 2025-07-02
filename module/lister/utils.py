@@ -43,7 +43,11 @@ def __extract_volumes(session: Session, book_page: BeautifulSoup) -> list[VolInf
     book_data = session.get(url = f"https://kox.moe{book_data_url}").text.split('\n')
     book_data = filter(lambda x: 'volinfo' in x, book_data)
     book_data = map(lambda x: x.split("\"")[1], book_data)
+
+    # TODO: 这里的过滤条件可能需要根据实际情况调整
+    #       目前只保留包含「單行本」的卷信息
     book_data = filter(lambda x: '單行本' in x, book_data)
+
     book_data = map(lambda x: x[8:].split(','), book_data)
     
     volume_data = list(map(lambda x: VolInfo(
