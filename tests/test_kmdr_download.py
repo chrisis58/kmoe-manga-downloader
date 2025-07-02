@@ -4,9 +4,6 @@ import time
 import unittest
 from argparse import Namespace
 
-from core import *
-from module import *
-
 from kmdr import main as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
@@ -42,7 +39,11 @@ class TestKmdrDownload(unittest.TestCase):
 
     def tearDown(self):
         # avoiding rate limit
-        time.sleep(3)
+        print("Waiting", end='')
+        for i in range(3):
+            print('.', end='', flush=True)
+            time.sleep(1)
+        print()
 
     def test_download_multiple_volumes(self):
         dest = f'{BASE_DIR}/{self.test_download_multiple_volumes.__name__}'
