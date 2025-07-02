@@ -8,8 +8,8 @@ class DefaultVolPicker(Picker):
 
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]:
         print("\t卷类型\t页数\t大小(MB)\t卷名")
-        for v, volume in enumerate(volumes):
-            print(f"[{v}]\t{volume.vol_type.value}\t{volume.pages}\t{volume.size:.2f}\t{volume.name}")
+        for index, volume in enumerate(volumes):
+            print(f"[{index}]\t{volume.vol_type.value}\t{volume.pages}\t{volume.size:.2f}\t{volume.name}")
 
         choosed = input("choose a volume to download (use comma to select multiple volumes or just 'all'):\n")
 
