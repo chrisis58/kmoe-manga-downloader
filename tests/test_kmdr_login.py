@@ -17,6 +17,7 @@ class TestKmdrLogin(unittest.TestCase):
             Namespace(
                 command='login',
                 username=KMOE_USERNAME,
-                password=KMOE_PASSWORD
+                password=KMOE_PASSWORD,
+                show_quota=False
             )
         )

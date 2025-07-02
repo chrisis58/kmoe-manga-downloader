@@ -10,9 +10,10 @@ from .utils import check_status
     hasvalues = {'command': 'login'}
 )
 class LoginAuthenticator(Authenticator):
-    def __init__(self, username: str, proxy: Optional[str] = None, password: Optional[str] = None, *args, **kwargs):
+    def __init__(self, username: str, proxy: Optional[str] = None, password: Optional[str] = None, show_quota = True, *args, **kwargs):
         super().__init__(proxy, *args, **kwargs)
         self._username = username
+        self._show_quota = show_quota
 
         if password is None:
             password = input("please input your password: \n")
@@ -46,7 +47,7 @@ class LoginAuthenticator(Authenticator):
                 print("驗證失效，請刷新頁面重新操作。")
             raise RuntimeError("Authentication failed with code: " + code)
         
-        if check_status(self._session, show_quota=True):
+        if check_status(self._session, show_quota=self._show_quota):
             self._configurer.config.cookie = self._session.cookies.get_dict()
             self._configurer.update()
             return True
