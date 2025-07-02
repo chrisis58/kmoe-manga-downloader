@@ -1,6 +1,6 @@
-# Kmoe Manga Downloader
+# Kmoe Manga Down
 
-[![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) ![python3.9](https://img.shields.io/badge/python-3.9+-blue)
+[![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
 `Kox Downloader` 是一个简单的 Python 脚本，用于从 [Kox](https://kox.moe/) 网站下载漫画。它支持登录、下载指定书籍及其卷，并支持回调脚本执行。
 
