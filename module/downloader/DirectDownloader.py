@@ -1,4 +1,6 @@
-from core import Downloader, BookInfo, VolInfo, download_file, DOWNLOADER
+from core import Downloader, BookInfo, VolInfo, DOWNLOADER
+
+from .utils import download_file, safe_filename
 
 @DOWNLOADER.register(
     hasvalues={
@@ -10,7 +12,7 @@ class DirectDownloader(Downloader):
         super().__init__(dest, callback, retry, num_workers, *args, **kwargs)
 
     def _download(self, book: BookInfo, volume: VolInfo, retry: int):
-        sub_dir = f'{book.name}'
+        sub_dir = safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
         download_file(
