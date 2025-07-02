@@ -9,8 +9,24 @@ from module import *
 from kmdr import main as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
+KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
+KMOE_PASSWORD = os.environ.get('KMOE_PASSWORD')
 
+@unittest.skipUnless(KMOE_USERNAME and KMOE_PASSWORD, "KMOE_USERNAME and KMOE_PASSWORD must be set in environment variables")
 class TestKmdrDownload(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        kmdr_main(
+            Namespace(
+                command='login',
+                username=KMOE_USERNAME,
+                password=KMOE_PASSWORD
+            )
+        )
+
+        if not os.path.exists(BASE_DIR):
+            os.makedirs(BASE_DIR, exist_ok=True)
 
     @classmethod
     def tearDownClass(cls):
