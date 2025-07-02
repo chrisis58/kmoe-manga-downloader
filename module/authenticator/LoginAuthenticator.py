@@ -31,7 +31,10 @@ class LoginAuthenticator(Authenticator):
         )
         response.raise_for_status()
         
-        code = re.search('"\w+"', response.text).group(0).split('"')[1]
+        match = re.search('"\w+"', response.text)
+        if not match:
+            raise RuntimeError("Failed to extract authentication code from response.")
+        code = match.group(0).split('"')[1]
         if code != 'm100':
             if code == 'e400':
                 print("帳號或密碼錯誤。")
