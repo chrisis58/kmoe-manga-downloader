@@ -10,7 +10,7 @@ from kmdr import main as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 
-class TestKmdr(unittest.TestCase):
+class TestKmdrDownload(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
