@@ -4,6 +4,9 @@ from typing import Optional, Callable
 from requests import Session
 from tqdm import tqdm
 import threading
+import subprocess
+
+from .structure import BookInfo, VolInfo
 
 _session_instance: Optional[Session] = None
 
@@ -104,3 +107,17 @@ def haskeys(obj: dict, keys: list[str]) -> bool:
 
 def hasvalues(obj: dict, values: dict[str, object]) -> bool:
     return all(obj.get(key) == value for key, value in values.items())
+
+def construct_callback(callback: Optional[str]) -> Optional[Callable]:
+    if callback is None or not isinstance(callback, str) or not callback.strip():
+        return None
+
+    def _callback(book: BookInfo, volume: VolInfo) -> int:
+        nonlocal callback
+
+        assert callback, "Callback script cannot be empty"
+        callback = callback.strip().format(b=book, v=volume)
+
+        return subprocess.run(callback, shell=True, check=True).returncode
+
+    return _callback

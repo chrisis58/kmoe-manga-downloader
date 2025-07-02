@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from .registry import Registry
 from .structure import VolInfo, BookInfo, Config
-from .utils import get_singleton_session
+from .utils import get_singleton_session, construct_callback
 from .defaults import Configurer
 
 class SessionContext:
@@ -56,7 +56,7 @@ class Downloader(SessionContext):
     ):
         super().__init__(*args, **kwargs)
         self._dest: str = dest
-        self._callback: Optional[Callable[[BookInfo, VolInfo], int]] = (lambda book, vol: os.system(callback.format(b=book, v=vol))) if callback else None
+        self._callback: Optional[Callable[[BookInfo, VolInfo], int]] = construct_callback(callback)
         self._retry: int = retry
         self._num_workers: int = num_workers
 
