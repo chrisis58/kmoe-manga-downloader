@@ -15,8 +15,8 @@ class FollowedBookLister(Lister):
     def list(self) -> tuple[BookInfo, list[VolInfo]]:
         followed_rows = BeautifulSoup(self._session.get(url = MY_FOLLOW_URL).text, 'html.parser').find_all('tr', style='height:36px;')
         mapped = map(lambda x: x.find_all('td'), followed_rows)
-        filterd = filter(lambda x: '書名' not in x[1].text, mapped)
-        books = map(lambda x: BookInfo(name = x[1].text, url = x[1].find('a')['href'], author = x[2].text, status = x[-1].text, last_update = x[-2].text, id = ''), filterd)
+        filtered = filter(lambda x: '書名' not in x[1].text, mapped)
+        books = map(lambda x: BookInfo(name = x[1].text, url = x[1].find('a')['href'], author = x[2].text, status = x[-1].text, last_update = x[-2].text, id = ''), filtered)
         books = list(books)
 
         print("\t最后更新时间\t书名")
