@@ -1,11 +1,13 @@
+from typing import Optional
+
 from core import Authenticator, AUTHENTICATOR
 
 from .utils import check_status
 
 @AUTHENTICATOR.register()
 class CookieAuthenticator(Authenticator):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
+        super().__init__(proxy, *args, **kwargs)
 
         if 'command' in kwargs and kwargs['command'] == 'status':
             self._show_quota = True

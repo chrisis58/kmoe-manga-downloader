@@ -19,9 +19,15 @@ class ConfigContext:
 
 class Authenticator(SessionContext, ConfigContext):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
         SessionContext.__init__(self, *args, **kwargs)
         ConfigContext.__init__(self, *args, **kwargs)
+
+        if proxy:
+            self._session.proxies.update({
+                'https': proxy,
+                'http': proxy,
+            })
 
     def authenticate(self) -> bool: ...
 

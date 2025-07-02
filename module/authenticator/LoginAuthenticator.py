@@ -10,8 +10,8 @@ from .utils import check_status
     hasvalues = {'command': 'login'}
 )
 class LoginAuthenticator(Authenticator):
-    def __init__(self, username: str, password: Optional[str] = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, username: str, proxy: Optional[str] = None, password: Optional[str] = None, *args, **kwargs):
+        super().__init__(proxy, *args, **kwargs)
         self._username = username
 
         if password is None:
