@@ -7,16 +7,16 @@ from module import *
 def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     if args.command == 'login':
-        AUTHENTICATOR.get(args).authenticate()
+        if not AUTHENTICATOR.get(args).authenticate():
+            raise RuntimeError("Authentication failed. Please check your credentials.")
 
     elif args.command == 'status':
-        AUTHENTICATOR.get(args).authenticate()
+        if not AUTHENTICATOR.get(args).authenticate():
+            raise RuntimeError("Authentication failed. Please check your credentials.")
 
     elif args.command == 'download':    
-
         if not AUTHENTICATOR.get(args).authenticate():
-            print("Authentication failed. Please check your credentials.")
-            return
+            raise RuntimeError("Authentication failed. Please check your credentials.")
 
         book, volumes = LISTERS.get(args).list()
 
