@@ -110,8 +110,8 @@ def construct_callback(callback: Optional[str]) -> Optional[Callable]:
         nonlocal callback
 
         assert callback, "Callback script cannot be empty"
-        callback = callback.strip().format(b=book, v=volume)
+        formatted_callback = callback.strip().format(b=book, v=volume)
 
-        return subprocess.run(callback, shell=True, check=True).returncode
+        return subprocess.run(formatted_callback, shell=True, check=True).returncode
 
     return _callback
