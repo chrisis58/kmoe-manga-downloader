@@ -122,3 +122,25 @@ class TestKmdrDownload(unittest.TestCase):
         files.remove('callback.log')
         assert os.path.isdir(os.path.join(dest, book_dir := files[0])), "Expected the subdirectory to be a directory"
         assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
+
+    def test_download_volume_with_direct_downloader(self):
+        dest = f'{BASE_DIR}/{self.test_download_volume_with_direct_downloader.__name__}'
+
+        kmdr_main(
+            Namespace(
+                command='download',
+                dest=dest,
+                book_url='https://kox.moe/c/51043.htm',
+                vol_type='extra',
+                volume='all',
+                max_size=0.4,
+                method=1, # use direct download method
+                limit=1,
+                retry=3,
+                num_workers=1
+            )
+        )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
