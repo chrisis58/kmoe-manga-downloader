@@ -12,3 +12,6 @@
 # Built Visual Studio Code Extensions
 *.vsix
 
+__pycache__/
+*.py[codz]
+*$py.class
