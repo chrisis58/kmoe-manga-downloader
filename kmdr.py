@@ -1,9 +1,10 @@
+from typing import Callable
+from argparse import Namespace
+
 from core import *
 from module import *
 
-def main():
-    parser = argument_parser()
-    args = parser.parse_args()
+def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     if args.command == 'login':
         AUTHENTICATOR.get(args).authenticate()
@@ -24,7 +25,11 @@ def main():
         DOWNLOADER.get(args).download(book, volumes)
 
     else:
-        parser.print_help()
+        fallback()
 
 if __name__ == '__main__':
-    main()
+
+    parser = argument_parser()
+    args = parser.parse_args()
+
+    main(args, lambda: parser.print_help())
