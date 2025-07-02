@@ -11,7 +11,7 @@ _session_instance: Optional[Session] = None
 _session_lock = threading.Lock()
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmdr)'
 }
 
 def get_singleton_session() -> Session:
