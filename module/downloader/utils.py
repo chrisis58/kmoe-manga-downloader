@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 import os
-from requests import Session
+from requests import Session, HTTPError
 from tqdm import tqdm
 import re
 
@@ -57,6 +57,11 @@ def download_file(
                     callback()
     except Exception as e:
         print(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
+
+        if isinstance(e, HTTPError):
+            print(f"Request Headers: {e.request.headers}")
+            print(f"Response Headers: {e.response.headers}")
+
         if retry_times > 0:
             # 重试下载
             print(f"Retry download {filename}...")
