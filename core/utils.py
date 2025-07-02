@@ -44,9 +44,11 @@ def download_file(
             dest_path: str, 
             filename: str, 
             retry_times: int = 0, 
-            headers: dict = dict(), 
+            headers: Optional[dict] = None, 
             callback: Optional[Callable] = None,
     ):
+    if headers is None:
+        headers = {}
     filename_downloading = f'{filename}.downloading'
         
     file_path = f'{dest_path}/{filename}'
