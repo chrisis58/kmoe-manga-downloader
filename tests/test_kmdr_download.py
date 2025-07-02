@@ -17,13 +17,13 @@ class TestKmdrDownload(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # kmdr_main(
-        #     Namespace(
-        #         command='login',
-        #         username=KMOE_USERNAME,
-        #         password=KMOE_PASSWORD
-        #     )
-        # )
+        kmdr_main(
+            Namespace(
+                command='login',
+                username=KMOE_USERNAME,
+                password=KMOE_PASSWORD
+            )
+        )
 
         if not os.path.exists(BASE_DIR):
             os.makedirs(BASE_DIR, exist_ok=True)
