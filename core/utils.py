@@ -102,12 +102,6 @@ def download_file(
             print(f"\nMeet max retry times, download failed")
             raise e
 
-def haskeys(obj: dict, keys: list[str]) -> bool:
-    return all(key in obj for key in keys)
-
-def hasvalues(obj: dict, values: dict[str, object]) -> bool:
-    return all(obj.get(key) == value for key, value in values.items())
-
 def construct_callback(callback: Optional[str]) -> Optional[Callable]:
     if callback is None or not isinstance(callback, str) or not callback.strip():
         return None
