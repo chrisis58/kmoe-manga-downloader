@@ -25,7 +25,7 @@ def argument_parser():
     download_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files', required=False)
     download_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
     download_parser.add_argument('-r', '--retry', type=int, help='Retry times', required=False)
-    download_parser.add_argument('--callback', '-c', type=str, help='Callback sctipt, use as `echo {v.name} downloaded!`', required=False)
+    download_parser.add_argument('--callback', '-c', type=str, help='Callback script, use as `echo {v.name} downloaded!`', required=False)
 
     login_parser = subparsers.add_parser('login', help='Login to kox.moe')
     login_parser.add_argument('-u', '--username', type=str, help='Your username', required=True)
