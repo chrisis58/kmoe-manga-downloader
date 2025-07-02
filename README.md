@@ -27,6 +27,14 @@ pip install -r requirements.txt
 python koxdl.py login -u <your_username> -p <your_password>
 ```
 
+或者：
+
+```bash
+python koxdl.py login -u <your_username>
+```
+
+第二种方式会在程序运行时获取登录密码。
+
 ### 2. 下载漫画书籍
 
 你可以通过以下命令下载指定书籍或卷：
@@ -66,17 +74,18 @@ python koxdl.py download -d /path/to/destination --book-id 123 --volume 1,2 --ca
 
 `{v.name}` 会被替换为卷的名称。可以使用的参数：
 
-| 变量名             | 描述                   |
-| ------------------ | ---------------------- |
-| v.url              | 卷的下载链接           |
-| v.name             | 卷的名称               |
-| v.size             | 卷的文件大小           |
-| v.book.name        | 对应漫画的名字         |
-| v.book.book_id     | 对应漫画的标识         |
-| v.book.url         | 对应漫画的主页链接     |
-| v.book.author      | 对应漫画的作者         |
-| v.book.status      | 对应漫画的更新状态     |
-| v.book.last_update | 对应漫画的最后更新时间 |
+| 变量名        | 描述                   |
+| ------------- | ---------------------- |
+| v.id          | 卷的标识               |
+| v.name        | 卷的名称               |
+| v.page        | 卷的页数               |
+| v.size        | 卷的文件大小           |
+| b.name        | 对应漫画的名字         |
+| b.id          | 对应漫画的标识         |
+| b.url         | 对应漫画的主页链接     |
+| b.author      | 对应漫画的作者         |
+| b.status      | 对应漫画的更新状态     |
+| b.last_update | 对应漫画的最后更新时间 |
 
 
 ## 参数说明
@@ -90,9 +99,9 @@ python koxdl.py login -u <your_username> -p <your_password>
 ```
 
 - `-u`, `--username`: `kox.moe` 用户名
-- `-p`, `--password`: `kox.moe` 密码
+- `-p`, `--password`: `kox.moe` 密码（可选，如果为空则会在运行时获取）
 
-> cookie 等内容存放在 `~/.koxdl` 中，如果删除可能会导致无法获取登录凭证。
+> cookie 等内容存放在 `~/.kmdr` 中，如果删除可能会导致无法获取登录凭证。
 
 ### download 子命令
 
@@ -103,10 +112,8 @@ python koxdl.py download -d /path/to/download/destination --book-id 123 --volume
 ```
 
 - `-d`, `--dest`: 下载目标目录
-- `--book-id`: 书籍 ID
-- `--book-name`: 按书名搜索关注的书籍
+- `--book-url`: 书籍主页的链接
 - `-v`, `--volume`: 要下载的卷，支持逗号分隔，`all` 表示所有卷
-- `--overwrite`: 如果文件存在，是否覆盖
 - `-p`, `--proxy`: 使用代理
 - `-r`, `--retry`: 最大重试次数（默认 3）
 - `--call-back`, `-c`: 下载后的回调脚本
@@ -118,15 +125,3 @@ python koxdl.py download -d /path/to/download/destination --book-id 123 --volume
 ```bash
 python koxdl.py status
 ```
-
-- `-p`, `--proxy`: 使用代理（可选）
-
-## 目录结构
-
-- `koxdl.py`: 主脚本文件
-- `.koxdl`: 存储用户 Cookie 的文件（登录时自动生成）
-
-## 开发者
-
-- 作者: `@chrisis58`
-- GitHub: [https://github.com/chrisis58](https://github.com/chrisis58)
