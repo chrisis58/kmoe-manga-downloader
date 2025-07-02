@@ -1,5 +1,4 @@
 from core import Downloader, BookInfo, VolInfo, download_file, DOWNLOADER
-from core import haskeys, hasvalues
 
 @DOWNLOADER.register(
     hasvalues={
