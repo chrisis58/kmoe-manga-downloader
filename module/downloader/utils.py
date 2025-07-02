@@ -59,6 +59,7 @@ def download_file(
         print(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
 
         if isinstance(e, HTTPError):
+            e.request.headers['Cookie'] = '***MASKED***'
             print(f"Request Headers: {e.request.headers}")
             print(f"Response Headers: {e.response.headers}")
 
