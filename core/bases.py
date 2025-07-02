@@ -45,14 +45,34 @@ class Downloader(SessionContext):
             dest: str,
             callback: Optional[str] = None,
             retry: int = 3,
+            num_workers: int = 1,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self._dest: str = dest
         self._callback: Optional[Callable[[BookInfo, VolInfo], int]] = (lambda book, vol: os.system(callback.format(b=book, v=vol))) if callback else None
         self._retry: int = retry
+        self._num_workers: int = num_workers
 
-    def download(self, book: BookInfo, volumes: list[VolInfo]): ...
+    def download(self, book: BookInfo, volumes: list[VolInfo]):
+        if self._num_workers <= 1:
+            for volume in volumes:
+                self._download(book, volume, self._retry)
+        else:
+            self._download_with_multiple_workers(book, volumes, self._retry)
+
+    def _download(self, book: BookInfo, volume: VolInfo, retry: int): ...
+
+    def _download_with_multiple_workers(self, book: BookInfo, volumes: list[VolInfo], retry: int):
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=self._num_workers) as executor:
+            futures = [
+                executor.submit(self._download, book, volume, retry)
+                for volume in volumes
+            ]
+            for future in futures:
+                future.result()
 
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')

@@ -7,13 +7,8 @@ from core import haskeys, hasvalues
     }
 )
 class DirectDownloader(Downloader):
-    def __init__(self, dest, callback=None, retry=3, *args, **kwargs):
-        super().__init__(dest, callback, retry, *args, **kwargs)
-
-    def download(self, book: BookInfo, volumes: list[VolInfo]):
-
-        for volume in volumes:
-            self._download(book, volume, self._retry)
+    def __init__(self, dest, callback=None, retry=3, num_workers=1, *args, **kwargs):
+        super().__init__(dest, callback, retry, num_workers, *args, **kwargs)
 
     def _download(self, book: BookInfo, volume: VolInfo, retry: int):
         sub_dir = f'{book.name}'
