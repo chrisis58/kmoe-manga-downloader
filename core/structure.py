@@ -7,7 +7,7 @@ class VolumeType(Enum):
     EXTRA = "番外篇"
     SERIALIZED = "連載話"
 
-@dataclass
+@dataclass(frozen=True)
 class VolInfo:
     """
     Kmoe 卷信息
@@ -43,7 +43,7 @@ class VolInfo:
     """
 
 
-@dataclass
+@dataclass(frozen=True)
 class BookInfo:
     id: str
     name: str

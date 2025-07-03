@@ -53,10 +53,10 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51043.htm',
+                book_url='https://kox.moe/c/51044.htm',
                 vol_type='extra',
                 volume='all',
-                max_size=0.5,
+                max_size=0.6,
                 limit=3,
                 retry=3,
             )
@@ -69,7 +69,7 @@ class TestKmdrDownload(unittest.TestCase):
         total_size = sum(
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
         )
-        assert total_size < 3 * 0.5 * 1024 * 1024, "Total size of downloaded files exceeds 0.5 MB"
+        assert total_size < 3 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
 
     def test_download_multiple_volumes_with_multiple_workers(self):
         dest = f'{BASE_DIR}/{self.test_download_multiple_volumes_with_multiple_workers.__name__}'
@@ -78,10 +78,10 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51043.htm',
+                book_url='https://kox.moe/c/51044.htm',
                 vol_type='extra',
                 volume='all',
-                max_size=0.5,
+                max_size=0.6,
                 limit=3,
                 retry=3,
                 num_workers=3
@@ -95,7 +95,7 @@ class TestKmdrDownload(unittest.TestCase):
         total_size = sum(
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
         )
-        assert total_size < 3 * 0.5 * 1024 * 1024, "Total size of downloaded files exceeds 0.5 MB"
+        assert total_size < 3 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
 
     def test_download_volume_with_callback(self):
         dest = f'{BASE_DIR}/{self.test_download_volume_with_callback.__name__}'
@@ -104,7 +104,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51043.htm',
+                book_url='https://kox.moe/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
