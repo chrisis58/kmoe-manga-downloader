@@ -76,4 +76,32 @@ def safe_filename(name: str) -> str:
     替换非法文件名字符为下划线
     """
     return re.sub(r'[\\/:*?"<>|]', '_', name)
+
+
+def cached_by_kwargs(func):
+    """
+    根据关键字参数缓存函数结果的装饰器。
+
+    Example:
+    >>> @kwargs_cached
+    >>> def add(a, b, c):
+    >>>     return a + b + c
+    >>> result1 = add(1, 2, c=3)  # Calls the function
+    >>> result2 = add(3, 2, c=3)  # Uses cached result
+    >>> assert result1 == result2  # Both results are the same
+    """
+    cache = {}
+
+    def wrapper(*args, **kwargs):
+        if not kwargs:
+            return func(*args, **kwargs)
         
+        nonlocal cache
+
+        key = frozenset(kwargs.items())
+
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+
+    return wrapper
