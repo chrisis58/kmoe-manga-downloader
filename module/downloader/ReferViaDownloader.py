@@ -1,6 +1,6 @@
 from core import Downloader, VolInfo, DOWNLOADER, BookInfo
 
-from .utils import download_file, safe_filename
+from .utils import download_file, safe_filename, cached_by_kwargs
 
 try:
     import cloudscraper
@@ -23,7 +23,7 @@ class ReferViaDownloader(Downloader):
 
         download_file(
             self._session if not self._scraper else self._scraper,
-            self.fetch_download_url(book, volume),
+            self.fetch_download_url(book=book, volume=volume),
             download_path,
             f'[Kmoe][{book.name}][{volume.name}].epub',
             retry,
@@ -33,6 +33,7 @@ class ReferViaDownloader(Downloader):
             callback=lambda: self._callback(book, volume) if self._callback else None
         )
 
+    @cached_by_kwargs
     def fetch_download_url(self, book: BookInfo, volume: VolInfo) -> str:
         response = self._session.get(f"https://kox.moe/getdownurl.php?b={book.id}&v={volume.id}&mobi=2&vip=0&json=1")
         response.raise_for_status()
