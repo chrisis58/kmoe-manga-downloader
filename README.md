@@ -46,7 +46,14 @@ python kmdr.py login -u <your_username>
 你可以通过以下命令下载指定书籍或卷：
 
 ```bash
-python kmdr.py download -d /path/to/download/destination --book-id 123 --volume 1,2,3
+# 在 path/to/destination 目录下载第一、二、三卷
+python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm --volume 1,2,3
+python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1-3
+```
+
+```bash
+# 在 path/to/download/destination 目录下载全部番外篇
+python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm --vol-type extra -v all
 ```
 
 #### 常用参数说明：
@@ -74,7 +81,7 @@ python kmdr.py status
 你可以设置一个回调函数，下载完成后执行。回调可以是任何你想要的命令：
 
 ```bash
-python kmdr.py download -d /path/to/destination --book-id 123 --volume 1,2 --callback "echo '{b.name} {v.name} downloaded!'"
+python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1-3 -c "echo '{b.name} {v.name} downloaded!'"
 ```
 
 > 字符串模板会直接朴素地替换，卷名或者书名可能会包含空格，推荐使用引号包含避免出现错误。
