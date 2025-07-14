@@ -21,12 +21,11 @@ class ArgsFilterPicker(Picker):
         if self._vol_type is not None:
             volume_data = filter(lambda x: x.vol_type == self._vol_type, volume_data)
 
-        if not self._volume == 'all':
-            volumes_choice = self._volume.split(',')
-            volumes_choice = [v.strip() for v in volumes_choice]
-            volume_data = filter(lambda x: any([v in x.name for v in volumes_choice]), volume_data)
+        if (choice := self.__resolve_volume(self._volume)) is not None:
+            volume_data = filter(lambda x: x.index in choice, volume_data)
 
-        volume_data = filter(lambda x: self._max_size is None or x.size <= self._max_size, volume_data)
+        if self._max_size is not None:
+            volume_data = filter(lambda x: x.size <= self._max_size, volume_data)
 
         if self._limit is not None:
             return list(volume_data)[:self._limit]
@@ -46,3 +45,19 @@ class ArgsFilterPicker(Picker):
             return None
         else:
             raise ValueError(f"Unknown volume type: {vol_type}")
+        
+    def __resolve_volume(self, volume: str) -> Optional[list[int]]:
+        if volume == 'all':
+            return None
+        
+        if '-' in volume and volume.count('-') == 1 and ',' not in volume:
+            start, end = volume.split('-')
+            start = int(start.strip())
+            end = int(end.strip())
+            return list(range(start, end + 1))
+        
+        volumes_choice = volume.split(',')
+        volumes_choice = [v.strip() for v in volumes_choice]
+        volumes_choice = [int(v) for v in volumes_choice if v.isdigit() and int(v) > 0]
+
+        return volumes_choice
