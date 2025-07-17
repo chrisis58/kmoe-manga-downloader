@@ -72,7 +72,8 @@ class Downloader(SessionContext):
     def _download_with_multiple_workers(self, book: BookInfo, volumes: list[VolInfo], retry: int):
         from concurrent.futures import ThreadPoolExecutor
 
-        with ThreadPoolExecutor(max_workers=self._num_workers) as executor:
+        max_workers = min(self._num_workers, len(volumes))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [
                 executor.submit(self._download, book, volume, retry)
                 for volume in volumes
