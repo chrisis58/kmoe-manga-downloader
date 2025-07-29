@@ -5,23 +5,24 @@ from typing import Callable, Optional
 from .registry import Registry
 from .structure import VolInfo, BookInfo, Config
 from .utils import get_singleton_session, construct_callback
-from .defaults import Configurer
+from .defaults import Configurer as InnerConfigurer
 
 class SessionContext:
 
     def __init__(self, *args, **kwargs):
+        super().__init__()
         self._session = get_singleton_session()
 
 class ConfigContext:
 
     def __init__(self, *args, **kwargs):
-        self._configurer = Configurer()
+        super().__init__()
+        self._configurer = InnerConfigurer()
 
 class Authenticator(SessionContext, ConfigContext):
 
     def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
-        SessionContext.__init__(self, *args, **kwargs)
-        ConfigContext.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         if proxy:
             self._session.proxies.update({
