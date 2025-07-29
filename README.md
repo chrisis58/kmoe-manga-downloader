@@ -103,7 +103,7 @@ python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/5007
 
 ### 5. 持久化配置
 
-重复设置下载的代理服务器、目标路径等参数，可能会降低脚本的使用效率。所以在新版本中提供了通用配置的持久化命令：
+重复设置下载的代理服务器、目标路径等参数，可能会降低脚本的使用效率。所以脚本也提供了通用配置的持久化命令：
 
 ```bash
 python kmdr.py config --set proxy=http://localhost:7890 dest=/path/to/destination
