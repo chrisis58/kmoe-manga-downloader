@@ -36,8 +36,9 @@ class TestKmdrConfigOption(unittest.TestCase):
             )
         )
 
-        self.assertIsNone(configurer.config.option), \
-            "No options should be set due to invalid values"
+        self.assertIsNone(configurer.config.option,
+            "No options should be set due to invalid values")
+            
 
     def test_set_options(self):
         os.makedirs(
