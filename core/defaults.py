@@ -18,17 +18,16 @@ def argument_parser():
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
     download_parser = subparsers.add_parser('download', help='Download books')
-    download_parser.add_argument('-d', '--dest', type=str, help='Download destination', required=True)
-    download_parser.add_argument('--book-url', type=str, help='Book page\'s url', required=False)
-    download_parser.add_argument('-v','--volume', type=str, help='Volume(s), split using commas, `all` for all', required=False)
-    download_parser.add_argument('--vol-type', type=str, help='Volume type, `vol` for volume, `extra` for extras, `seri` for serialized', required=False, choices=['vol', 'extra', 'seri', 'all'], default='vol')
+    download_parser.add_argument('-d', '--dest', type=str, help='Download destination, default to current directory', required=False)
+    download_parser.add_argument('-l', '--book-url', type=str, help='Book page\'s url', required=False)
+    download_parser.add_argument('-v', '--volume', type=str, help='Volume(s), split using commas, `all` for all', required=False)
+    download_parser.add_argument('-t', '--vol-type', type=str, help='Volume type, `vol` for volume, `extra` for extras, `seri` for serialized', required=False, choices=['vol', 'extra', 'seri', 'all'], default='vol')
     download_parser.add_argument('--max-size', type=float, help='Max size of volume in MB', required=False)
     download_parser.add_argument('--limit', type=int, help='Limit number of volumes to download', required=False)
     download_parser.add_argument('--num-workers', type=int, help='Number of workers to use for downloading', required=False)
-    download_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files', required=False)
     download_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
     download_parser.add_argument('-r', '--retry', type=int, help='Retry times', required=False)
-    download_parser.add_argument('--callback', '-c', type=str, help='Callback script, use as `echo {v.name} downloaded!`', required=False)
+    download_parser.add_argument('-c', '--callback', type=str, help='Callback script, use as `echo {v.name} downloaded!`', required=False)
 
     login_parser = subparsers.add_parser('login', help='Login to kox.moe')
     login_parser.add_argument('-u', '--username', type=str, help='Your username', required=True)
@@ -36,6 +35,12 @@ def argument_parser():
 
     status_parser = subparsers.add_parser('status', help='Show status of account and script')
     status_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
+
+    config_parser = subparsers.add_parser('config', help='Configure the downloader')
+    config_parser.add_argument('-l', '--list-option', action='store_true', help='List all configurations')
+    config_parser.add_argument('-s', '--set', nargs='+', type=str, help='Configuration options to set, e.g. num_workers=3 dest=.')
+    config_parser.add_argument('-c', '--clear', type=str, help='Clear configurations, `all`, `cookie`, `option` are available')
+    config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='Delete a specific configuration option')
 
     return parser
 
@@ -75,3 +80,43 @@ class Configurer:
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
             json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)
+    
+    def clear(self, key: str):
+        if key == 'all':
+            self._config = Config()
+        elif key == 'cookie':
+            self._config.cookie = None
+        elif key == 'option':
+            self._config.option = None
+        else:
+            raise ValueError(f"Unsupported clear option: {key}")
+
+        self.update()
+    
+    def set_option(self, key: str, value: any):
+        if self._config.option is None:
+            self._config.option = {}
+
+        self._config.option[key] = value
+        self.update()
+    
+    def unset_option(self, key: str):
+        if self._config.option is None or key not in self._config.option:
+            return
+        
+        del self._config.option[key]
+        self.update()
+
+def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace:
+    if option is None:
+        return dest
+
+    for key, value in option.items():
+        if hasattr(dest, key) and getattr(dest, key) is None:
+            setattr(dest, key, value)
+    return dest
+
+def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
+    assert isinstance(dest, argparse.Namespace), "dest must be an argparse.Namespace instance"
+    option = Configurer().config.option
+    return __combine_args(dest, option)

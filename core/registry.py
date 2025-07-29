@@ -2,13 +2,16 @@ from typing import Optional, Callable, TypeVar, Generic
 from dataclasses import dataclass, field
 from argparse import Namespace
 
+from .defaults import combine_args
+
 T = TypeVar('T')
 
 class Registry(Generic[T]):
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, combine_args: bool = False):
         self._name = name
         self._modules: list['Predication'] = list()
+        self._combine_args = combine_args
 
     def register(self,
             hasattrs: frozenset[str] = frozenset(),
@@ -69,8 +72,13 @@ class Registry(Generic[T]):
             return cls
         
         return wrapper
-        
+    
     def get(self, condition: Namespace) -> T:
+        if self._combine_args:
+            condition = combine_args(condition)
+        return self._get(condition)
+    
+    def _get(self, condition: Namespace) -> T:
         if not self._modules or len(self._modules) == 0:
             raise ValueError(f'{self._name} has no registered modules')
 
