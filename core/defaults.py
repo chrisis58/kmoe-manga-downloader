@@ -40,6 +40,7 @@ def argument_parser():
     config_parser.add_argument('-l', '--list-option', action='store_true', help='List all configurations')
     config_parser.add_argument('-s', '--set', nargs='+', type=str, help='Configuration options to set, e.g. num_workers=3 dest=.')
     config_parser.add_argument('-c', '--clear', type=str, help='Clear configurations, `all`, `cookie`, `option` are available')
+    config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='Delete a specific configuration option')
 
     return parser
 
@@ -97,6 +98,13 @@ class Configurer:
             self._config.option = {}
 
         self._config.option[key] = value
+        self.update()
+    
+    def unset_option(self, key: str):
+        if self._config.option is None or key not in self._config.option:
+            return
+        
+        del self._config.option[key]
         self.update()
 
 def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace:
