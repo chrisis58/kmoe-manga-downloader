@@ -17,8 +17,8 @@
 在使用本脚本之前，请确保你已经安装了项目所需要的依赖：
 
 ```bash
-git clone https://github.com/chrisis58/kmdr.git
-cd kmdr
+git https://github.com/chrisis58/kmoe-manga-downlaoder.git
+cd kmoe-manga-downlaoder
 
 pip install -r requirements.txt
 ```
@@ -64,7 +64,7 @@ python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/5007
 - `--vol-type`: 卷类型，`vol`: 单行本（默认）；`extra`: 番外；`seri`: 连载话；`all`: 全部
 - `-p`, `--proxy`: 代理服务器地址
 - `-r`, `--retry`: 下载失败时的重试次数
-- `--callback`, `-c`: 下载完成后的回调脚本（使用方式详见 [4. 回调函数](# 4. 回调函数)）
+- `-c`, `--callback`: 下载完成后的回调脚本（使用方式详见 [4. 回调函数](https://github.com/chrisis58/kmoe-manga-downlaoder?tab=readme-ov-file#4-%E5%9B%9E%E8%B0%83%E5%87%BD%E6%95%B0)）
 
 > 完整的参数说明可以从 `help` 指令中获取。
 
@@ -81,7 +81,8 @@ python kmdr.py status
 你可以设置一个回调函数，下载完成后执行。回调可以是任何你想要的命令：
 
 ```bash
-python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1-3 -c "echo '{b.name} {v.name} downloaded!'"
+python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1-3 \
+	--callback "echo '{b.name} {v.name} downloaded!' >> ~/kmdr.log"
 ```
 
 > 字符串模板会直接朴素地替换，卷名或者书名可能会包含空格，推荐使用引号包含避免出现错误。
@@ -96,4 +97,4 @@ python kmdr.py download -d path/to/destination --book-url https://kox.moe/c/5007
 | b.name   | 对应漫画的名字 |
 | b.author | 对应漫画的作者 |
 
-> 完成的可用参数请参考 [structure.py](https://github.com/chrisis58/kmdr/blob/main/core/structure.py) 中的定义。
+> 完整的可用参数请参考 [structure.py](https://github.com/chrisis58/kmdr/blob/main/core/structure.py#L11) 中关于 `VolInfo` 的定义。
