@@ -19,7 +19,7 @@
 
 ```bash
 git clone https://github.com/chrisis58/kmoe-manga-downloader.git
-cd kmoe-manga-downlaoder
+cd kmoe-manga-downloader
 
 pip install -r requirements.txt
 ```
