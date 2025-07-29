@@ -75,3 +75,14 @@ class Configurer:
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
             json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)
+
+def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace:
+    for key, value in option.items():
+        if hasattr(dest, key) and getattr(dest, key) is None:
+            setattr(dest, key, value)
+    return dest
+
+def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
+    assert isinstance(dest, argparse.Namespace), "dest must be an argparse.Namespace instance"
+    download_option = Configurer().config.download_option
+    return __combine_args(dest, download_option)

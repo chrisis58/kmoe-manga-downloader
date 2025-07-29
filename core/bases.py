@@ -84,4 +84,4 @@ class Downloader(SessionContext):
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
 PICKERS = Registry[Picker]('Picker')
-DOWNLOADER = Registry[Downloader]('Downloader')
+DOWNLOADER = Registry[Downloader]('Downloader', True)

@@ -52,13 +52,17 @@ class BookInfo:
     status: str
     last_update: str
 
-
 @dataclass
 class Config:
 
-    retry_times: Optional[int] = None
-    dest: Optional[str] = None
-    callback: Optional[str] = None
+    download_option: Optional[dict] = None
+    """
+    用来存储下载相关的配置选项
+    - retry_times: 重试次数
+    - dest: 下载文件保存路径
+    - callback: 下载完成后的回调函数
+    - proxy: 下载时使用的代理
+    - num_workers: 下载时使用的线程数
+    """
 
     cookie: Optional[dict[str, str]] = None
-    
