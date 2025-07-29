@@ -18,7 +18,7 @@
 在使用本脚本之前，请确保你已经安装了项目所需要的依赖：
 
 ```bash
-git https://github.com/chrisis58/kmoe-manga-downlaoder.git
+git clone https://github.com/chrisis58/kmoe-manga-downloader.git
 cd kmoe-manga-downlaoder
 
 pip install -r requirements.txt
@@ -121,9 +121,8 @@ python kmdr.py config -s num_workers=5 "callback=echo '{b.name} {v.name} downloa
 - `-c`, `--clear`: 清除配置，`all`: 清除所有；`cookie`: 退出登录；`option`: 清除持久化的配置
 - `-d`, `--delete`, `--unset`: 清除单项配置
 
-> 当前仅支持部分下载参数的持久化：
+> 当前仅支持部分下载参数的持久化：`num_workers`, `dest`, `retry`, `callback`, `proxy`
 >
-> - `num_workers`, `dest`, `retry`, `callback`, `proxy`
 
 ---
 
