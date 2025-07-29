@@ -37,9 +37,17 @@ def validate_dest(value: str) -> Optional[str]:
     if not value:
         print("Destination cannot be empty.")
         return None
-    if not os.path.isdir(value):
-        print(f"Destination must be a directory, got: {value}")
+    if not os.path.exists(value) or not os.path.isdir(value):
+        print(f"Destination directory does not exist or is not a directory: {value}")
         return None
+
+    if not os.access(value, os.W_OK):
+        print(f"Destination directory is not writable: {value}")
+        return None
+
+    if not os.path.isabs(value):
+        print(f"Destination better be an absolute path: {value}")
+
     return value
 
 @_register_validator
@@ -57,5 +65,12 @@ def validate_retry(value: str) -> Optional[int]:
 def validate_callback(value: str) -> Optional[str]:
     if not value:
         print("Callback cannot be empty.")
+        return None
+    return value
+
+@_register_validator
+def validate_proxy(value: str) -> Optional[str]:
+    if not value:
+        print("Proxy cannot be empty.")
         return None
     return value
