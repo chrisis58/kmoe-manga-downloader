@@ -24,6 +24,9 @@ def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPL
 
         DOWNLOADER.get(args).download(book, volumes)
 
+    elif args.command == 'config':
+        CONFIGURER.get(args).operate()
+
     else:
         fallback()
 

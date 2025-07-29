@@ -55,7 +55,7 @@ class BookInfo:
 @dataclass
 class Config:
 
-    download_option: Optional[dict] = None
+    option: Optional[dict] = None
     """
     用来存储下载相关的配置选项
     - retry_times: 重试次数

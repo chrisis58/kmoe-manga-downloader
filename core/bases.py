@@ -19,6 +19,13 @@ class ConfigContext:
         super().__init__()
         self._configurer = InnerConfigurer()
 
+class Configurer(ConfigContext):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def operate(self) -> None: ...
+
 class Authenticator(SessionContext, ConfigContext):
 
     def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
@@ -86,3 +93,4 @@ AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
 PICKERS = Registry[Picker]('Picker')
 DOWNLOADER = Registry[Downloader]('Downloader', True)
+CONFIGURER = Registry[Configurer]('Configurer')
