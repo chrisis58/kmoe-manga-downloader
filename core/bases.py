@@ -56,7 +56,7 @@ class Picker(SessionContext):
 class Downloader(SessionContext):
 
     def __init__(self, 
-            dest: str,
+            dest: str = '.',
             callback: Optional[str] = None,
             retry: int = 3,
             num_workers: int = 1,
