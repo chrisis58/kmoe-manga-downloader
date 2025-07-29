@@ -14,7 +14,11 @@ class TestKmdrConfigOption(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        configurer.clear('all')
+        configurer.clear('option')
+
+    @classmethod
+    def tearDownClass(cls):
+        configurer.clear('option')
 
     def tearDown(self):
         configurer.clear('option')
