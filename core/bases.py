@@ -69,6 +69,9 @@ class Downloader(SessionContext):
         self._num_workers: int = num_workers
 
     def download(self, book: BookInfo, volumes: list[VolInfo]):
+        if volumes is None or not volumes:
+            raise ValueError("No volumes to download")
+
         if self._num_workers <= 1:
             for volume in volumes:
                 self._download(book, volume, self._retry)
