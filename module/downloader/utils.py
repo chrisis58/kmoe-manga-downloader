@@ -60,7 +60,7 @@ def download_file(
                 if callback:
                     callback()
     except Exception as e:
-        tqdm.write(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
+        tqdm.write(f"\n{type(e).__name__} occurred while downloading {filename}. ", end='')
 
         if isinstance(e, HTTPError):
             e.request.headers['Cookie'] = '***MASKED***'
