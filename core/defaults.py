@@ -71,7 +71,13 @@ class Configurer:
             with open(os.path.join(os.path.expanduser("~"), self.__filename), 'r') as f:
                 config = json.load(f)
 
-            self._config = Config(**config)
+            self._config = Config()
+            option = config.get('option', None)
+            if option is not None and isinstance(option, dict):
+                self._config.option = option
+            cookie = config.get('cookie', None)
+            if cookie is not None and isinstance(cookie, dict):
+                self._config.cookie = cookie
 
     @property
     def config(self) -> 'Config':
