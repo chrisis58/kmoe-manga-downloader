@@ -3,6 +3,7 @@ import os
 import time
 
 from requests import Session, HTTPError
+from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 import re
 
@@ -37,13 +38,14 @@ def download_file(
     
     if resume_from:
         headers['Range'] = f'bytes={resume_from}-'
+
+    block_size = 8192
         
     try:
         with session.get(url = url, stream=True, headers=headers) as r:
             r.raise_for_status()
             
             total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
-            block_size = 8192
             
             with open(tmp_file_path, 'ab') as f:
                 with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f'{filename}', initial=resume_from) as progress_bar:
@@ -64,6 +66,9 @@ def download_file(
             e.request.headers['Cookie'] = '***MASKED***'
             tqdm.write(f"Request Headers: {e.request.headers}")
             tqdm.write(f"Response Headers: {e.response.headers}")
+
+        if isinstance(e, ChunkedEncodingError):
+            block_size = max(block_size // 4 * 3, 2048)
 
         if retry_times > 0:
             # 重试下载
