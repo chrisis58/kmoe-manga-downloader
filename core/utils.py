@@ -52,3 +52,17 @@ def construct_callback(callback: Optional[str]) -> Optional[Callable]:
         return subprocess.run(formatted_callback, shell=True, check=True).returncode
 
     return _callback
+
+def no_proxy(func):
+    session = get_singleton_session()
+
+    cached_proxies = session.proxies.copy()
+    session.proxies.clear()
+
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        finally:
+            session.proxies = cached_proxies
+
+    return wrapper

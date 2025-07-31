@@ -20,7 +20,7 @@ class LoginAuthenticator(Authenticator):
 
         self._password = password
 
-    def authenticate(self) -> bool:
+    def _authenticate(self) -> bool:
         
         response = self._session.post(
             url = 'https://kox.moe/login_do.php', 

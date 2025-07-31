@@ -9,8 +9,8 @@ except ImportError:
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=1, *args, **kwargs):
-        super().__init__(dest, callback, retry, num_workers, *args, **kwargs)
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=1, proxy=None, *args, **kwargs):
+        super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
 
         if cloudscraper:
             self._scraper = cloudscraper.create_scraper()
