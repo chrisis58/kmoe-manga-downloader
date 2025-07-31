@@ -76,7 +76,7 @@ def download_file(
             time.sleep(3) # 等待3秒后重试，避免触发限流
             download_file(session, url, dest_path, filename, retry_times - 1, headers, callback)
         else:
-            tqdm.write(f"\nMeet max retry times, download failed")
+            tqdm.write(f"Meet max retry times, download failed.")
             raise e
 
 def safe_filename(name: str) -> str:
