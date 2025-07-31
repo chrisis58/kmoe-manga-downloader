@@ -26,7 +26,7 @@ def download_file(
         os.makedirs(dest_path, exist_ok=True)
         
     if os.path.exists(file_path):
-        print(f"\n{filename} already exists")
+        tqdm.write(f"\n{filename} already exists")
         return
 
     resume_from = 0
@@ -58,20 +58,20 @@ def download_file(
                 if callback:
                     callback()
     except Exception as e:
-        print(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
+        tqdm.write(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
 
         if isinstance(e, HTTPError):
             e.request.headers['Cookie'] = '***MASKED***'
-            print(f"Request Headers: {e.request.headers}")
-            print(f"Response Headers: {e.response.headers}")
+            tqdm.write(f"Request Headers: {e.request.headers}")
+            tqdm.write(f"Response Headers: {e.response.headers}")
 
         if retry_times > 0:
             # 重试下载
-            print(f"Retry download {filename} after 3 seconds...")
+            tqdm.write(f"Retry download {filename} after 3 seconds...")
             time.sleep(3) # 等待3秒后重试，避免触发限流
             download_file(session, url, dest_path, filename, retry_times - 1, headers, callback)
         else:
-            print(f"\nMeet max retry times, download failed")
+            tqdm.write(f"\nMeet max retry times, download {filename} failed")
             raise e
 
 def safe_filename(name: str) -> str:
