@@ -11,7 +11,7 @@ _session_instance: Optional[Session] = None
 _session_lock = threading.Lock()
 
 HEADERS = {
-    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmdr)'
+    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
 def get_singleton_session() -> Session:
