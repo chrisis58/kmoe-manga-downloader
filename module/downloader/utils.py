@@ -15,6 +15,7 @@ def download_file(
             retry_times: int = 0, 
             headers: Optional[dict] = None, 
             callback: Optional[Callable] = None,
+            block_size: int = 8192
     ):
     if headers is None:
         headers = {}
@@ -39,8 +40,6 @@ def download_file(
     if resume_from:
         headers['Range'] = f'bytes={resume_from}-'
 
-    block_size = 8192
-        
     try:
         with session.get(url = url, stream=True, headers=headers) as r:
             r.raise_for_status()
@@ -60,7 +59,7 @@ def download_file(
                 if callback:
                     callback()
     except Exception as e:
-        tqdm.write(f"{type(e).__name__} occurred while downloading {filename}. ", end='')
+        prefix = f"{type(e).__name__} occurred while downloading {filename}. "
 
         if isinstance(e, HTTPError):
             e.request.headers['Cookie'] = '***MASKED***'
@@ -72,11 +71,11 @@ def download_file(
 
         if retry_times > 0:
             # 重试下载
-            tqdm.write(f"Retry after 3 seconds...")
+            tqdm.write(f"{prefix} Retry after 3 seconds...")
             time.sleep(3) # 等待3秒后重试，避免触发限流
-            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback)
+            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback, block_size)
         else:
-            tqdm.write(f"Meet max retry times, download failed.")
+            tqdm.write(f"{prefix} Meet max retry times, download failed.")
             raise e
 
 def safe_filename(name: str) -> str:
