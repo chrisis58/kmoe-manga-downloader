@@ -31,7 +31,7 @@ def download_file(
         os.makedirs(dest_path, exist_ok=True)
         
     if os.path.exists(file_path):
-        tqdm.write(f"{filename} already exists")
+        tqdm.write(f"{filename} already exists.")
         return
 
     resume_from = 0
