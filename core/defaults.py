@@ -89,11 +89,25 @@ class Configurer:
             return None
         return self._config.cookie
     
+    @cookie.setter
+    def cookie(self, value: Optional[dict[str, str]]):
+        if self._config is None:
+            self._config = Config()
+        self._config.cookie = value
+        self.update()
+    
     @property
     def option(self) -> Optional[dict]:
         if self._config is None:
             return None
         return self._config.option
+    
+    @option.setter
+    def option(self, value: Optional[dict[str, any]]):
+        if self._config is None:
+            self._config = Config()
+        self._config.option = value
+        self.update()
     
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
