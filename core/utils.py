@@ -62,13 +62,13 @@ def construct_callback(callback: Optional[str]) -> Optional[Callable]:
     return _callback
 
 def no_proxy(func):
-    session = get_singleton_session()
-
-    cached_proxies = session.proxies.copy()
-    session.proxies.clear()
-
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        session = get_singleton_session()
+
+        cached_proxies = session.proxies.copy()
+        session.proxies.clear()
+
         try:
             return func(*args, **kwargs)
         finally:
