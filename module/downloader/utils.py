@@ -69,14 +69,15 @@ def download_file(
             tqdm.write(f"Request Headers: {e.request.headers}")
             tqdm.write(f"Response Headers: {e.response.headers}")
 
+        new_block_size = block_size
         if isinstance(e, ChunkedEncodingError):
-            block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
+            new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
 
         if retry_times > 0:
             # 重试下载
             tqdm.write(f"{prefix} Retry after 3 seconds...")
             time.sleep(3) # 等待3秒后重试，避免触发限流
-            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback, block_size)
+            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback, new_block_size)
         else:
             tqdm.write(f"{prefix} Meet max retry times, download failed.")
             raise e
