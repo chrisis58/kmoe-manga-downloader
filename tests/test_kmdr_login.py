@@ -3,7 +3,7 @@ import os
 import unittest
 from argparse import Namespace
 
-from core import clear_session_context
+from core.utils import clear_session_context
 from kmdr import main as kmdr_main
 
 KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
