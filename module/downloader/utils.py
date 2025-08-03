@@ -7,6 +7,9 @@ from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 import re
 
+BLOCK_SIZE_REDUCTION_FACTOR = 0.75
+MIN_BLOCK_SIZE = 2048
+
 def download_file(
             session: Session, 
             url: str,
@@ -67,7 +70,7 @@ def download_file(
             tqdm.write(f"Response Headers: {e.response.headers}")
 
         if isinstance(e, ChunkedEncodingError):
-            block_size = max(block_size // 4 * 3, 2048)
+            block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
 
         if retry_times > 0:
             # 重试下载
