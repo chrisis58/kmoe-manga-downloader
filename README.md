@@ -122,7 +122,12 @@ python kmdr.py config -s num_workers=5 "callback=echo '{b.name} {v.name} downloa
 - `-d`, `--delete`, `--unset`: 清除单项配置
 
 > 当前仅支持部分下载参数的持久化：`num_workers`, `dest`, `retry`, `callback`, `proxy`
->
+
+## ⚠️ 声明
+
+- 本工具仅作学习、研究、交流使用，使用本工具的用户应自行承担风险
+- 作者不对使用本工具导致的任何损失、法律纠纷或其他后果负责
+- 作者不对用户使用本工具的行为负责，包括但不限于用户违反法律或任何第三方权益的行为
 
 ---
 
