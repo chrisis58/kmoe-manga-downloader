@@ -131,6 +131,9 @@ python kmdr.py config -s num_workers=5 "callback=echo '{b.name} {v.name} downloa
 
 ---
 
-💬任何使用中遇到的问题、希望添加的功能，都欢迎提交 issue 或开 discussion 交流！
+<div align=center> 
+💬任何使用中遇到的问题、希望添加的功能，都欢迎提交 issue 或开 discussion 交流！<br />
+⭐ 如果这个项目对你有帮助，请给它一个星标！<br /> <br /> 
+<img src="https://counter.seku.su/cmoe?name=kmdr&theme=mbs" />
+</div>
 
-⭐ 如果这个项目对你有帮助，请给它一个星标！

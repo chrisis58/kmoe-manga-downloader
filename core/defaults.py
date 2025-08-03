@@ -83,6 +83,18 @@ class Configurer:
     def config(self) -> 'Config':
         return self._config
     
+    @property
+    def cookie(self) -> Optional[dict]:
+        if self._config is None:
+            return None
+        return self._config.cookie
+    
+    @property
+    def option(self) -> Optional[dict]:
+        if self._config is None:
+            return None
+        return self._config.option
+    
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
             json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)

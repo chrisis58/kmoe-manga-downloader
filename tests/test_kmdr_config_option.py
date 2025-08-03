@@ -36,7 +36,7 @@ class TestKmdrConfigOption(unittest.TestCase):
             )
         )
 
-        self.assertIsNone(configurer.config.option,
+        self.assertIsNone(configurer.option,
             "No options should be set due to invalid values")
             
 
@@ -58,7 +58,9 @@ class TestKmdrConfigOption(unittest.TestCase):
             )
         )
 
-        self.assertEqual(configurer.config.option['dest'], os.path.join(BASE_DIR, self.test_set_options.__name__))
-        self.assertEqual(configurer.config.option['num_workers'], 4)
-        self.assertEqual(configurer.config.option['retry'], 5)
-        self.assertEqual(configurer.config.option['callback'], "echo '{v.name}' downloaded!")
+        self.assertEqual(configurer.option['dest'], os.path.join(BASE_DIR, self.test_set_options.__name__))
+        self.assertEqual(configurer.option['num_workers'], 4)
+        self.assertEqual(configurer.option['retry'], 5)
+        self.assertEqual(configurer.option['callback'], "echo '{v.name}' downloaded!")
+
+        os.rmdir(os.path.join(BASE_DIR, self.test_set_options.__name__))
