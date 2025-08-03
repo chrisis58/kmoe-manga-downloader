@@ -3,8 +3,12 @@ import os
 import time
 
 from requests import Session, HTTPError
+from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 import re
+
+BLOCK_SIZE_REDUCTION_FACTOR = 0.75
+MIN_BLOCK_SIZE = 2048
 
 def download_file(
             session: Session, 
@@ -14,6 +18,7 @@ def download_file(
             retry_times: int = 0, 
             headers: Optional[dict] = None, 
             callback: Optional[Callable] = None,
+            block_size: int = 8192
     ):
     if headers is None:
         headers = {}
@@ -26,7 +31,7 @@ def download_file(
         os.makedirs(dest_path, exist_ok=True)
         
     if os.path.exists(file_path):
-        print(f"\n{filename} already exists")
+        tqdm.write(f"{filename} already exists.")
         return
 
     resume_from = 0
@@ -37,13 +42,12 @@ def download_file(
     
     if resume_from:
         headers['Range'] = f'bytes={resume_from}-'
-        
+
     try:
         with session.get(url = url, stream=True, headers=headers) as r:
             r.raise_for_status()
             
             total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
-            block_size = 8192
             
             with open(tmp_file_path, 'ab') as f:
                 with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f'{filename}', initial=resume_from) as progress_bar:
@@ -58,20 +62,24 @@ def download_file(
                 if callback:
                     callback()
     except Exception as e:
-        print(f"\n{type(e).__name__}: {e} occurred while downloading {filename}")
+        prefix = f"{type(e).__name__} occurred while downloading {filename}. "
 
         if isinstance(e, HTTPError):
             e.request.headers['Cookie'] = '***MASKED***'
-            print(f"Request Headers: {e.request.headers}")
-            print(f"Response Headers: {e.response.headers}")
+            tqdm.write(f"Request Headers: {e.request.headers}")
+            tqdm.write(f"Response Headers: {e.response.headers}")
+
+        new_block_size = block_size
+        if isinstance(e, ChunkedEncodingError):
+            new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
 
         if retry_times > 0:
             # 重试下载
-            print(f"Retry download {filename} after 3 seconds...")
+            tqdm.write(f"{prefix} Retry after 3 seconds...")
             time.sleep(3) # 等待3秒后重试，避免触发限流
-            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback)
+            download_file(session, url, dest_path, filename, retry_times - 1, headers, callback, new_block_size)
         else:
-            print(f"\nMeet max retry times, download failed")
+            tqdm.write(f"{prefix} Meet max retry times, download failed.")
             raise e
 
 def safe_filename(name: str) -> str:

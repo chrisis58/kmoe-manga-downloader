@@ -8,8 +8,8 @@ from .utils import download_file, safe_filename
     }
 )
 class DirectDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=1, *args, **kwargs):
-        super().__init__(dest, callback, retry, num_workers, *args, **kwargs)
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=1, proxy=None, *args, **kwargs):
+        super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
 
     def _download(self, book: BookInfo, volume: VolInfo, retry: int):
         sub_dir = safe_filename(book.name)

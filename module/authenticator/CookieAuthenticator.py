@@ -14,7 +14,7 @@ class CookieAuthenticator(Authenticator):
         else:
             self._show_quota = False
 
-    def authenticate(self) -> bool:
+    def _authenticate(self) -> bool:
         cookie = self._configurer.config.cookie
         
         if not cookie:

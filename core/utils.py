@@ -1,3 +1,4 @@
+import functools
 from typing import Optional, Callable
 
 from requests import Session
@@ -11,7 +12,7 @@ _session_instance: Optional[Session] = None
 _session_lock = threading.Lock()
 
 HEADERS = {
-    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmdr)'
+    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
 def get_singleton_session() -> Session:
@@ -24,6 +25,13 @@ def get_singleton_session() -> Session:
                 _session_instance.headers.update(HEADERS)
 
     return _session_instance
+
+def clear_session_context():
+    session = get_singleton_session()
+    session.proxies.clear()
+    session.headers.clear()
+    session.cookies.clear()
+    session.headers.update(HEADERS)
 
 def singleton(cls):
     """
@@ -52,3 +60,18 @@ def construct_callback(callback: Optional[str]) -> Optional[Callable]:
         return subprocess.run(formatted_callback, shell=True, check=True).returncode
 
     return _callback
+
+def no_proxy(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        session = get_singleton_session()
+
+        cached_proxies = session.proxies.copy()
+        session.proxies.clear()
+
+        try:
+            return func(*args, **kwargs)
+        finally:
+            session.proxies = cached_proxies
+
+    return wrapper
