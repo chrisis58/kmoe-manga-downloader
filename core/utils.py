@@ -25,6 +25,13 @@ def get_singleton_session() -> Session:
 
     return _session_instance
 
+def clear_session_context():
+    session = get_singleton_session()
+    session.proxies.clear()
+    session.headers.clear()
+    session.cookies.clear()
+    session.headers.update(HEADERS)
+
 def singleton(cls):
     """
     **非线程安全**的单例装饰器
