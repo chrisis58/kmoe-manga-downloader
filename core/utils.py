@@ -1,3 +1,4 @@
+import functools
 from typing import Optional, Callable
 
 from requests import Session
@@ -66,6 +67,7 @@ def no_proxy(func):
     cached_proxies = session.proxies.copy()
     session.proxies.clear()
 
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
