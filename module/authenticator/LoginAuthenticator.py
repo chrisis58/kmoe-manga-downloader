@@ -48,7 +48,7 @@ class LoginAuthenticator(Authenticator):
             raise RuntimeError("Authentication failed with code: " + code)
         
         if check_status(self._session, show_quota=self._show_quota):
-            self._configurer.config.cookie = self._session.cookies.get_dict()
+            self._configurer.cookie = self._session.cookies.get_dict()
             self._configurer.update()
             return True
         

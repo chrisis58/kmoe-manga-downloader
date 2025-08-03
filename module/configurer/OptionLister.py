@@ -10,10 +10,10 @@ class OptionLister(Configurer):
         super().__init__(*args, **kwargs)
 
     def operate(self) -> None:
-        if self._configurer.config is None or self._configurer.config.option is None:
+        if self._configurer.option is None:
             print("No configurations found.")
             return
 
         print("Current configurations:")
-        for key, value in self._configurer.config.option.items():
+        for key, value in self._configurer.option.items():
             print(f"\t{key} = {value}")
