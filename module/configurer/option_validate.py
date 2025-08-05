@@ -10,18 +10,16 @@ def validate(key: str, value: str) -> Optional[object]:
         print(f"Unsupported option: {key}. Supported options are: {', '.join(__OPTIONS_VALIDATOR.keys())}")
         return None
 
-def _register_validator(func):
-    global __OPTIONS_VALIDATOR
+def register_validator(arg_name: str):
 
-    func_name = func.__name__
+    def decorator(func):
+        global __OPTIONS_VALIDATOR
+        __OPTIONS_VALIDATOR[arg_name] = func
+        return func
+    
+    return decorator
 
-    assert func_name.startswith('validate_'), \
-        f"Validator function name must start with 'validate_', got '{func_name}'"
-
-    __OPTIONS_VALIDATOR[func.__name__[9:]] = func
-    return func
-
-@_register_validator
+@register_validator("num_workers")
 def validate_num_workers(value: str) -> Optional[int]:
     try:
         num_workers = int(value)
@@ -32,7 +30,7 @@ def validate_num_workers(value: str) -> Optional[int]:
         print(f"Invalid value for num_workers: {value}. {str(e)}")
         return None
 
-@_register_validator
+@register_validator("dest")
 def validate_dest(value: str) -> Optional[str]:
     if not value:
         print("Destination cannot be empty.")
@@ -50,7 +48,7 @@ def validate_dest(value: str) -> Optional[str]:
 
     return value
 
-@_register_validator
+@register_validator("retry")
 def validate_retry(value: str) -> Optional[int]:
     try:
         retry = int(value)
@@ -61,14 +59,14 @@ def validate_retry(value: str) -> Optional[int]:
         print(f"Invalid value for retry: {value}. {str(e)}")
         return None
 
-@_register_validator
+@register_validator("callback")
 def validate_callback(value: str) -> Optional[str]:
     if not value:
         print("Callback cannot be empty.")
         return None
     return value
 
-@_register_validator
+@register_validator("proxy")
 def validate_proxy(value: str) -> Optional[str]:
     if not value:
         print("Proxy cannot be empty.")
