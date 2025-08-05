@@ -11,6 +11,13 @@ def validate(key: str, value: str) -> Optional[object]:
         return None
 
 def register_validator(arg_name: str):
+    """
+    Register a validation function for a specific argument.
+
+    Usage:
+    >>> @register_validator("arg_name")
+    >>> def validate_arg(value: str) -> Optional[object]: ...
+    """
 
     def decorator(func):
         global __OPTIONS_VALIDATOR
