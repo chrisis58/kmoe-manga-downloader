@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from core import Lister, LISTERS, BookInfo, VolInfo
+from kmdr.core import Lister, LISTERS, BookInfo, VolInfo
 
 from .utils import extract_book_info_and_volumes
 

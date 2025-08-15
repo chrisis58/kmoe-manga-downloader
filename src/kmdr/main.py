@@ -1,8 +1,8 @@
 from typing import Callable
 from argparse import Namespace
 
-from core import *
-from module import *
+from kmdr.core import *
+from kmdr.module import *
 
 def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 

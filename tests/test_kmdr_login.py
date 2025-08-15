@@ -3,8 +3,8 @@ import os
 import unittest
 from argparse import Namespace
 
-from core.utils import clear_session_context
-from kmdr import main as kmdr_main
+from kmdr.core.utils import clear_session_context
+from kmdr.main import main as kmdr_main
 
 KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
 KMOE_PASSWORD = os.environ.get('KMOE_PASSWORD')

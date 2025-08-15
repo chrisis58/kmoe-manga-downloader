@@ -1,4 +1,4 @@
-from core import Configurer, CONFIGURER
+from kmdr.core import Configurer, CONFIGURER
 
 @CONFIGURER.register()
 class ConfigUnsetter(Configurer):

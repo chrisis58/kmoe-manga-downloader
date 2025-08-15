@@ -1,4 +1,4 @@
-from core import CONFIGURER, Configurer
+from kmdr.core import CONFIGURER, Configurer
 
 @CONFIGURER.register(
     hasvalues={

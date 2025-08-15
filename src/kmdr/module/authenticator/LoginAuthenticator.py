@@ -1,7 +1,7 @@
 from typing import Optional
 import re
 
-from core import Authenticator, AUTHENTICATOR
+from kmdr.core import Authenticator, AUTHENTICATOR
 
 from .utils import check_status
 

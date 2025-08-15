@@ -3,8 +3,8 @@ import json
 from typing import Optional
 import argparse
 
-from core.utils import singleton
-from core.structure import Config
+from .utils import singleton
+from .structure import Config
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None

@@ -1,4 +1,4 @@
-from core import Picker, PICKERS, VolInfo
+from kmdr.core import Picker, PICKERS, VolInfo
 
 from .utils import resolve_volume
 

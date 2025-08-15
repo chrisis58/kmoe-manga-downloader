@@ -1,4 +1,4 @@
-from core import Downloader, BookInfo, VolInfo, DOWNLOADER
+from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 
 from .utils import download_file, safe_filename
 
