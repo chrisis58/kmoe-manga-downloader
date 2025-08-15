@@ -2,7 +2,7 @@ from requests import Session
 from bs4 import BeautifulSoup
 import re
 
-from core import BookInfo, VolInfo, VolumeType
+from kmdr.core import BookInfo, VolInfo, VolumeType
 
 def extract_book_info_and_volumes(session: Session, url: str) -> tuple[BookInfo, list[VolInfo]]:
     """

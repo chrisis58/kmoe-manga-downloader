@@ -27,12 +27,11 @@ dependencies = [
 Homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
 Issues = "https://github.com/chrisis58/kmoe-manga-downloader/issues"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["core*", "module*"]
+[project.scripts]
+kmdr = "kmdr.main:entry_point"
 
 [tool.setuptools]
-py-modules = ["kmdr"]
+package-dir = {"" = "src"}
 
-[project.scripts]
-kmdr = "kmdr:entry_point"
+[tool.pytest.ini_options]
+pythonpath = "src"

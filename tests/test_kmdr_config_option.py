@@ -3,8 +3,8 @@ import os
 import unittest
 from argparse import Namespace
 
-from core.defaults import Configurer
-from kmdr import main as kmdr_main
+from kmdr.core.defaults import Configurer
+from kmdr.main import main as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 

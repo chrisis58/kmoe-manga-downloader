@@ -1,6 +1,6 @@
 import unittest
 
-from module.picker.utils import resolve_volume
+from kmdr.module.picker.utils import resolve_volume
 
 class TestVolumeResolve(unittest.TestCase):
 
