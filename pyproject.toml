@@ -27,8 +27,11 @@ dependencies = [
 Homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
 Issues = "https://github.com/chrisis58/kmoe-manga-downloader/issues"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "module*"]
+
 [tool.setuptools]
-packages = ["core", "module", "module.authenticator", "module.configurer", "module.downloader", "module.lister", "module.picker"]
 py-modules = ["kmdr"]
 
 [project.scripts]
