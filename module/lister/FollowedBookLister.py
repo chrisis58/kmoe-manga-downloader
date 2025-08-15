@@ -24,7 +24,7 @@ class FollowedBookLister(Lister):
             print(f"[{v + 1}]\t{books[v].last_update}\t{books[v].name}")
         
         choosed = input("choose a book to download: ")
-        while not choosed.isdigit() or int(choosed) >= len(books) or int(choosed) < 1:
+        while not choosed.isdigit() or int(choosed) > len(books) or int(choosed) < 1:
             choosed = input("choose a book to download: ")
         choosed = int(choosed) - 1
         book = books[choosed]
