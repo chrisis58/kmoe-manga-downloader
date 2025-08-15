@@ -10,7 +10,6 @@ def resolve_volume(volume: str) -> Optional[set[int]]:
         volumes = [resolve_volume(v) for v in volumes]
 
         ret = set()
-
         for v in volumes:
             if v is not None:
                 ret.update(v)
@@ -34,5 +33,5 @@ def resolve_volume(volume: str) -> Optional[set[int]]:
         assert start <= end, "Start of range must be less than or equal to end."
 
         return set(range(start, end + 1))
-    
+
     raise ValueError(f"Invalid volume format: {volume}. Use 'all', '1,2,3', '1-3', or '1-3,4-6'.")
