@@ -13,7 +13,7 @@ class DefaultVolPicker(Picker):
         for index, volume in enumerate(volumes):
             print(f"[{index + 1}]\t{volume.vol_type.value}\t{volume.pages}\t{volume.size:.2f}\t\t{volume.name}")
 
-        choosed = input("choose a volume to download (.e.g 'all', '1,2,3', '1-3,4-6'):\n")
+        choosed = input("choose a volume to download (e.g. 'all', '1,2,3', '1-3,4-6'):\n")
 
         if (chosen := resolve_volume(choosed)) is None:
             return volumes
