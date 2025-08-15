@@ -18,4 +18,4 @@ class DefaultVolPicker(Picker):
         if (chosen := resolve_volume(choosed)) is None:
             return volumes
 
-        return [volumes[i - 1] for i in chosen]
+        return [volumes[i - 1] for i in chosen if 1 <= i <= len(volumes)]
