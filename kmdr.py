@@ -30,9 +30,10 @@ def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPL
     else:
         fallback()
 
-if __name__ == '__main__':
-
+def entry_point():
     parser = argument_parser()
     args = parser.parse_args()
-
     main(args, lambda: parser.print_help())
+
+if __name__ == '__main__':
+    entry_point()
