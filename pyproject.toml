@@ -1,0 +1,38 @@
+[project]
+name = "kmoe-manga-downloader"
+version = "1.0.0"
+authors = [
+    { name="Chris Zheng", email="chrisis58@outlook.com" },
+]
+description = "A CLI-downloader for site @kox.moe."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file="LICENSE" }
+keywords = ["manga", "downloader", "kmoe"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "beautifulsoup4>=4.11.1,<5.0.0",
+    "requests>=2.32.3,<3.0.0",
+    "tqdm>=4.67.1,<5.0.0",
+    "cloudscraper>=1.2.71,<2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
+Issues = "https://github.com/chrisis58/kmoe-manga-downloader/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "module*"]
+
+[tool.setuptools]
+py-modules = ["kmdr"]
+
+[project.scripts]
+kmdr = "kmdr:entry_point"

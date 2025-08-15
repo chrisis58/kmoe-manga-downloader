@@ -1,5 +1,7 @@
 from core import Picker, PICKERS, VolInfo
 
+from .utils import resolve_volume
+
 @PICKERS.register()
 class DefaultVolPicker(Picker):
 
@@ -9,17 +11,11 @@ class DefaultVolPicker(Picker):
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]:
         print("\t卷类型\t页数\t大小(MB)\t卷名")
         for index, volume in enumerate(volumes):
-            print(f"[{index}]\t{volume.vol_type.value}\t{volume.pages}\t{volume.size:.2f}\t{volume.name}")
+            print(f"[{index + 1}]\t{volume.vol_type.value}\t{volume.pages}\t{volume.size:.2f}\t\t{volume.name}")
 
-        choosed = input("choose a volume to download (use comma to select multiple volumes or just 'all'):\n")
+        choosed = input("choose a volume to download (e.g. 'all', '1,2,3', '1-3,4-6'):\n")
 
-        if choosed.strip() == '':
-            return []
-        elif choosed.strip().lower() == 'all':
+        if (chosen := resolve_volume(choosed)) is None:
             return volumes
 
-        choosed = choosed.split(',')
-        choosed = [x.strip() for x in choosed]
-        choosed = [int(x) for x in choosed if x.isdigit() and 0 <= int(x) < len(volumes)]
-
-        return [volumes[i] for i in choosed] if choosed else []
+        return [volumes[i - 1] for i in chosen if 1 <= i <= len(volumes)]
