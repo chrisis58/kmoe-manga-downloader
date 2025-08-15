@@ -21,12 +21,12 @@ class FollowedBookLister(Lister):
 
         print("\t最后更新时间\t书名")
         for v in range(len(books)):
-            print(f"[{v}]\t{books[v].last_update}\t{books[v].name}")
+            print(f"[{v + 1}]\t{books[v].last_update}\t{books[v].name}")
         
         choosed = input("choose a book to download: ")
         while not choosed.isdigit() or int(choosed) >= len(books) or int(choosed) < 0:
             choosed = input("choose a book to download: ")
-        choosed = int(choosed)
+        choosed = int(choosed) - 1
         book = books[choosed]
 
         book_info, volumes = extract_book_info_and_volumes(self._session, book.url)
