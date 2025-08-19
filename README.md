@@ -1,6 +1,6 @@
 # Kmoe Manga Downloader
 
-[![PyPI Downloads](https://img.shields.io/pypi/dm/kmoe-manga-downloader)](https://pypi.org/project/kmoe-manga-downloader/) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
+[![PyPI Downloads](https://static.pepy.tech/badge/kmoe-manga-downloader)](https://pepy.tech/projects/kmoe-manga-downloader) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
 `kmdr (Kmoe Manga Downloader)` 是一个 Python 应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定书籍及其卷，并支持回调脚本执行。
 
@@ -14,7 +14,7 @@
 
 ## 🛠️安装应用
 
-您可以通过 PyPI 使用 `pip` 进行安装：
+你可以通过 PyPI 使用 `pip` 进行安装：
 
 ```bash
 pip install kmoe-manga-downloader
@@ -100,7 +100,7 @@ kmdr download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1
 
 ### 5. 持久化配置
 
-重复设置下载的代理服务器、目标路径等参数，可能会降低脚本的使用效率。所以脚本也提供了通用配置的持久化命令：
+重复设置下载的代理服务器、目标路径等参数，可能会降低应用的使用效率。所以应用也提供了通用配置的持久化命令：
 
 ```bash
 kmdr config --set proxy=http://localhost:7890 dest=/path/to/destination
@@ -129,7 +129,7 @@ kmdr config -s num_workers=5 "callback=echo '{b.name} {v.name} downloaded!' >> ~
 ---
 
 <div align=center> 
-💬任何使用中遇到的问题、希望添加的功能，都欢迎提交 issue 或开 discussion 交流！<br />
+💬任何使用中遇到的问题、希望添加的功能，都欢迎提交 issue 交流！<br />
 ⭐ 如果这个项目对你有帮助，请给它一个星标！<br /> <br /> 
 <img src="https://counter.seku.su/cmoe?name=kmdr&theme=mbs" />
 </div>
