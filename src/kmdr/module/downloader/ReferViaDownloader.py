@@ -35,6 +35,8 @@ class ReferViaDownloader(Downloader):
 
     @cached_by_kwargs
     def fetch_download_url(self, book: BookInfo, volume: VolInfo) -> str:
+        # TODO: 根据当前用户的会员状态调整 vip 参数的值。
+        #       但是网页端上会员仍然用的 vip=0，而且两者下载链接好像没有明显区别。
         response = self._session.get(f"https://kox.moe/getdownurl.php?b={book.id}&v={volume.id}&mobi=2&vip=0&json=1")
         response.raise_for_status()
         data = response.json()
