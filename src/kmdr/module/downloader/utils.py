@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 import os
 import time
+from functools import wraps
 
 from requests import Session, HTTPError
 from requests.exceptions import ChunkedEncodingError
@@ -89,6 +90,8 @@ def safe_filename(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|]', '_', name)
 
 
+function_cache = {}
+
 def cached_by_kwargs(func):
     """
     根据关键字参数缓存函数结果的装饰器。
@@ -101,18 +104,29 @@ def cached_by_kwargs(func):
     >>> result2 = add(3, 2, c=3)  # Uses cached result
     >>> assert result1 == result2  # Both results are the same
     """
-    cache = {}
 
+    global function_cache
+    if func not in function_cache:
+        function_cache[func] = {}
+
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if not kwargs:
             return func(*args, **kwargs)
-        
-        nonlocal cache
 
         key = frozenset(kwargs.items())
 
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
+        if key not in function_cache[func]:
+            function_cache[func][key] = func(*args, **kwargs)
+        return function_cache[func][key]
 
     return wrapper
+
+def clear_cache(func):
+    assert hasattr(func, "__wrapped__"), "Function is not wrapped"
+    global function_cache
+
+    wrapped = func.__wrapped__
+
+    if wrapped in function_cache:
+        function_cache[wrapped] = {}
