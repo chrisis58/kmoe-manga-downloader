@@ -1,27 +1,61 @@
 from typing import Optional
+from functools import wraps
 import os
 
 __OPTIONS_VALIDATOR = {}
 
 def validate(key: str, value: str) -> Optional[object]:
+    """
+    供外部调用的验证函数，根据键名调用相应的验证器。
+
+    :param key: 配置项的键名
+    :param value: 配置项的值
+    :return: 验证后的值或 None
+    """
     if key in __OPTIONS_VALIDATOR:
         return __OPTIONS_VALIDATOR[key](value)
     else:
         print(f"Unsupported option: {key}. Supported options are: {', '.join(__OPTIONS_VALIDATOR.keys())}")
         return None
 
-def _register_validator(func):
-    global __OPTIONS_VALIDATOR
+def check_key(key: str, exit_if_invalid: bool = True) -> None:
+    """
+    供外部调用的验证函数，用于检查配置项的键名是否有效。
+    如果键名无效，函数会打印错误信息并退出程序。
 
-    func_name = func.__name__
+    :param key: 配置项的键名
+    :param exit_if_invalid: 如果键名无效，是否退出程序
+    """
+    if key not in __OPTIONS_VALIDATOR:
+        print(f"Unknown option: {key}. Supported options are: {', '.join(__OPTIONS_VALIDATOR.keys())}")
+        if exit_if_invalid:
+            exit(1)
 
-    assert func_name.startswith('validate_'), \
-        f"Validator function name must start with 'validate_', got '{func_name}'"
+def register_validator(arg_name):
+    """
+    验证函数的注册装饰器，用于将验证函数注册到全局验证器字典中。
 
-    __OPTIONS_VALIDATOR[func.__name__[9:]] = func
-    return func
+    :param arg_name: 配置项的键名
+    """
 
-@_register_validator
+    def wrapper(func):
+        global __OPTIONS_VALIDATOR
+        __OPTIONS_VALIDATOR[arg_name] = func
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            return func(*args, **kwargs)
+    
+        return inner
+
+    return wrapper
+
+
+#############################################
+## 以下为各个配置项的验证函数。
+#############################################
+
+@register_validator('num_workers')
 def validate_num_workers(value: str) -> Optional[int]:
     try:
         num_workers = int(value)
@@ -32,7 +66,7 @@ def validate_num_workers(value: str) -> Optional[int]:
         print(f"Invalid value for num_workers: {value}. {str(e)}")
         return None
 
-@_register_validator
+@register_validator('dest')
 def validate_dest(value: str) -> Optional[str]:
     if not value:
         print("Destination cannot be empty.")
@@ -50,7 +84,7 @@ def validate_dest(value: str) -> Optional[str]:
 
     return value
 
-@_register_validator
+@register_validator('retry')
 def validate_retry(value: str) -> Optional[int]:
     try:
         retry = int(value)
@@ -61,14 +95,14 @@ def validate_retry(value: str) -> Optional[int]:
         print(f"Invalid value for retry: {value}. {str(e)}")
         return None
 
-@_register_validator
+@register_validator('callback')
 def validate_callback(value: str) -> Optional[str]:
     if not value:
         print("Callback cannot be empty.")
         return None
     return value
 
-@_register_validator
+@register_validator('proxy')
 def validate_proxy(value: str) -> Optional[str]:
     if not value:
         print("Proxy cannot be empty.")

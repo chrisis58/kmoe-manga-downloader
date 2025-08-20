@@ -25,4 +25,4 @@ class DirectDownloader(Downloader):
         )
 
     def construct_download_url(self, book: BookInfo, volume: VolInfo) -> str:
-        return f'https://kox.moe/dl/{book.id}/{volume.id}/1/2/0/'
+        return f'https://kox.moe/dl/{book.id}/{volume.id}/1/2/{self._profile.is_vip}/'

@@ -2,16 +2,23 @@ import os
 
 from typing import Callable, Optional
 
+from .error import LoginError
 from .registry import Registry
 from .structure import VolInfo, BookInfo
 from .utils import get_singleton_session, construct_callback
-from .defaults import Configurer as InnerConfigurer
+from .defaults import Configurer as InnerConfigurer, UserProfile
 
 class SessionContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
         self._session = get_singleton_session()
+
+class UserProfileContext:
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self._profile = UserProfile()
 
 class ConfigContext:
 
@@ -26,7 +33,7 @@ class Configurer(ConfigContext):
     
     def operate(self) -> None: ...
 
-class Authenticator(SessionContext, ConfigContext):
+class Authenticator(SessionContext, ConfigContext, UserProfileContext):
 
     def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,8 +48,13 @@ class Authenticator(SessionContext, ConfigContext):
     # 主站正常情况下不使用代理也能登录成功。但是不排除特殊的网络环境下需要代理。
     # 所以暂时保留代理登录的功能，如果后续确认是代理的问题，可以考虑启用 @no_proxy 装饰器。
     # @no_proxy
-    def authenticate(self) -> bool:
-        return self._authenticate()
+    def authenticate(self) -> None:
+        try:
+            assert self._authenticate()
+        except LoginError as e:
+            print("Authentication failed. Please check your login credentials or session cookies.")
+            print(f"Details: {e}")
+            exit(1)
 
     def _authenticate(self) -> bool: ...
 
@@ -60,7 +72,7 @@ class Picker(SessionContext):
 
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
-class Downloader(SessionContext):
+class Downloader(SessionContext, UserProfileContext):
 
     def __init__(self, 
             dest: str = '.',

@@ -28,15 +28,13 @@ pip install kmoe-manga-downloader
 
 ```bash
 kmdr login -u <your_username> -p <your_password>
-```
-
-或者：
-
-```bash
+# 或者
 kmdr login -u <your_username>
 ```
 
-第二种方式会在程序运行时获取登录密码。如果登录成功，会同时显示当前登录用户及配额。
+第二种方式会在程序运行时获取登录密码，此时你输入的密码**不会显示**在终端中。
+
+如果登录成功，会同时显示当前登录用户及配额。
 
 ### 2. 下载漫画书籍
 

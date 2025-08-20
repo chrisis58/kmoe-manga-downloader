@@ -59,6 +59,29 @@ def parse_args():
     return args
 
 @singleton
+class UserProfile:
+
+    def __init__(self):
+        self._is_vip: Optional[int] = None
+        self._user_level: Optional[int] = None
+
+    @property
+    def is_vip(self) -> Optional[int]:
+        return self._is_vip
+
+    @property
+    def user_level(self) -> Optional[int]:
+        return self._user_level
+    
+    @is_vip.setter
+    def is_vip(self, value: Optional[int]):
+        self._is_vip = value
+
+    @user_level.setter
+    def user_level(self, value: Optional[int]):
+        self._user_level = value
+
+@singleton
 class Configurer:
 
     def __init__(self):
