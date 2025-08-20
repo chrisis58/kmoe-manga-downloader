@@ -4,13 +4,22 @@ from requests import Session
 
 from kmdr.core.error import LoginError
 
+PROFILE_URL = 'https://kox.moe/my.php'
+LOGIN_URL = 'https://kox.moe/login.php'
+
+NICKNAME_ID = 'div_nickname_display'
+
+VIP_ID = 'div_user_vip'
+NOR_ID = 'div_user_nor'
+LV1_ID = 'div_user_lv1'
+
 def check_status(
         session: Session,
         show_quota: bool = False,
         is_vip_setter: Optional[Callable[[bool], None]] = None,
         level_setter: Optional[Callable[[int], None]] = None
 ) -> bool:
-    response = session.get(url = 'https://kox.moe/my.php')
+    response = session.get(url = PROFILE_URL)
 
     try:
         response.raise_for_status()
@@ -19,7 +28,7 @@ def check_status(
         return False
     
     if response.history and any(resp.status_code in (301, 302, 307) for resp in response.history) \
-        and response.url == 'https://kox.moe/login.php':
+        and response.url == LOGIN_URL:
         raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
     if not is_vip_setter and not level_setter:
@@ -45,11 +54,10 @@ def check_status(
     if not show_quota:
         return True
 
-    nickname = soup.find('div', id='div_nickname_display').text.strip().split(' ')[0]
-    print(f"=========================\n\nLogged in as {nickname}\n\n=========================\n")
-    
-    quota = soup.find('div', id='div_user_vip').text.strip()
-    print(f"=========================\n\n{quota}\n\n=========================\n")
+    nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0]
+    quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip()
+
+    print(f"\n当前登录为 {nickname}\n\n{quota}")
     return True
 
 def extract_var_define(script_text) -> dict[str, str]:
@@ -60,3 +68,12 @@ def extract_var_define(script_text) -> dict[str, str]:
             var_name, var_value = line[4:].split("=", 1)
             var_define[var_name.strip()] = var_value.strip().strip(";").strip('"')
     return var_define
+
+def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] = None):
+    if is_vip is not None and is_vip >= 1:
+        return VIP_ID
+    
+    if user_level is not None and user_level <= 1:
+        return LV1_ID
+    
+    return NOR_ID
