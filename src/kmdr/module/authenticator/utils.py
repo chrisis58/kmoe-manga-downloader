@@ -16,7 +16,7 @@ LV1_ID = 'div_user_lv1'
 def check_status(
         session: Session,
         show_quota: bool = False,
-        is_vip_setter: Optional[Callable[[bool], None]] = None,
+        is_vip_setter: Optional[Callable[[int], None]] = None,
         level_setter: Optional[Callable[[int], None]] = None
 ) -> bool:
     response = session.get(url = PROFILE_URL)
@@ -47,7 +47,7 @@ def check_status(
         user_level = int(var_define.get('user_level', '0'))
 
         if is_vip_setter:
-            is_vip_setter(is_vip >= 1)
+            is_vip_setter(is_vip)
         if level_setter:
             level_setter(user_level)
     

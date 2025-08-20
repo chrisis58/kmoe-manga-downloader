@@ -24,6 +24,6 @@ class CookieAuthenticator(Authenticator):
         return check_status(
             self._session,
             show_quota=self._show_quota,
-            is_vip_setter=lambda value: setattr(self, '_is_vip', value),
-            level_setter=lambda value: setattr(self, '_user_level', value),
+            is_vip_setter=lambda value: setattr(self._profile, 'is_vip', value),
+            level_setter=lambda value: setattr(self._profile, 'user_level', value),
         )

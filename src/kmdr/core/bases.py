@@ -6,7 +6,7 @@ from .error import LoginError
 from .registry import Registry
 from .structure import VolInfo, BookInfo
 from .utils import get_singleton_session, construct_callback
-from .defaults import Configurer as InnerConfigurer
+from .defaults import Configurer as InnerConfigurer, UserProfile
 
 class SessionContext:
 
@@ -14,14 +14,17 @@ class SessionContext:
         super().__init__()
         self._session = get_singleton_session()
 
+class UserProfileContext:
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self._profile = UserProfile()
+
 class ConfigContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
         self._configurer = InnerConfigurer()
-
-        self._is_vip: bool = False
-        self._user_level: Optional[int] = None
 
 class Configurer(ConfigContext):
 
@@ -30,7 +33,7 @@ class Configurer(ConfigContext):
     
     def operate(self) -> None: ...
 
-class Authenticator(SessionContext, ConfigContext):
+class Authenticator(SessionContext, ConfigContext, UserProfileContext):
 
     def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,7 +72,7 @@ class Picker(SessionContext):
 
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
-class Downloader(SessionContext):
+class Downloader(SessionContext, UserProfileContext):
 
     def __init__(self, 
             dest: str = '.',
