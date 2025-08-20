@@ -31,7 +31,7 @@ def check_status(
         and response.url == LOGIN_URL:
         raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
-    if not is_vip_setter and not level_setter:
+    if not is_vip_setter and not level_setter and not show_quota:
         return True
     
     from bs4 import BeautifulSoup
