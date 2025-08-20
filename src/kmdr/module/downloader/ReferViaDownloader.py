@@ -23,7 +23,7 @@ class ReferViaDownloader(Downloader):
 
         download_file(
             self._session if not self._scraper else self._scraper,
-            self.fetch_download_url(book=book, volume=volume),
+            self.fetch_download_url(book_id=book.id, volume_id=volume.id),
             download_path,
             f'[Kmoe][{book.name}][{volume.name}].epub',
             retry,
@@ -34,10 +34,10 @@ class ReferViaDownloader(Downloader):
         )
 
     @cached_by_kwargs
-    def fetch_download_url(self, book: BookInfo, volume: VolInfo) -> str:
+    def fetch_download_url(self, book_id: str, volume_id: str) -> str:
         # TODO: 根据当前用户的会员状态调整 vip 参数的值。
         #       但是网页端上会员仍然用的 vip=0，而且两者下载链接好像没有明显区别。
-        response = self._session.get(f"https://kox.moe/getdownurl.php?b={book.id}&v={volume.id}&mobi=2&vip=0&json=1")
+        response = self._session.get(f"https://kox.moe/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip=0&json=1")
         response.raise_for_status()
         data = response.json()
         if data.get('code') != 200:
