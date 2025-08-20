@@ -7,16 +7,13 @@ from kmdr.module import *
 def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     if args.command == 'login':
-        if not AUTHENTICATOR.get(args).authenticate():
-            raise RuntimeError("Authentication failed. Please check your credentials.")
+        AUTHENTICATOR.get(args).authenticate()
 
     elif args.command == 'status':
-        if not AUTHENTICATOR.get(args).authenticate():
-            raise RuntimeError("Authentication failed. Please check your credentials.")
+        AUTHENTICATOR.get(args).authenticate()
 
-    elif args.command == 'download':    
-        if not AUTHENTICATOR.get(args).authenticate():
-            raise RuntimeError("Authentication failed. Please check your credentials.")
+    elif args.command == 'download':
+        AUTHENTICATOR.get(args).authenticate()
 
         book, volumes = LISTERS.get(args).list()
 

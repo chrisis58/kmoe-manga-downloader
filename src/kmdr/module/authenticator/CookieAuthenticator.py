@@ -1,6 +1,6 @@
 from typing import Optional
 
-from kmdr.core import Authenticator, AUTHENTICATOR
+from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 
 from .utils import check_status
 
@@ -18,8 +18,7 @@ class CookieAuthenticator(Authenticator):
         cookie = self._configurer.cookie
         
         if not cookie:
-            print("No cookie found. Please login first.")
-            return False
+            raise LoginError("No cookie found, please login first.", ['kmdr login -u <username>'])
         
         self._session.cookies.update(cookie)
         return check_status(self._session, show_quota=self._show_quota)
