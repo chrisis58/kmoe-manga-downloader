@@ -65,11 +65,6 @@ def download_file(
     except Exception as e:
         prefix = f"{type(e).__name__} occurred while downloading {filename}. "
 
-        if isinstance(e, HTTPError):
-            e.request.headers['Cookie'] = '***MASKED***'
-            tqdm.write(f"Request Headers: {e.request.headers}")
-            tqdm.write(f"Response Headers: {e.response.headers}")
-
         new_block_size = block_size
         if isinstance(e, ChunkedEncodingError):
             new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
