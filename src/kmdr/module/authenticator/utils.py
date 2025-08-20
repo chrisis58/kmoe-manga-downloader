@@ -20,7 +20,7 @@ def check_status(
     
     if response.history and any(resp.status_code in (301, 302, 307) for resp in response.history) \
         and response.url == 'https://kox.moe/login.php':
-        raise LoginError("Invalid credentials, please login again.", ['kmdr config -d cookie', 'kmdr login -u <username>'])
+        raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
     if not show_quota:
         return True

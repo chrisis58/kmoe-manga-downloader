@@ -46,7 +46,7 @@ class LoginAuthenticator(Authenticator):
         
         code = match.group(0).split('"')[1]
         if code != CODE_OK:
-            raise LoginError(f"Authentication failed with error code: {code}" + CODE_MAPPING.get(code, "Unknown error."))
+            raise LoginError(f"Authentication failed with error code: {code} " + CODE_MAPPING.get(code, "Unknown error."))
 
         if check_status(self._session, show_quota=self._show_quota):
             self._configurer.cookie = self._session.cookies.get_dict()
