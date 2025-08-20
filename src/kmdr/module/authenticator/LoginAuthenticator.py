@@ -1,5 +1,6 @@
 from typing import Optional
 import re
+from getpass import getpass
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 
@@ -24,7 +25,7 @@ class LoginAuthenticator(Authenticator):
         self._show_quota = show_quota
 
         if password is None:
-            password = input("please input your password: \n")
+            password = getpass("please input your password: ")
 
         self._password = password
 
