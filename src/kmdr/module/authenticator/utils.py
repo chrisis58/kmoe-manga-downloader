@@ -22,7 +22,7 @@ def check_status(
         and response.url == 'https://kox.moe/login.php':
         raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
-    if not show_quota:
+    if not is_vip_setter and not level_setter:
         return True
     
     from bs4 import BeautifulSoup
@@ -31,27 +31,19 @@ def check_status(
 
     script = soup.find('script', language="javascript")
 
-    # <script language='javascript'>
-    # var user_level = "1";
-    # var is_vip     = "0";
-    # var i = 0;
-    # 
-    # ...
-    # </script>
+    if script:
+        var_define = extract_var_define(script.text[:100])
 
-    # if script:
-    #     script_content = script.string
-    #     # 解析脚本内容，提取 VIP 状态和等级
-    #     is_vip = "VIP" in script_content
-    #     level = None
-    #     level_match = re.search(r"level:\s*(\d+)", script_content)
-    #     if level_match:
-    #         level = int(level_match.group(1))
+        is_vip = int(var_define.get('is_vip', '0'))
+        user_level = int(var_define.get('user_level', '0'))
 
-    #     if is_vip_setter:
-    #         is_vip_setter(is_vip)
-    #     if level_setter:
-    #         level_setter(level)
+        if is_vip_setter:
+            is_vip_setter(is_vip >= 1)
+        if level_setter:
+            level_setter(user_level)
+    
+    if not show_quota:
+        return True
 
     nickname = soup.find('div', id='div_nickname_display').text.strip().split(' ')[0]
     print(f"=========================\n\nLogged in as {nickname}\n\n=========================\n")
@@ -59,4 +51,12 @@ def check_status(
     quota = soup.find('div', id='div_user_vip').text.strip()
     print(f"=========================\n\n{quota}\n\n=========================\n")
     return True
-    
+
+def extract_var_define(script_text) -> dict[str, str]:
+    var_define = {}
+    for line in script_text.splitlines():
+        line = line.strip()
+        if line.startswith("var ") and "=" in line:
+            var_name, var_value = line[4:].split("=", 1)
+            var_define[var_name.strip()] = var_value.strip().strip(";").strip('"')
+    return var_define

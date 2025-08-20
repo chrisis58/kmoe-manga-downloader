@@ -21,7 +21,7 @@ class ConfigContext:
         self._configurer = InnerConfigurer()
 
         self._is_vip: bool = False
-        self._level: Optional[int] = None
+        self._user_level: Optional[int] = None
 
 class Configurer(ConfigContext):
 

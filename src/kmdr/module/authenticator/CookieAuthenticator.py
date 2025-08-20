@@ -21,4 +21,9 @@ class CookieAuthenticator(Authenticator):
             raise LoginError("No cookie found, please login first.", ['kmdr login -u <username>'])
         
         self._session.cookies.update(cookie)
-        return check_status(self._session, show_quota=self._show_quota)
+        return check_status(
+            self._session,
+            show_quota=self._show_quota,
+            is_vip_setter=lambda value: setattr(self, '_is_vip', value),
+            level_setter=lambda value: setattr(self, '_user_level', value),
+        )
