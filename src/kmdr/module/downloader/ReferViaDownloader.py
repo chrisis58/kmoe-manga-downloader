@@ -23,7 +23,7 @@ class ReferViaDownloader(Downloader):
 
         download_file(
             self._session if not self._scraper else self._scraper,
-            self.fetch_download_url(book_id=book.id, volume_id=volume.id),
+            lambda: self.fetch_download_url(book_id=book.id, volume_id=volume.id),
             download_path,
             safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             retry,

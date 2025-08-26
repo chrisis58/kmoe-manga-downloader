@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 import os
 import time
 from functools import wraps
@@ -13,7 +13,7 @@ MIN_BLOCK_SIZE = 2048
 
 def download_file(
             session: Session, 
-            url: str,
+            url: Union[str, Callable[[], str]],
             dest_path: str, 
             filename: str, 
             retry_times: int = 0, 
@@ -21,10 +21,22 @@ def download_file(
             callback: Optional[Callable] = None,
             block_size: int = 8192
     ):
+    """
+    下载文件
+
+    :param session: requests.Session 对象
+    :param url: 下载链接或者其 Supplier
+    :param dest_path: 目标路径
+    :param filename: 文件名
+    :param retry_times: 重试次数
+    :param headers: 请求头
+    :param callback: 下载完成后的回调函数
+    :param block_size: 块大小
+    """
     if headers is None:
         headers = {}
     filename_downloading = f'{filename}.downloading'
-        
+
     file_path = f'{dest_path}/{filename}'
     tmp_file_path = f'{dest_path}/{filename_downloading}'
     
@@ -43,6 +55,9 @@ def download_file(
     
     if resume_from:
         headers['Range'] = f'bytes={resume_from}-'
+
+    if callable(url):
+        url = url()
 
     try:
         with session.get(url = url, stream=True, headers=headers) as r:
