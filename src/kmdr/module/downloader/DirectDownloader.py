@@ -17,9 +17,9 @@ class DirectDownloader(Downloader):
 
         download_file(
             self._session,
-            self.construct_download_url(book, volume),
+            lambda: self.construct_download_url(book, volume),
             download_path,
-            f'[Kmoe][{book.name}][{volume.name}].epub',
+            safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             retry,
             callback=lambda: self._callback(book, volume) if self._callback else None
         )
