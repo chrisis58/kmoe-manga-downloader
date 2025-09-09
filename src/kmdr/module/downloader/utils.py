@@ -48,6 +48,8 @@ def download_file(
         tqdm.write(f"{filename} already exists.")
         return
     
+    position = get_progress_position(tmp_file_path)
+
     resume_from = 0
     total_size_in_bytes = 0
     
@@ -71,7 +73,7 @@ def download_file(
                     total=total_size_in_bytes, unit='B',
                     unit_scale=True, desc=f'{filename}',
                     initial=resume_from,
-                    position=get_progress_position(tmp_file_path)
+                    position=position
                 ) as progress_bar:
                     for chunk in r.iter_content(chunk_size=block_size):
                         if chunk:
