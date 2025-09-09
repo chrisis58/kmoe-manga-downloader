@@ -42,7 +42,7 @@ def download_file(
         os.makedirs(dest_path, exist_ok=True)
 
     if os.path.exists(file_path):
-        tqdm.write(f"{filename} already exists.")
+        tqdm.write(f"{filename} 已经存在")
         return
 
     block_size = 8192
