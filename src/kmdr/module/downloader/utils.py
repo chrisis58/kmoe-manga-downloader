@@ -1,6 +1,7 @@
 from typing import Callable, Optional, Union
 import os
 import time
+import threading
 from functools import wraps
 
 from requests import Session, HTTPError
@@ -66,7 +67,12 @@ def download_file(
             total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
             
             with open(tmp_file_path, 'ab') as f:
-                with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f'{filename}', initial=resume_from) as progress_bar:
+                with tqdm(
+                    total=total_size_in_bytes, unit='B',
+                    unit_scale=True, desc=f'{filename}',
+                    initial=resume_from,
+                    position=get_progress_position(tmp_file_path)
+                ) as progress_bar:
                     for chunk in r.iter_content(chunk_size=block_size):
                         if chunk:
                             f.write(chunk)
@@ -140,3 +146,15 @@ def clear_cache(func):
 
     if wrapped in function_cache:
         function_cache[wrapped] = {}
+
+_progress_index_map = {}
+_progress_index_lock = threading.Lock()
+
+def get_progress_position(key: str) -> int:
+    """
+    获取自增下标，线程安全。
+    """
+    with _progress_index_lock:
+        if key not in _progress_index_map:
+            _progress_index_map[key] = len(_progress_index_map)
+        return _progress_index_map[key]
