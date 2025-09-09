@@ -46,7 +46,6 @@ def download_file(
         return
 
     block_size = 8192
-    position = get_progress_position(tmp_file_path)
     
     attempts_left = retry_times + 1
     progress_bar = tqdm(
@@ -157,15 +156,3 @@ def clear_cache(func):
 
     if wrapped in function_cache:
         function_cache[wrapped] = {}
-
-_progress_index_map = {}
-_progress_index_lock = threading.Lock()
-
-def get_progress_position(key: str) -> int:
-    """
-    获取自增下标，线程安全。
-    """
-    with _progress_index_lock:
-        if key not in _progress_index_map:
-            _progress_index_map[key] = len(_progress_index_map)
-        return _progress_index_map[key]
