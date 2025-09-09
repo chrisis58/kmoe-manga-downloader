@@ -109,21 +109,24 @@ class Downloader(SessionContext, UserProfileContext):
     def _download_with_multiple_workers(self, book: BookInfo, volumes: list[VolInfo], retry: int):
         from concurrent.futures import ThreadPoolExecutor, wait, FIRST_EXCEPTION
 
-        max_workers = min(self._num_workers, len(volumes))
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(self._download, book, volume, retry)
-                for volume in volumes
-            ]
         try:
-            # 等待所有任务完成，遇到异常立即返回
+            max_workers = min(self._num_workers, len(volumes))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    executor.submit(self._download, book, volume, retry)
+                    for volume in volumes
+                ]
             wait(futures, return_when=FIRST_EXCEPTION)
             for future in futures:
                 future.result()
         except KeyboardInterrupt:
             print("\n操作已取消（KeyboardInterrupt）")
-            executor.shutdown(wait=False, cancel_futures=True)
-            exit(130)
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except NameError:
+                pass
+            finally:
+                exit(130)
 
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
