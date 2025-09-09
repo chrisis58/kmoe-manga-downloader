@@ -101,12 +101,11 @@ def download_file(
                 else:
                     raise e
     finally:
-        if progress_bar:
-            if progress_bar.total and progress_bar.n >= progress_bar.total:
-                tqdm.write(f"{filename} 下载完成")
-            elif progress_bar.total is not None:
-                tqdm.write(f"{filename} 下载失败")
-            progress_bar.close()
+        if progress_bar.total and progress_bar.n >= progress_bar.total:
+            tqdm.write(f"{filename} 下载完成")
+        elif progress_bar.total is not None:
+            tqdm.write(f"{filename} 下载失败")
+        progress_bar.close()
 
 
 def safe_filename(name: str) -> str:
