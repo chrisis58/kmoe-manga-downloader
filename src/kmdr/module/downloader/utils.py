@@ -53,7 +53,6 @@ def download_file(
         total=0, unit='B', unit_scale=True,
         desc=f'{filename} (连接中...)',
         position=position,
-        leave=True,
         dynamic_ncols=True
     )
 
