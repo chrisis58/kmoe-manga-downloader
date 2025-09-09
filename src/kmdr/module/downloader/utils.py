@@ -52,7 +52,7 @@ def download_file(
     progress_bar = tqdm(
         total=0, unit='B', unit_scale=True,
         desc=f'{filename} (连接中...)',
-        position=position,
+        leave=False,
         dynamic_ncols=True
     )
 
@@ -104,9 +104,9 @@ def download_file(
     finally:
         if progress_bar:
             if progress_bar.total and progress_bar.n >= progress_bar.total:
-                progress_bar.set_description(f'{filename} (完成)')
+                tqdm.write(f"{filename} 下载完成")
             elif progress_bar.total is not None:
-                progress_bar.set_description(f'{filename} (下载失败)')
+                tqdm.write(f"{filename} 下载失败")
             progress_bar.close()
 
 
