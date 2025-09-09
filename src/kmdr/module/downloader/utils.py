@@ -47,9 +47,6 @@ def download_file(
         tqdm.write(f"{filename} already exists.")
         return
     
-    if callable(url):
-        url = url()
-
     resume_from = 0
     total_size_in_bytes = 0
     
@@ -60,6 +57,9 @@ def download_file(
         headers['Range'] = f'bytes={resume_from}-'
 
     try:
+        if callable(url):
+            url = url()
+
         with session.get(url = url, stream=True, headers=headers) as r:
             r.raise_for_status()
             
