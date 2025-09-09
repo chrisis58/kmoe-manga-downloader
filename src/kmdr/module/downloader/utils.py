@@ -94,7 +94,7 @@ def download_file(
 
         if retry_times > 0:
             # 重试下载
-            tqdm.write(f"{prefix} Retry after 3 seconds...")
+            # tqdm.write(f"{prefix} Retry after 3 seconds...")
             time.sleep(3) # 等待3秒后重试，避免触发限流
             download_file(session, url, dest_path, filename, retry_times - 1, headers, callback, new_block_size)
         else:
