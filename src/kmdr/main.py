@@ -28,9 +28,13 @@ def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPL
         fallback()
 
 def entry_point():
-    parser = argument_parser()
-    args = parser.parse_args()
-    main(args, lambda: parser.print_help())
+    try:
+        parser = argument_parser()
+        args = parser.parse_args()
+        main(args, lambda: parser.print_help())
+    except KeyboardInterrupt:
+        print("\n操作已取消（KeyboardInterrupt）")
+        exit(130)
 
 if __name__ == '__main__':
     entry_point()
