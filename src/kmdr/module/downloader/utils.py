@@ -73,7 +73,9 @@ def download_file(
                     total=total_size_in_bytes, unit='B',
                     unit_scale=True, desc=f'{filename}',
                     initial=resume_from,
-                    position=position
+                    position=position,
+                    leave=True,
+                    dynamic_ncols=True
                 ) as progress_bar:
                     for chunk in r.iter_content(chunk_size=block_size):
                         if chunk:
