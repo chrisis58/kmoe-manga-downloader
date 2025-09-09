@@ -49,7 +49,13 @@ def download_file(
     position = get_progress_position(tmp_file_path)
     
     attempts_left = retry_times + 1
-    progress_bar = None
+    progress_bar = tqdm(
+        total=0, unit='B', unit_scale=True,
+        desc=f'{filename} (连接中...)',
+        position=position,
+        leave=True,
+        dynamic_ncols=True
+    )
 
     try:
         while attempts_left > 0:
@@ -67,20 +73,8 @@ def download_file(
 
                     total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
 
-                    if progress_bar is None:
-                        progress_bar = tqdm(
-                            total=total_size_in_bytes,
-                            unit='B', unit_scale=True,
-                            desc=f'{filename}',
-                            initial=resume_from,
-                            position=position,
-                            leave=True,
-                            dynamic_ncols=True
-                        )
-                    else:
-                        progress_bar.total = total_size_in_bytes
-                        progress_bar.initial = resume_from
-                    
+                    progress_bar.set_description(f'{filename}')
+                    progress_bar.total = total_size_in_bytes
                     progress_bar.n = resume_from
                     progress_bar.refresh()
 
@@ -98,7 +92,7 @@ def download_file(
 
             except Exception as e:
                 if attempts_left > 0:
-
+                    progress_bar.set_description(f'{filename} (重试中...)')
                     if isinstance(e, ChunkedEncodingError):
                         new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
                         if new_block_size < block_size:
@@ -107,10 +101,13 @@ def download_file(
                     # 避免限流
                     time.sleep(3)
                 else:
-                    tqdm.write(f"'{filename}' failed after max retries.")
                     raise e
     finally:
         if progress_bar:
+            if progress_bar.total and progress_bar.n >= progress_bar.total:
+                progress_bar.set_description(f'{filename} (完成)')
+            elif progress_bar.total is not None:
+                progress_bar.set_description(f'{filename} (下载失败)')
             progress_bar.close()
 
 
