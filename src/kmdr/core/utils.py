@@ -1,5 +1,6 @@
 import functools
 from typing import Optional, Callable
+import asyncio
 
 from deprecation import deprecated
 from requests import Session
@@ -79,3 +80,15 @@ def no_proxy(func):
             session.proxies = cached_proxies
 
     return wrapper
+
+async def spinner(message: str = "Loading"):
+    frames = ['   ', '.  ', '.. ', '...']
+    try:
+        while True:
+            for frame in frames:
+                print(f"\r{message}{frame}", end="", flush=True)
+                await asyncio.sleep(0.3)
+    except asyncio.CancelledError:
+        print(f"\r{' ' * (len(message) + 5)}\r", end="", flush=True)
+    finally:
+        print("\r", end="", flush=True)
