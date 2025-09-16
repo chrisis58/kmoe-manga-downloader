@@ -13,6 +13,7 @@ MIN_BLOCK_SIZE = 2048
 
 async def download_file(
         session: aiohttp.ClientSession,
+        semaphore: asyncio.Semaphore,
         url: Union[str, Callable[[], str]],
         dest_path: str,
         filename: str,
@@ -64,34 +65,35 @@ async def download_file(
                 headers['Range'] = f'bytes={resume_from}-'
 
             try:
-                if asyncio.iscoroutinefunction(url):
-                    current_url = await url()
-                elif callable(url):
-                    current_url = url()
-                else:
-                    current_url = url
+                async with semaphore:
+                    if asyncio.iscoroutinefunction(url):
+                        current_url = await url()
+                    elif callable(url):
+                        current_url = url()
+                    else:
+                        current_url = url
 
-                async with session.get(url=current_url, headers=headers) as r:
-                    r.raise_for_status()
+                    async with session.get(url=current_url, headers=headers) as r:
+                        r.raise_for_status()
 
-                    total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
+                        total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
 
-                    progress_bar.set_description(f'{filename}')
-                    progress_bar.total = total_size_in_bytes
-                    progress_bar.n = resume_from
-                    progress_bar.refresh()
+                        progress_bar.set_description(f'{filename}')
+                        progress_bar.total = total_size_in_bytes
+                        progress_bar.n = resume_from
+                        progress_bar.refresh()
 
-                    async with aiofiles.open(tmp_file_path, 'ab') as f:
-                        async for chunk in r.content.iter_chunked(block_size):
-                            if chunk:
-                                await f.write(chunk)
-                                progress_bar.update(len(chunk))
+                        async with aiofiles.open(tmp_file_path, 'ab') as f:
+                            async for chunk in r.content.iter_chunked(block_size):
+                                if chunk:
+                                    await f.write(chunk)
+                                    progress_bar.update(len(chunk))
 
-                    if os.path.getsize(tmp_file_path) >= total_size_in_bytes:
-                        os.rename(tmp_file_path, file_path)
-                        if callback:
-                            callback()
-                        return
+                        if os.path.getsize(tmp_file_path) >= total_size_in_bytes:
+                            os.rename(tmp_file_path, file_path)
+                            if callback:
+                                callback()
+                            return
 
             except Exception as e:
                 if attempts_left > 0:

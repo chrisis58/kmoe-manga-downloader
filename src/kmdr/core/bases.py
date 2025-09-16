@@ -90,34 +90,23 @@ class Downloader(SessionContext, UserProfileContext):
         self._dest: str = dest
         self._callback: Optional[Callable] = construct_callback(callback)
         self._retry: int = retry
-        self._num_workers: int = num_workers
         self._proxy: Optional[str] = proxy
+        self._semaphore = asyncio.Semaphore(num_workers)
 
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
-        """
-        下载指定卷的主入口方法。
-        """
         if not volumes:
-            raise ValueError("No volumes to download")
-
-        semaphore = asyncio.Semaphore(self._num_workers)
-        async def download_with_semaphore(volume: VolInfo):
-            async with semaphore:
-                return await self._download(book, volume, self._retry)
+            print("No volumes to download.")
+            exit(0)
 
         try:
-            tasks = [download_with_semaphore(volume) for volume in volumes]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    print(f"下载 '{volumes[i].name}' 失败: {result}")
+            tasks = [self._download(book, volume) for volume in volumes]
+            await asyncio.gather(*tasks, return_exceptions=True)
 
         except KeyboardInterrupt:
             print("\n操作已取消（KeyboardInterrupt）")
             exit(130)
 
-    async def _download(self, book: BookInfo, volume: VolInfo, retry: int): ...
+    async def _download(self, book: BookInfo, volume: VolInfo): ...
 
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')

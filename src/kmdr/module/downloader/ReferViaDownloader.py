@@ -12,7 +12,7 @@ class ReferViaDownloader(Downloader):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
 
 
-    async def _download(self, book: BookInfo, volume: VolInfo, retry: int):
+    async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
@@ -21,10 +21,11 @@ class ReferViaDownloader(Downloader):
 
         await download_file(
             self._session,
+            self._semaphore,
             fetch_url,
             download_path,
             safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
-            retry,
+            self._retry,
             headers={
                 "X-Km-From": "kb_http_down"
             },
