@@ -17,12 +17,11 @@ classifiers = [
 ]
 
 dependencies = [
-    "beautifulsoup4",
-    "aiohttp",
-    "aiofiles",
-    "tqdm",
-    "cloudscraper",
-    "async-lru"
+    "beautifulsoup4~=4.13.4",
+    "aiohttp~=3.12.15",
+    "aiofiles~=24.1.0",
+    "tqdm~=4.67.1",
+    "async-lru~=2.0.5",
 ]
 
 [project.urls]
