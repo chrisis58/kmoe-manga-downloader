@@ -4,6 +4,7 @@ from async_lru import alru_cache
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 
 from .utils import download_file, safe_filename
+from .multipart_utils import download_file_multipart
 
 
 @DOWNLOADER.register(order=10)
@@ -19,7 +20,7 @@ class ReferViaDownloader(Downloader):
         async def fetch_url():
             return await self.fetch_download_url(book_id=book.id, volume_id=volume.id)
 
-        await download_file(
+        await download_file_multipart(
             self._session,
             self._semaphore,
             fetch_url,
