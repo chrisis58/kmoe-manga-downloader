@@ -22,8 +22,8 @@ async def download_file_multipart(
     if headers is None:
         headers = {}
         
-    filename_downloading = f'{filename}.downloading'
     file_path = os.path.join(dest_path, filename)
+    filename_downloading = f'{file_path}.downloading'
     
     if not await aio_os.path.exists(dest_path):
         await aio_os.makedirs(dest_path, exist_ok=True)
