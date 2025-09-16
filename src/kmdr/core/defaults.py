@@ -2,9 +2,12 @@ import os
 import json
 from typing import Optional
 import argparse
+from contextvars import ContextVar
 
 from .utils import singleton
 from .structure import Config
+
+session_var = ContextVar('session')
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None

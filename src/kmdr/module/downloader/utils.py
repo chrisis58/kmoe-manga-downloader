@@ -1,19 +1,18 @@
-from typing import Callable, Optional, Union
+import asyncio
 import os
-import time
-import threading
-from functools import wraps
-
-from requests import Session, HTTPError
-from requests.exceptions import ChunkedEncodingError
-from tqdm import tqdm
 import re
+from typing import Callable, Optional, Union
+
+import aiohttp
+import aiofiles
+from tqdm import tqdm
+from aiohttp.client_exceptions import ClientPayloadError
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
-def download_file(
-        session: Session,
+async def download_file(
+        session: aiohttp.ClientSession,
         url: Union[str, Callable[[], str]],
         dest_path: str,
         filename: str,
@@ -65,8 +64,14 @@ def download_file(
                 headers['Range'] = f'bytes={resume_from}-'
 
             try:
-                current_url = url() if callable(url) else url
-                with session.get(url=current_url, stream=True, headers=headers) as r:
+                if asyncio.iscoroutinefunction(url):
+                    current_url = await url()
+                elif callable(url):
+                    current_url = url()
+                else:
+                    current_url = url
+
+                async with session.get(url=current_url, headers=headers) as r:
                     r.raise_for_status()
 
                     total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
@@ -76,10 +81,10 @@ def download_file(
                     progress_bar.n = resume_from
                     progress_bar.refresh()
 
-                    with open(tmp_file_path, 'ab') as f:
-                        for chunk in r.iter_content(chunk_size=block_size):
+                    async with aiofiles.open(tmp_file_path, 'ab') as f:
+                        async for chunk in r.content.iter_chunked(block_size):
                             if chunk:
-                                f.write(chunk)
+                                await f.write(chunk)
                                 progress_bar.update(len(chunk))
 
                     if os.path.getsize(tmp_file_path) >= total_size_in_bytes:
@@ -91,13 +96,12 @@ def download_file(
             except Exception as e:
                 if attempts_left > 0:
                     progress_bar.set_description(f'{filename} (重试中...)')
-                    if isinstance(e, ChunkedEncodingError):
+                    if isinstance(e, ClientPayloadError):
                         new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
                         if new_block_size < block_size:
                             block_size = new_block_size
 
-                    # 避免限流
-                    time.sleep(3)
+                    await asyncio.sleep(3)
                 else:
                     raise e
     finally:
@@ -107,51 +111,8 @@ def download_file(
             tqdm.write(f"{filename} 下载失败")
         progress_bar.close()
 
-
 def safe_filename(name: str) -> str:
     """
     替换非法文件名字符为下划线
     """
     return re.sub(r'[\\/:*?"<>|]', '_', name)
-
-
-function_cache = {}
-
-def cached_by_kwargs(func):
-    """
-    根据关键字参数缓存函数结果的装饰器。
-
-    Example:
-    >>> @kwargs_cached
-    >>> def add(a, b, c):
-    >>>     return a + b + c
-    >>> result1 = add(1, 2, c=3)  # Calls the function
-    >>> result2 = add(3, 2, c=3)  # Uses cached result
-    >>> assert result1 == result2  # Both results are the same
-    """
-
-    global function_cache
-    if func not in function_cache:
-        function_cache[func] = {}
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if not kwargs:
-            return func(*args, **kwargs)
-
-        key = frozenset(kwargs.items())
-
-        if key not in function_cache[func]:
-            function_cache[func][key] = func(*args, **kwargs)
-        return function_cache[func][key]
-
-    return wrapper
-
-def clear_cache(func):
-    assert hasattr(func, "__wrapped__"), "Function is not wrapped"
-    global function_cache
-
-    wrapped = func.__wrapped__
-
-    if wrapped in function_cache:
-        function_cache[wrapped] = {}

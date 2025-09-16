@@ -10,6 +10,6 @@ class BookUrlLister(Lister):
         super().__init__(*args, **kwargs)
         self._book_url = book_url
 
-    def list(self) -> tuple[BookInfo, list[VolInfo]]:
-        book_info, volumes = extract_book_info_and_volumes(self._session, self._book_url)
+    async def list(self) -> tuple[BookInfo, list[VolInfo]]:
+        book_info, volumes = await extract_book_info_and_volumes(self._session, self._book_url)
         return book_info, volumes

@@ -1,6 +1,7 @@
 import functools
 from typing import Optional, Callable
 
+from deprecation import deprecated
 from requests import Session
 import threading
 import subprocess
@@ -15,6 +16,7 @@ HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
+@deprecated(details="在 asyncio 环境中请使用 'session_var' 来管理 session")
 def get_singleton_session() -> Session:
     global _session_instance
 
@@ -26,6 +28,7 @@ def get_singleton_session() -> Session:
 
     return _session_instance
 
+@deprecated(details="在 asyncio 环境中请使用 'session_var' 来管理 session")
 def clear_session_context():
     session = get_singleton_session()
     session.proxies.clear()
@@ -61,6 +64,7 @@ def construct_callback(callback: Optional[str]) -> Optional[Callable]:
 
     return _callback
 
+@deprecated()
 def no_proxy(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

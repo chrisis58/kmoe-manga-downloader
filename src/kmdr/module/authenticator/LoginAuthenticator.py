@@ -29,28 +29,31 @@ class LoginAuthenticator(Authenticator):
 
         self._password = password
 
-    def _authenticate(self) -> bool:
-        
-        response = self._session.post(
+    async def _authenticate(self) -> bool:
+
+        async with self._session.post(
             url = 'https://kox.moe/login_do.php', 
             data = {
                 'email': self._username,
                 'passwd': self._password,
                 'keepalive': 'on'
             },
-        )
-        response.raise_for_status()
-        match = re.search(r'"\w+"', response.text)
+        ) as response:
 
-        if not match:
-            raise LoginError("Failed to extract authentication code from response.")
-        
-        code = match.group(0).split('"')[1]
-        if code != CODE_OK:
-            raise LoginError(f"Authentication failed with error code: {code} " + CODE_MAPPING.get(code, "Unknown error."))
+            response.raise_for_status()
+            match = re.search(r'"\w+"', await response.text())
 
-        if check_status(self._session, show_quota=self._show_quota):
-            self._configurer.cookie = self._session.cookies.get_dict()
-            return True
-        
-        return False
+            if not match:
+                raise LoginError("Failed to extract authentication code from response.")
+            
+            code = match.group(0).split('"')[1]
+            if code != CODE_OK:
+                raise LoginError(f"Authentication failed with error code: {code} " + CODE_MAPPING.get(code, "Unknown error."))
+
+            if await check_status(self._session, show_quota=self._show_quota):
+                cookie = self._session.cookie_jar.filter_cookies('https://kox.moe')
+                self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
+
+                return True
+            
+            return False
