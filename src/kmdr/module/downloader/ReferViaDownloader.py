@@ -1,3 +1,5 @@
+from functools import partial
+
 import json
 from async_lru import alru_cache
 
@@ -17,13 +19,11 @@ class ReferViaDownloader(Downloader):
         sub_dir = safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        async def fetch_url():
-            return await self.fetch_download_url(book_id=book.id, volume_id=volume.id)
-
         await download_file_multipart(
             self._session,
             self._semaphore,
-            fetch_url,
+            self._progress,
+            partial(self.fetch_download_url, book.id, volume.id),
             download_path,
             safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,

@@ -3,9 +3,36 @@ import json
 from typing import Optional
 import argparse
 from contextvars import ContextVar
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    BarColumn,
+    DownloadColumn,
+    TextColumn,
+    TransferSpeedColumn,
+    TimeRemainingColumn,
+)
 
 from .utils import singleton
 from .structure import Config
+
+
+console = Console()
+
+progress = Progress(
+    TextColumn("[blue]{task.fields[filename]}", justify="left"),
+    TextColumn("{task.fields[status]}", justify="right"),
+    TextColumn("{task.percentage:>3.1f}%"),
+    BarColumn(bar_width=None),
+    "[progress.percentage]",
+    DownloadColumn(),
+    "[",
+    TransferSpeedColumn(),
+    ",",
+    TimeRemainingColumn(),
+    "]",
+    console=console,
+)
 
 session_var = ContextVar('session')
 

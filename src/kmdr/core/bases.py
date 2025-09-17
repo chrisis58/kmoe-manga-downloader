@@ -1,5 +1,3 @@
-import os
-
 from typing import Callable, Optional
 import asyncio
 from aiohttp import ClientSession
@@ -8,27 +6,10 @@ from .error import LoginError
 from .registry import Registry
 from .structure import VolInfo, BookInfo
 from .utils import construct_callback
-from .defaults import Configurer as InnerConfigurer, UserProfile, session_var
 
-class SessionContext:
+from .context import TerminalContext, SessionContext, UserProfileContext, ConfigContext
 
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._session: ClientSession = session_var.get()
-
-class UserProfileContext:
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._profile = UserProfile()
-
-class ConfigContext:
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._configurer = InnerConfigurer()
-
-class Configurer(ConfigContext):
+class Configurer(ConfigContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -68,7 +49,7 @@ class Picker:
 
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
-class Downloader(SessionContext, UserProfileContext):
+class Downloader(SessionContext, UserProfileContext, TerminalContext):
 
     def __init__(self,
                  dest: str = '.',
@@ -77,8 +58,7 @@ class Downloader(SessionContext, UserProfileContext):
                  num_workers: int = 8,
                  *args, **kwargs
     ):
-        SessionContext.__init__(self)
-        UserProfileContext.__init__(self)
+        super().__init__(*args, **kwargs)
 
         self._dest: str = dest
         self._callback: Optional[Callable] = construct_callback(callback)
@@ -87,15 +67,16 @@ class Downloader(SessionContext, UserProfileContext):
 
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
-            print("No volumes to download.")
+            self._console.print("No volumes to download.")
             exit(0)
 
         try:
-            tasks = [self._download(book, volume) for volume in volumes]
-            await asyncio.gather(*tasks, return_exceptions=True)
+            with self._progress:
+                tasks = [self._download(book, volume) for volume in volumes]
+                await asyncio.gather(*tasks, return_exceptions=True)
 
         except KeyboardInterrupt:
-            print("\n操作已取消（KeyboardInterrupt）")
+            self._console.print("\n操作已取消（KeyboardInterrupt）")
             exit(130)
 
     async def _download(self, book: BookInfo, volume: VolInfo): ...

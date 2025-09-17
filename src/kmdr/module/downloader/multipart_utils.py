@@ -6,11 +6,12 @@ import math
 import aiohttp
 import aiofiles
 import aiofiles.os as aio_os
-from tqdm.asyncio import tqdm
+from rich.progress import Progress
 
 async def download_file_multipart(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
+        progress: Progress,
         url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
         dest_path: str,
         filename: str,
@@ -29,10 +30,11 @@ async def download_file_multipart(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        tqdm.write(f"{filename} 已经存在")
+        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
         return
 
     part_paths = []
+    task_id = None
     try:
         current_url = await fetch_url(url)
 
@@ -51,8 +53,8 @@ async def download_file_multipart(
             part_paths.append(part_path)
             if await aio_os.path.exists(part_path):
                 resumed_size += (await aio_os.stat(part_path)).st_size
-        
-        progress_bar = tqdm(total=total_size, initial=resumed_size, unit='B', unit_scale=True, desc=filename, leave=False, dynamic_ncols=True)
+
+        task_id = progress.add_task("download", filename=filename, status='[blue]下载中[/blue]', total=total_size, completed=resumed_size)
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
             end = min(start + chunk_size - 1, total_size - 1)
@@ -64,27 +66,31 @@ async def download_file_multipart(
                 start=start,
                 end=end,
                 part_path=part_paths[i],
-                progress_bar=progress_bar,
+                progress=progress,
+                task_id=task_id,
                 headers=headers,
                 retry_times=retry_times
             )
             tasks.append(task)
             
         await asyncio.gather(*tasks)
-        
-        progress_bar.set_description(f"{filename} (合并中...)")
+
+        progress.update(task_id, status='[blue]合并中[/blue]', refresh=True)
         await _merge_parts(part_paths, filename_downloading)
         
         os.rename(filename_downloading, file_path)
     except Exception as e:
-        tqdm.write(f"下载 {filename} 失败: {e}")
+        if task_id is not None:
+            progress.update(task_id, status='[red]失败[/red]', visible=False)
+
     finally:
         if await aio_os.path.exists(file_path):
-            # 成功下载
-            progress_bar.close()
-            tqdm.write(f"{filename} 下载完成")
-            await asyncio.gather(*[aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)])
+            if task_id is not None:
+                progress.update(task_id, status='[green]完成[/green]', completed=total_size, refresh=True)
 
+            cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
+            if cleanup_tasks:
+                await asyncio.gather(*cleanup_tasks)
             if callback:
                 callback()
 
@@ -95,7 +101,8 @@ async def _download_part(
         start: int,
         end: int,
         part_path: str,
-        progress_bar: tqdm,
+        progress: Progress,
+        task_id,
         headers: Optional[dict] = None,
         retry_times: int = 3
 ):
@@ -126,17 +133,14 @@ async def _download_part(
                         async for chunk in response.content.iter_chunked(block_size):
                             if chunk:
                                 await f.write(chunk)
-                                progress_bar.update(len(chunk))
-            
+                                progress.update(task_id, advance=len(chunk))
             return
-
         except Exception as e:
             if attempts_left > 0:
                 await asyncio.sleep(3)
             else:
-                progress_bar.write(f"分片 {part_path} 下载失败: {e}")
+                # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
                 raise
-
 
 async def _merge_parts(part_paths: List[str], final_path: str):
     async with aiofiles.open(final_path, 'wb') as final_file:
