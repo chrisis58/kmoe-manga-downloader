@@ -8,6 +8,8 @@ import aiofiles
 import aiofiles.os as aio_os
 from rich.progress import Progress
 
+from .utils import fetch_url
+
 async def download_file_multipart(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
@@ -156,20 +158,3 @@ async def _merge_parts(part_paths: List[str], final_path: str):
             if os.path.exists(final_path):
                 os.remove(final_path)
             raise e
-
-async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]], retry_times: int = 3) -> str:
-    while retry_times >= 0:
-        try:
-            if callable(url):
-                result = url()
-                if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
-                    return await result
-                return result
-            elif isinstance(url, str):
-                return url
-        except Exception as e:
-            retry_times -= 1
-            if retry_times < 0:
-                raise e
-            await asyncio.sleep(2)
-    raise RuntimeError("Max retries exceeded")
