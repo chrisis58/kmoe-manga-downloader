@@ -27,7 +27,7 @@ class ArgsFilterPicker(Picker):
             volume_data = filter(lambda x: x.index in choice, volume_data)
 
         if self._max_size is not None:
-            volume_data = filter(lambda x: x.size <= self._max_size, volume_data)
+            volume_data = filter(lambda x: self._max_size is None or x.size <= self._max_size, volume_data)
 
         if self._limit is not None:
             return list(volume_data)[:self._limit]
