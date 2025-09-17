@@ -4,6 +4,7 @@ from aiohttp import ClientSession
 from rich.console import Console
 
 from kmdr.core.error import LoginError
+from kmdr.core.utils import async_retry
 
 PROFILE_URL = 'https://kox.moe/my.php'
 LOGIN_URL = 'https://kox.moe/login.php'
@@ -14,6 +15,7 @@ VIP_ID = 'div_user_vip'
 NOR_ID = 'div_user_nor'
 LV1_ID = 'div_user_lv1'
 
+@async_retry()
 async def check_status(
         session: ClientSession,
         console: Console,
@@ -37,6 +39,7 @@ async def check_status(
         
         from bs4 import BeautifulSoup
 
+        # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         soup = BeautifulSoup(await response.text(), 'html.parser')
 
         script = soup.find('script', language="javascript")

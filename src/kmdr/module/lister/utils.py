@@ -5,7 +5,9 @@ from typing import Optional
 from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
+from kmdr.core.utils import async_retry
 
+@async_retry()
 async def extract_book_info_and_volumes(session: Session, url: str, book_info: Optional[BookInfo] = None) -> tuple[BookInfo, list[VolInfo]]:
     """
     从指定的书籍页面 URL 中提取书籍信息和卷信息。
@@ -17,6 +19,7 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
     async with session.get(url) as response:
         response.raise_for_status()
 
+        # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         book_page = BeautifulSoup(await response.text(), 'html.parser')
 
         book_info = __extract_book_info(url, book_page, book_info)
