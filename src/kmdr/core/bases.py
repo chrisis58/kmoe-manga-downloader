@@ -37,14 +37,8 @@ class Configurer(ConfigContext):
 
 class Authenticator(SessionContext, ConfigContext, UserProfileContext):
 
-    def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # if proxy:
-        #     self._session.proxies.update({
-        #         'https': proxy,
-        #         'http': proxy,
-        #     })
 
     # 在使用代理登录时，可能会出现问题，但是现在还不清楚是不是代理的问题。
     # 主站正常情况下不使用代理也能登录成功。但是不排除特殊的网络环境下需要代理。
@@ -81,7 +75,6 @@ class Downloader(SessionContext, UserProfileContext):
                  callback: Optional[str] = None,
                  retry: int = 3,
                  num_workers: int = 8,
-                 proxy: Optional[str] = None,
                  *args, **kwargs
     ):
         SessionContext.__init__(self)
@@ -90,7 +83,6 @@ class Downloader(SessionContext, UserProfileContext):
         self._dest: str = dest
         self._callback: Optional[Callable] = construct_callback(callback)
         self._retry: int = retry
-        self._proxy: Optional[str] = proxy
         self._semaphore = asyncio.Semaphore(num_workers)
 
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
