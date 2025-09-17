@@ -30,7 +30,7 @@ async def download_file_multipart(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
+        progress.console.print(f"[blue]{filename} 已经存在[/blue]")
         return
 
     part_paths = []
