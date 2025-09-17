@@ -30,8 +30,8 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
             try:
                 assert await self._authenticate()
             except LoginError as e:
-                self._console.print("[bold red]认证失败。请检查您的登录凭据或会话 cookie。[/bold red]")
-                self._console.print(f"详细信息：{e}")
+                self._console.print("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
+                self._console.print(f"[yellow]详细信息：{e}[/yellow]")
                 exit(1)
 
     async def _authenticate(self) -> bool: ...

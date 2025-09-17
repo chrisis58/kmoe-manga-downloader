@@ -21,7 +21,7 @@ class CookieAuthenticator(Authenticator):
         cookie = self._configurer.cookie
         
         if not cookie:
-            raise LoginError("No cookie found, please login first.", ['kmdr login -u <username>'])
+            raise LoginError("无法找到 Cookie，请先完成登录。", ['kmdr login -u <username>'])
         
         self._session.cookie_jar.update_cookies(cookie, response_url=URL(PROFILE_URL))
         return await check_status(

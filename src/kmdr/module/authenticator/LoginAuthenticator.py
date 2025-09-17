@@ -44,11 +44,11 @@ class LoginAuthenticator(Authenticator):
             match = re.search(r'"\w+"', await response.text())
 
             if not match:
-                raise LoginError("Failed to extract authentication code from response.")
+                raise LoginError("无法解析登录响应。")
             
             code = match.group(0).split('"')[1]
             if code != CODE_OK:
-                raise LoginError(f"Authentication failed with error code: {code} " + CODE_MAPPING.get(code, "Unknown error."))
+                raise LoginError(f"认证失败，错误代码：{code} " + CODE_MAPPING.get(code, "未知错误。"))
 
             if await check_status(self._session, show_quota=self._show_quota):
                 cookie = self._session.cookie_jar.filter_cookies('https://kox.moe')

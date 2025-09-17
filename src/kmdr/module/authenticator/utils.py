@@ -29,7 +29,7 @@ async def check_status(
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
                 and str(response.url) == LOGIN_URL:
-            raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
+            raise LoginError("凭证已生效，请重新登陆。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
         if not is_vip_setter and not level_setter and not show_quota:
             return True

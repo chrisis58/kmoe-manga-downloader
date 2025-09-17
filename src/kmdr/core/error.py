@@ -5,7 +5,7 @@ class KmdrError(RuntimeError):
         super().__init__(message, *args, **kwargs)
         self.message = message
 
-        self._solution = "" if solution is None else "\nSuggested Solution: \n" + "\n".join(f">>> {sol}" for sol in solution)
+        self._solution = "" if solution is None else "\n[bold cyan]推荐解决方法:[/bold cyan] \n" + "\n".join(f"[cyan]>>> {sol}[/cyan]" for sol in solution)
 
 class LoginError(KmdrError):
     def __init__(self, message, solution: Optional[list[str]] = None):
