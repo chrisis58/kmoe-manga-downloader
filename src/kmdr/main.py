@@ -2,8 +2,6 @@ from typing import Callable
 from argparse import Namespace
 import asyncio
 
-from aiohttp import ClientSession
-
 from kmdr.core import *
 from kmdr.module import *
 
@@ -13,8 +11,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
         CONFIGURER.get(args).operate()
         return
 
-    async with ClientSession() as session:
-        session_var.set(session)
+    async with KMDR_SESSION.get(args):
 
         if args.command == 'login':
             await AUTHENTICATOR.get(args).authenticate()

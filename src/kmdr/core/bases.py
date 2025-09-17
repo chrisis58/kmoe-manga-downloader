@@ -108,6 +108,7 @@ class Downloader(SessionContext, UserProfileContext):
 
     async def _download(self, book: BookInfo, volume: VolInfo): ...
 
+KMDR_SESSION = Registry[ClientSession]('KmdrSession', True)
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
 PICKERS = Registry[Picker]('Picker')
