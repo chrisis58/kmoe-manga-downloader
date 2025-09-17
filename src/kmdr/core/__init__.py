@@ -6,6 +6,4 @@ from .defaults import argument_parser, session_var
 
 from .error import KmdrError, LoginError
 
-from .utils import spinner
-
 from .session import KmdrSession
