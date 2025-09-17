@@ -33,10 +33,7 @@ class FollowedBookLister(Lister):
             choosed = int(choosed) - 1
             book = books[choosed]
 
-            book_info, volumes = extract_book_info_and_volumes(self._session, book.url)
-            book_info.author = book.author
-            book_info.status = book.status
-            book_info.last_update = book.last_update
+            book_info, volumes = await extract_book_info_and_volumes(self._session, book.url, book)
 
             return book_info, volumes
         

@@ -1,10 +1,12 @@
-from requests import Session
 from bs4 import BeautifulSoup
 import re
+from typing import Optional
+
+from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
 
-async def extract_book_info_and_volumes(session: Session, url: str) -> tuple[BookInfo, list[VolInfo]]:
+async def extract_book_info_and_volumes(session: Session, url: str, book_info: Optional[BookInfo] = None) -> tuple[BookInfo, list[VolInfo]]:
     """
     从指定的书籍页面 URL 中提取书籍信息和卷信息。
 
@@ -17,12 +19,12 @@ async def extract_book_info_and_volumes(session: Session, url: str) -> tuple[Boo
 
         book_page = BeautifulSoup(await response.text(), 'html.parser')
 
-        book_info = __extract_book_info(url, book_page)
+        book_info = __extract_book_info(url, book_page, book_info)
         volumes = await __extract_volumes(session, book_page)
 
         return book_info, volumes
 
-def __extract_book_info(url: str, book_page: BeautifulSoup) -> BookInfo:
+def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[BookInfo]) -> BookInfo:
     book_name = book_page.find('font', class_='text_bglight_big').text
 
     id = book_page.find('input', attrs={'name': 'bookid'})['value']
@@ -31,9 +33,9 @@ def __extract_book_info(url: str, book_page: BeautifulSoup) -> BookInfo:
         id = id,
         name = book_name,
         url = url,
-        author = '',
-        status = '',
-        last_update = ''
+        author = book_info.author if book_info else '',
+        status = book_info.status if book_info else '',
+        last_update = book_info.last_update if book_info else ''
     )
     
 
