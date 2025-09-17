@@ -1,6 +1,7 @@
 from typing import Optional
 import re
-from getpass import getpass
+
+from rich.prompt import Prompt
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 
@@ -25,7 +26,7 @@ class LoginAuthenticator(Authenticator):
         self._show_quota = show_quota
 
         if password is None:
-            password = getpass("please input your password: ")
+            password = Prompt.ask("请输入密码", password=True, console=self._console)
 
         self._password = password
 
