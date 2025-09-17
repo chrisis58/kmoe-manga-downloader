@@ -3,6 +3,7 @@ import os
 import re
 from typing import Callable, Optional, Union, Awaitable
 
+from deprecation import deprecated
 import aiohttp
 import aiofiles
 import aiofiles.os as aio_os
@@ -12,6 +13,7 @@ from aiohttp.client_exceptions import ClientPayloadError
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
+@deprecated(details="最新版本中改用分片下载，建议使用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
