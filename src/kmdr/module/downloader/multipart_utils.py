@@ -56,7 +56,7 @@ async def download_file_multipart(
             if await aio_os.path.exists(part_path):
                 resumed_size += (await aio_os.stat(part_path)).st_size
 
-        task_id = progress.add_task("download", filename=filename, status='[blue]下载中[/blue]', total=total_size, completed=resumed_size)
+        task_id = progress.add_task("download", filename=filename, status='[cyan]下载中[/cyan]', total=total_size, completed=resumed_size)
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
             end = min(start + chunk_size - 1, total_size - 1)
@@ -77,7 +77,7 @@ async def download_file_multipart(
             
         await asyncio.gather(*tasks)
 
-        progress.update(task_id, status='[blue]合并中[/blue]', refresh=True)
+        progress.update(task_id, status='[cyan]合并中[/cyan]', refresh=True)
         await _merge_parts(part_paths, filename_downloading)
         
         os.rename(filename_downloading, file_path)
