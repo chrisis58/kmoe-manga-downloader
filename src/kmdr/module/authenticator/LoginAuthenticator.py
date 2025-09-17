@@ -51,7 +51,7 @@ class LoginAuthenticator(Authenticator):
             if code != CODE_OK:
                 raise LoginError(f"认证失败，错误代码：{code} " + CODE_MAPPING.get(code, "未知错误。"))
 
-            if await check_status(self._session, show_quota=self._show_quota):
+            if await check_status(self._session, self._console, show_quota=self._show_quota):
                 cookie = self._session.cookie_jar.filter_cookies('https://kox.moe')
                 self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
 

@@ -26,6 +26,7 @@ class CookieAuthenticator(Authenticator):
         self._session.cookie_jar.update_cookies(cookie, response_url=URL(PROFILE_URL))
         return await check_status(
             self._session,
+            self._console,
             show_quota=self._show_quota,
             is_vip_setter=lambda value: setattr(self._profile, 'is_vip', value),
             level_setter=lambda value: setattr(self._profile, 'user_level', value),
