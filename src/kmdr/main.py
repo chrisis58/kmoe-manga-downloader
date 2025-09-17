@@ -20,16 +20,12 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
             await AUTHENTICATOR.get(args).authenticate()
 
         elif args.command == 'download':
-            spinner_task = asyncio.create_task(spinner("Loading"))
             await AUTHENTICATOR.get(args).authenticate()
 
             book, volumes = await LISTERS.get(args).list()
 
             volumes = PICKERS.get(args).pick(volumes)
 
-            spinner_task.cancel()
-            await spinner_task
-            
             await DOWNLOADER.get(args).download(book, volumes)
 
         else:
