@@ -16,7 +16,7 @@ class Configurer(ConfigContext, TerminalContext):
     
     def operate(self) -> None: ...
 
-class Authenticator(SessionContext, ConfigContext, UserProfileContext):
+class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -26,16 +26,17 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext):
     # 所以暂时保留代理登录的功能，如果后续确认是代理的问题，可以考虑启用 @no_proxy 装饰器。
     # @no_proxy
     async def authenticate(self) -> None:
-        try:
-            assert await self._authenticate()
-        except LoginError as e:
-            print("Authentication failed. Please check your login credentials or session cookies.")
-            print(f"Details: {e}")
-            exit(1)
+        with self._console.status("认证中..."):
+            try:
+                assert await self._authenticate()
+            except LoginError as e:
+                self._console.print("[bold red]认证失败。请检查您的登录凭据或会话 cookie。[/bold red]")
+                self._console.print(f"详细信息：{e}")
+                exit(1)
 
     async def _authenticate(self) -> bool: ...
 
-class Lister(SessionContext):
+class Lister(SessionContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
