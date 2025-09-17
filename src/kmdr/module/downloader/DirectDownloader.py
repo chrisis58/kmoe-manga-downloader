@@ -1,6 +1,6 @@
 from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 
-from .utils import download_file, safe_filename
+from .utils import download_file, safe_filename, download_file_multipart
 
 @DOWNLOADER.register(
     hasvalues={
@@ -15,7 +15,7 @@ class DirectDownloader(Downloader):
         sub_dir = safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        await download_file(
+        await download_file_multipart(
             self._session,
             self._semaphore,
             self._progress,

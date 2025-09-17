@@ -5,8 +5,7 @@ from async_lru import alru_cache
 
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 
-from .utils import download_file, safe_filename
-from .multipart_utils import download_file_multipart
+from .utils import download_file, safe_filename, download_file_multipart
 
 
 @DOWNLOADER.register(order=10)
