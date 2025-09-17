@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Callable, Optional, Union, List
+from typing import Callable, Optional, Union, List, Awaitable
 import math
 
 import aiohttp
@@ -11,7 +11,7 @@ from tqdm.asyncio import tqdm
 async def download_file_multipart(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
-        url: Union[str, Callable[[], str]],
+        url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
         dest_path: str,
         filename: str,
         retry_times: int = 3,
@@ -153,17 +153,19 @@ async def _merge_parts(part_paths: List[str], final_path: str):
                 os.remove(final_path)
             raise e
 
-async def fetch_url(url: Union[str, Callable[[], str]], retry_times: int = 3) -> str:
+async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]], retry_times: int = 3) -> str:
     while retry_times >= 0:
         try:
-            if asyncio.iscoroutinefunction(url):
-                return await url()
-            elif callable(url):
-                return url()
-            else:
+            if callable(url):
+                result = url()
+                if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
+                    return await result
+                return result
+            elif isinstance(url, str):
                 return url
         except Exception as e:
             retry_times -= 1
             if retry_times < 0:
                 raise e
             await asyncio.sleep(2)
+    raise RuntimeError("Max retries exceeded")
