@@ -1,4 +1,6 @@
 from typing import Callable, Optional
+from abc import abstractmethod
+
 import asyncio
 from aiohttp import ClientSession
 
@@ -14,6 +16,7 @@ class Configurer(ConfigContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
+    @abstractmethod
     def operate(self) -> None: ...
 
 class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
@@ -34,6 +37,7 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
                 self._console.print(f"[yellow]详细信息：{e}[/yellow]")
                 exit(1)
 
+    @abstractmethod
     async def _authenticate(self) -> bool: ...
 
 class Lister(SessionContext, TerminalContext):
@@ -41,6 +45,7 @@ class Lister(SessionContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @abstractmethod
     async def list(self) -> tuple[BookInfo, list[VolInfo]]: ...
 
 class Picker:
@@ -48,6 +53,7 @@ class Picker:
     def __init__(self, *args, **kwargs):
         super().__init__()
 
+    @abstractmethod
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
 class Downloader(SessionContext, UserProfileContext, TerminalContext):
@@ -80,6 +86,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
             self._console.print("\n操作已取消（KeyboardInterrupt）")
             exit(130)
 
+    @abstractmethod
     async def _download(self, book: BookInfo, volume: VolInfo): ...
 
 KMDR_SESSION = Registry[ClientSession]('KmdrSession', True)
