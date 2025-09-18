@@ -4,7 +4,6 @@ import time
 import unittest
 from argparse import Namespace
 
-from kmdr.core.utils import clear_session_context
 from kmdr.main import main_sync as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
@@ -30,7 +29,6 @@ class TestKmdrDownload(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        clear_session_context()
 
         from shutil import rmtree
         test_methods = [method for method in dir(cls) if method.startswith('test_')]
