@@ -12,7 +12,7 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
     """
     从指定的书籍页面 URL 中提取书籍信息和卷信息。
 
-    :param session: 已经建立的 requests.Session 实例。
+    :param session: 已经建立的 HTTP 会话。
     :param url: 书籍页面的 URL。
     :return: 包含书籍信息和卷信息的元组。
     """
