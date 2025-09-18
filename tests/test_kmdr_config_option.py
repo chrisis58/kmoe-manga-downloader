@@ -4,7 +4,7 @@ import unittest
 from argparse import Namespace
 
 from kmdr.core.defaults import Configurer
-from kmdr.main import main as kmdr_main
+from kmdr.main import main_sync as kmdr_main
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 

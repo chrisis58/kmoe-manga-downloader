@@ -1,44 +1,47 @@
+from functools import partial
+
+import json
+from async_lru import alru_cache
+
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 
-from .utils import download_file, safe_filename, cached_by_kwargs
+from .utils import download_file, safe_filename, download_file_multipart
 
-try:
-    import cloudscraper
-except ImportError:
-    cloudscraper = None
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=1, proxy=None, *args, **kwargs):
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
 
-        if cloudscraper:
-            self._scraper = cloudscraper.create_scraper()
-        else:
-            self._scraper = None
 
-    def _download(self, book: BookInfo, volume: VolInfo, retry: int):
+    async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        download_file(
-            self._session if not self._scraper else self._scraper,
-            lambda: self.fetch_download_url(book_id=book.id, volume_id=volume.id),
+        await download_file_multipart(
+            self._session,
+            self._semaphore,
+            self._progress,
+            partial(self.fetch_download_url, book.id, volume.id),
             download_path,
             safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
-            retry,
+            self._retry,
             headers={
                 "X-Km-From": "kb_http_down"
             },
             callback=lambda: self._callback(book, volume) if self._callback else None
         )
 
-    @cached_by_kwargs
-    def fetch_download_url(self, book_id: str, volume_id: str) -> str:
-        response = self._session.get(f"https://kox.moe/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={self._profile.is_vip}&json=1")
-        response.raise_for_status()
-        data = response.json()
-        if data.get('code') != 200:
-            raise Exception(f"Failed to fetch download URL: {data.get('msg', 'Unknown error')}")
-        
-        return data['url']
+    @alru_cache(maxsize=128)
+    async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
+
+        url = f"https://kox.moe/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={self._profile.is_vip}&json=1"
+
+        async with self._session.get(url) as response:
+            response.raise_for_status()
+            data = await response.text()
+            data = json.loads(data)
+            if data.get('code') != 200:
+                raise Exception(f"Failed to fetch download URL: {data.get('msg', 'Unknown error')}")
+            
+            return data['url']

@@ -1,8 +1,10 @@
 from typing import Optional, Callable
 
-from requests import Session
+from aiohttp import ClientSession
+from rich.console import Console
 
 from kmdr.core.error import LoginError
+from kmdr.core.utils import async_retry
 
 PROFILE_URL = 'https://kox.moe/my.php'
 LOGIN_URL = 'https://kox.moe/login.php'
@@ -13,52 +15,54 @@ VIP_ID = 'div_user_vip'
 NOR_ID = 'div_user_nor'
 LV1_ID = 'div_user_lv1'
 
-def check_status(
-        session: Session,
+@async_retry()
+async def check_status(
+        session: ClientSession,
+        console: Console,
         show_quota: bool = False,
         is_vip_setter: Optional[Callable[[int], None]] = None,
-        level_setter: Optional[Callable[[int], None]] = None
+        level_setter: Optional[Callable[[int], None]] = None,
 ) -> bool:
-    response = session.get(url = PROFILE_URL)
+    async with session.get(url = PROFILE_URL) as response:
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            console.print(f"Error: {type(e).__name__}: {e}")
+            return False
+        
+        if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
+                and str(response.url) == LOGIN_URL:
+            raise LoginError("凭证已失效，请重新登录。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        print(f"Error: {type(e).__name__}: {e}")
-        return False
-    
-    if response.history and any(resp.status_code in (301, 302, 307) for resp in response.history) \
-        and response.url == LOGIN_URL:
-        raise LoginError("Invalid credentials, please login again.", ['kmdr config -c cookie', 'kmdr login -u <username>'])
+        if not is_vip_setter and not level_setter and not show_quota:
+            return True
+        
+        from bs4 import BeautifulSoup
 
-    if not is_vip_setter and not level_setter and not show_quota:
+        # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
+        soup = BeautifulSoup(await response.text(), 'html.parser')
+
+        script = soup.find('script', language="javascript")
+
+        if script:
+            var_define = extract_var_define(script.text[:100])
+
+            is_vip = int(var_define.get('is_vip', '0'))
+            user_level = int(var_define.get('user_level', '0'))
+
+            if is_vip_setter:
+                is_vip_setter(is_vip)
+            if level_setter:
+                level_setter(user_level)
+        
+        if not show_quota:
+            return True
+
+        nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0]
+        quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip()
+
+        console.print(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
         return True
-    
-    from bs4 import BeautifulSoup
-
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    script = soup.find('script', language="javascript")
-
-    if script:
-        var_define = extract_var_define(script.text[:100])
-
-        is_vip = int(var_define.get('is_vip', '0'))
-        user_level = int(var_define.get('user_level', '0'))
-
-        if is_vip_setter:
-            is_vip_setter(is_vip)
-        if level_setter:
-            level_setter(user_level)
-    
-    if not show_quota:
-        return True
-
-    nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0]
-    quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip()
-
-    print(f"\n当前登录为 {nickname}\n\n{quota}")
-    return True
 
 def extract_var_define(script_text) -> dict[str, str]:
     var_define = {}

@@ -1,6 +1,6 @@
 [project]
 name = "kmoe-manga-downloader"
-version = "1.1.2"
+version = "1.2.0a1"
 authors = [
     { name="Chris Zheng", email="chrisis58@outlook.com" },
 ]
@@ -17,10 +17,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "beautifulsoup4>=4.11.1,<5.0.0",
-    "requests>=2.32.3,<3.0.0",
-    "tqdm>=4.67.1,<5.0.0",
-    "cloudscraper>=1.2.71,<2.0.0",
+    "deprecation~=2.1.0",
+    "beautifulsoup4~=4.13.4",
+    "aiohttp~=3.12.15",
+    "aiofiles~=24.1.0",
+    "async-lru~=2.0.5",
+    "rich~=13.9.4"
 ]
 
 [project.urls]

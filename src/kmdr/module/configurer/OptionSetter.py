@@ -11,7 +11,7 @@ class OptionSetter(Configurer):
     def operate(self) -> None:
         for option in self._set:
             if '=' not in option:
-                print(f"Invalid option format: `{option}`. Expected format is key=value.")
+                self._console.print(f"[red]无效的选项格式: `{option}`。[/red] 应为 key=value 格式。")
                 continue
 
             key, value = option.split('=', 1)
@@ -23,7 +23,7 @@ class OptionSetter(Configurer):
                 continue
 
             self._configurer.set_option(key, validated_value)
-            print(f"Set configuration: {key} = {validated_value}")
+            self._console.print(f"[green]已设置配置: {key} = {validated_value}[/green]")
 
 
 

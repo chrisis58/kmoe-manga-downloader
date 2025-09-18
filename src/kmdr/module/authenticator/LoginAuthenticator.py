@@ -1,6 +1,7 @@
 from typing import Optional
 import re
-from getpass import getpass
+
+from rich.prompt import Prompt
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 
@@ -25,32 +26,35 @@ class LoginAuthenticator(Authenticator):
         self._show_quota = show_quota
 
         if password is None:
-            password = getpass("please input your password: ")
+            password = Prompt.ask("请输入密码", password=True, console=self._console)
 
         self._password = password
 
-    def _authenticate(self) -> bool:
-        
-        response = self._session.post(
+    async def _authenticate(self) -> bool:
+
+        async with self._session.post(
             url = 'https://kox.moe/login_do.php', 
             data = {
                 'email': self._username,
                 'passwd': self._password,
                 'keepalive': 'on'
             },
-        )
-        response.raise_for_status()
-        match = re.search(r'"\w+"', response.text)
+        ) as response:
 
-        if not match:
-            raise LoginError("Failed to extract authentication code from response.")
-        
-        code = match.group(0).split('"')[1]
-        if code != CODE_OK:
-            raise LoginError(f"Authentication failed with error code: {code} " + CODE_MAPPING.get(code, "Unknown error."))
+            response.raise_for_status()
+            match = re.search(r'"\w+"', await response.text())
 
-        if check_status(self._session, show_quota=self._show_quota):
-            self._configurer.cookie = self._session.cookies.get_dict()
-            return True
-        
-        return False
+            if not match:
+                raise LoginError("无法解析登录响应。")
+            
+            code = match.group(0).split('"')[1]
+            if code != CODE_OK:
+                raise LoginError(f"认证失败，错误代码：{code} " + CODE_MAPPING.get(code, "未知错误。"))
+
+            if await check_status(self._session, self._console, show_quota=self._show_quota):
+                cookie = self._session.cookie_jar.filter_cookies('https://kox.moe')
+                self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
+
+                return True
+            
+            return False

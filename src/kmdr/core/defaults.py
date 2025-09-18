@@ -2,9 +2,42 @@ import os
 import json
 from typing import Optional
 import argparse
+from contextvars import ContextVar
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    BarColumn,
+    DownloadColumn,
+    TextColumn,
+    TransferSpeedColumn,
+    TimeRemainingColumn,
+)
 
 from .utils import singleton
 from .structure import Config
+
+
+console = Console()
+
+def console_print(*args, **kwargs):
+    console.print(*args, **kwargs)
+
+progress = Progress(
+    TextColumn("[blue]{task.fields[filename]}", justify="left"),
+    TextColumn("{task.fields[status]}", justify="right"),
+    TextColumn("{task.percentage:>3.1f}%"),
+    BarColumn(bar_width=None),
+    "[progress.percentage]",
+    DownloadColumn(),
+    "[",
+    TransferSpeedColumn(),
+    ",",
+    TimeRemainingColumn(),
+    "]",
+    console=console,
+)
+
+session_var = ContextVar('session')
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None
@@ -14,33 +47,33 @@ def argument_parser():
     if parser is not None:
         return parser
 
-    parser = argparse.ArgumentParser(description='Kox Downloader')
-    subparsers = parser.add_subparsers(title='subcommands', dest='command')
+    parser = argparse.ArgumentParser(description='Kmoe 漫画下载器')
+    subparsers = parser.add_subparsers(title='可用的子命令', dest='command')
 
-    download_parser = subparsers.add_parser('download', help='Download books')
-    download_parser.add_argument('-d', '--dest', type=str, help='Download destination, default to current directory', required=False)
-    download_parser.add_argument('-l', '--book-url', type=str, help='Book page\'s url', required=False)
-    download_parser.add_argument('-v', '--volume', type=str, help='Volume(s), split using commas, `all` for all', required=False)
-    download_parser.add_argument('-t', '--vol-type', type=str, help='Volume type, `vol` for volume, `extra` for extras, `seri` for serialized', required=False, choices=['vol', 'extra', 'seri', 'all'], default='vol')
-    download_parser.add_argument('--max-size', type=float, help='Max size of volume in MB', required=False)
-    download_parser.add_argument('--limit', type=int, help='Limit number of volumes to download', required=False)
-    download_parser.add_argument('--num-workers', type=int, help='Number of workers to use for downloading', required=False)
-    download_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
-    download_parser.add_argument('-r', '--retry', type=int, help='Retry times', required=False)
-    download_parser.add_argument('-c', '--callback', type=str, help='Callback script, use as `echo {v.name} downloaded!`', required=False)
+    download_parser = subparsers.add_parser('download', help='下载指定的漫画')
+    download_parser.add_argument('-d', '--dest', type=str, help='指定下载文件的保存路径，默认为当前目录', required=False)
+    download_parser.add_argument('-l', '--book-url', type=str, help='漫画详情页面的 URL', required=False)
+    download_parser.add_argument('-v', '--volume', type=str, help='指定下载的卷，多个用逗号分隔，例如 `1,2,3` 或 `1-5,8`，`all` 表示全部', required=False)
+    download_parser.add_argument('-t', '--vol-type', type=str, help='指定下载的卷类型，`vol` 为单行本, `extra` 为番外, `seri` 为连载', required=False, choices=['vol', 'extra', 'seri', 'all'], default='vol')
+    download_parser.add_argument('--max-size', type=float, help='限制下载卷的最大体积 (单位: MB)', required=False)
+    download_parser.add_argument('--limit', type=int, help='限制下载卷的总数量', required=False)
+    download_parser.add_argument('--num-workers', type=int, help='下载时使用的并发任务数', required=False)
+    download_parser.add_argument('-p', '--proxy', type=str, help='设置下载使用的代理服务器', required=False)
+    download_parser.add_argument('-r', '--retry', type=int, help='网络请求失败时的重试次数', required=False)
+    download_parser.add_argument('-c', '--callback', type=str, help='每个卷下载完成后执行的回调脚本，例如: `echo {v.name} downloaded!`', required=False)
 
-    login_parser = subparsers.add_parser('login', help='Login to kox.moe')
-    login_parser.add_argument('-u', '--username', type=str, help='Your username', required=True)
-    login_parser.add_argument('-p', '--password', type=str, help='Your password', required=False)
+    login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
+    login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
+    login_parser.add_argument('-p', '--password', type=str, help='密码 (如果留空，应用将提示您输入)', required=False)
 
-    status_parser = subparsers.add_parser('status', help='Show status of account and script')
-    status_parser.add_argument('-p', '--proxy', type=str, help='Proxy server', required=False)
+    status_parser = subparsers.add_parser('status', help='显示账户信息以及配额')
+    status_parser.add_argument('-p', '--proxy', type=str, help='代理服务器', required=False)
 
-    config_parser = subparsers.add_parser('config', help='Configure the downloader')
-    config_parser.add_argument('-l', '--list-option', action='store_true', help='List all configurations')
-    config_parser.add_argument('-s', '--set', nargs='+', type=str, help='Configuration options to set, e.g. num_workers=3 dest=.')
-    config_parser.add_argument('-c', '--clear', type=str, help='Clear configurations, `all`, `cookie`, `option` are available')
-    config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='Delete a specific configuration option')
+    config_parser = subparsers.add_parser('config', help='配置下载器')
+    config_parser.add_argument('-l', '--list-option', action='store_true', help='列出所有配置')
+    config_parser.add_argument('-s', '--set', nargs='+', type=str, help='设置一个或多个配置项，格式为 `key=value`，例如: `num_workers=8`')
+    config_parser.add_argument('-c', '--clear', type=str, help='清除指定配置，可选值为 `all`, `cookie`, `option`')
+    config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='删除特定的配置选项')
 
     return parser
 
@@ -144,7 +177,7 @@ class Configurer:
         elif key == 'option':
             self._config.option = None
         else:
-            raise ValueError(f"Unsupported clear option: {key}")
+            raise KeyError(f"[red]对应配置不存在: {key}。可用配置项：all, cookie, option[/red]")
 
         self.update()
     

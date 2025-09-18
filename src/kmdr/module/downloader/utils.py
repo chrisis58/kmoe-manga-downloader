@@ -1,20 +1,34 @@
-from typing import Callable, Optional, Union
+import asyncio
 import os
-import time
-import threading
-from functools import wraps
-
-from requests import Session, HTTPError
-from requests.exceptions import ChunkedEncodingError
-from tqdm import tqdm
 import re
+import math
+from typing import Callable, Optional, Union, Awaitable
+from enum import Enum
+
+from deprecation import deprecated
+import aiohttp
+import aiofiles
+import aiofiles.os as aio_os
+from rich.progress import Progress
+from aiohttp.client_exceptions import ClientPayloadError
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
-def download_file(
-        session: Session,
-        url: Union[str, Callable[[], str]],
+class STATUS(Enum):
+    WAITING='[blue]等待中[/blue]'
+    DOWNLOADING='[cyan]下载中[/cyan]'
+    RETRYING='[yellow]重试中[/yellow]'
+    MERGING='[magenta]合并中[/magenta]'
+    COMPLETED='[green]完成[/green]'
+    FAILED='[red]失败[/red]'
+
+@deprecated(details="请使用 'download_file_multipart'")
+async def download_file(
+        session: aiohttp.ClientSession,
+        semaphore: asyncio.Semaphore,
+        progress: Progress,
+        url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
         dest_path: str,
         filename: str,
         retry_times: int = 3,
@@ -24,7 +38,9 @@ def download_file(
     """
     下载文件
 
-    :param session: requests.Session 对象
+    :param session: aiohttp.ClientSession 对象
+    :param semaphore: 控制并发的信号量
+    :param progress: 进度条对象
     :param url: 下载链接或者其 Supplier
     :param dest_path: 目标路径
     :param filename: 文件名
@@ -34,78 +50,245 @@ def download_file(
     """
     if headers is None:
         headers = {}
-    filename_downloading = f'{filename}.downloading'
+
     file_path = os.path.join(dest_path, filename)
-    tmp_file_path = os.path.join(dest_path, filename_downloading)
+    filename_downloading = f'{file_path}.downloading'
 
-    if not os.path.exists(dest_path):
-        os.makedirs(dest_path, exist_ok=True)
+    if not await aio_os.path.exists(dest_path):
+        await aio_os.makedirs(dest_path, exist_ok=True)
 
-    if os.path.exists(file_path):
-        tqdm.write(f"{filename} 已经存在")
+    if await aio_os.path.exists(file_path):
+        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
         return
 
     block_size = 8192
-    
     attempts_left = retry_times + 1
-    progress_bar = tqdm(
-        total=0, unit='B', unit_scale=True,
-        desc=f'{filename} (连接中...)',
-        leave=False,
-        dynamic_ncols=True
-    )
+    task_id = None
 
     try:
         while attempts_left > 0:
             attempts_left -= 1
             
-            resume_from = os.path.getsize(tmp_file_path) if os.path.exists(tmp_file_path) else 0
+            resume_from = (await aio_os.stat(filename_downloading)).st_size if await aio_os.path.exists(filename_downloading) else 0
             
             if resume_from:
                 headers['Range'] = f'bytes={resume_from}-'
 
             try:
-                current_url = url() if callable(url) else url
-                with session.get(url=current_url, stream=True, headers=headers) as r:
-                    r.raise_for_status()
+                async with semaphore:
+                    current_url = await fetch_url(url)
+                    async with session.get(url=current_url, headers=headers) as r:
+                        r.raise_for_status()
 
-                    total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
+                        total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
 
-                    progress_bar.set_description(f'{filename}')
-                    progress_bar.total = total_size_in_bytes
-                    progress_bar.n = resume_from
-                    progress_bar.refresh()
-
-                    with open(tmp_file_path, 'ab') as f:
-                        for chunk in r.iter_content(chunk_size=block_size):
-                            if chunk:
-                                f.write(chunk)
-                                progress_bar.update(len(chunk))
-
-                    if os.path.getsize(tmp_file_path) >= total_size_in_bytes:
-                        os.rename(tmp_file_path, file_path)
-                        if callback:
-                            callback()
-                        return
-
+                        if task_id is None:
+                            task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
+                        else:
+                            progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value, refresh=True)
+                        
+                        async with aiofiles.open(filename_downloading, 'ab') as f:
+                            async for chunk in r.content.iter_chunked(block_size):
+                                if chunk:
+                                    await f.write(chunk)
+                                    progress.update(task_id, advance=len(chunk))
+                        
+                        break 
+            
             except Exception as e:
                 if attempts_left > 0:
-                    progress_bar.set_description(f'{filename} (重试中...)')
-                    if isinstance(e, ChunkedEncodingError):
+                    if task_id is not None:
+                        progress.update(task_id, status=STATUS.RETRYING.value, refresh=True)
+                    if isinstance(e, ClientPayloadError):
                         new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
                         if new_block_size < block_size:
                             block_size = new_block_size
-
-                    # 避免限流
-                    time.sleep(3)
+                    await asyncio.sleep(3)
                 else:
                     raise e
+        
+        else: 
+            raise IOError(f"Failed to download {filename} after {retry_times} retries.")
+
+        os.rename(filename_downloading, file_path)
+    
+    except Exception as e:
+        if task_id is not None:
+            progress.update(task_id, status=STATUS.FAILED.value, visible=False)
+
     finally:
-        if progress_bar.total and progress_bar.n >= progress_bar.total:
-            tqdm.write(f"{filename} 下载完成")
-        elif progress_bar.total is not None:
-            tqdm.write(f"{filename} 下载失败")
-        progress_bar.close()
+        if await aio_os.path.exists(file_path):
+            if task_id is not None:
+                progress.update(task_id, status=STATUS.COMPLETED.value, visible=False)
+
+            if callback:
+                callback()
+
+async def download_file_multipart(
+        session: aiohttp.ClientSession,
+        semaphore: asyncio.Semaphore,
+        progress: Progress,
+        url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
+        dest_path: str,
+        filename: str,
+        retry_times: int = 3,
+        chunk_size_mb: int = 10,
+        headers: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+):
+    """
+    下载文件
+
+    :param session: aiohttp.ClientSession 对象
+    :param semaphore: 控制并发的信号量
+    :param progress: 进度条对象
+    :param url: 下载链接或者其 Supplier
+    :param dest_path: 目标路径
+    :param filename: 文件名
+    :param retry_times: 重试次数
+    :param headers: 请求头
+    :param callback: 下载完成后的回调函数
+    """
+    if headers is None:
+        headers = {}
+        
+    file_path = os.path.join(dest_path, filename)
+    filename_downloading = f'{file_path}.downloading'
+    
+    if not await aio_os.path.exists(dest_path):
+        await aio_os.makedirs(dest_path, exist_ok=True)
+
+    if await aio_os.path.exists(file_path):
+        progress.console.print(f"[blue]{filename} 已经存在[/blue]")
+        return
+
+    part_paths = []
+    task_id = None
+    try:
+        current_url = await fetch_url(url)
+
+        async with session.head(current_url, headers=headers, allow_redirects=True) as response:
+            response.raise_for_status()
+            total_size = int(response.headers['Content-Length'])
+
+        chunk_size = chunk_size_mb * 1024 * 1024
+        num_chunks = math.ceil(total_size / chunk_size)
+
+        tasks = []
+        
+        resumed_size = 0
+        for i in range(num_chunks):
+            part_path = os.path.join(dest_path, f"{filename}.{i + 1:03d}.downloading")
+            part_paths.append(part_path)
+            if await aio_os.path.exists(part_path):
+                resumed_size += (await aio_os.stat(part_path)).st_size
+
+        task_id = progress.add_task("download", filename=filename, status=STATUS.WAITING.value, total=total_size, completed=resumed_size)
+
+        for i, start in enumerate(range(0, total_size, chunk_size)):
+            end = min(start + chunk_size - 1, total_size - 1)
+
+            task = _download_part(
+                session=session,
+                semaphore=semaphore,
+                url=current_url,
+                start=start,
+                end=end,
+                part_path=part_paths[i],
+                progress=progress,
+                task_id=task_id,
+                headers=headers,
+                retry_times=retry_times
+            )
+            tasks.append(task)
+            
+        await asyncio.gather(*tasks)
+
+        progress.update(task_id, status=STATUS.MERGING.value, refresh=True)
+        await _merge_parts(part_paths, filename_downloading)
+        
+        os.rename(filename_downloading, file_path)
+    except Exception as e:
+        if task_id is not None:
+            progress.update(task_id, status=STATUS.FAILED.value, visible=False)
+
+    finally:
+        if await aio_os.path.exists(file_path):
+            if task_id is not None:
+                progress.update(task_id, status=STATUS.COMPLETED.value, completed=total_size, refresh=True)
+
+            cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
+            if cleanup_tasks:
+                await asyncio.gather(*cleanup_tasks)
+            if callback:
+                callback()
+
+async def _download_part(
+        session: aiohttp.ClientSession,
+        semaphore: asyncio.Semaphore,
+        url: str,
+        start: int,
+        end: int,
+        part_path: str,
+        progress: Progress,
+        task_id,
+        headers: Optional[dict] = None,
+        retry_times: int = 3
+):
+    if headers is None:
+        headers = {}
+    
+    local_headers = headers.copy()
+    block_size = 8192
+    attempts_left = retry_times + 1
+
+    while attempts_left > 0:
+        attempts_left -= 1
+        
+        try:
+            resume_from = (await aio_os.path.getsize(part_path)) if await aio_os.path.exists(part_path) else 0
+            
+            if resume_from >= (end - start + 1):
+                return
+
+            current_start = start + resume_from
+            local_headers['Range'] = f'bytes={current_start}-{end}'
+            
+            async with semaphore:
+                async with session.get(url, headers=local_headers) as response:
+                    response.raise_for_status()
+
+                    if progress.tasks[task_id].fields.get("status") != STATUS.DOWNLOADING.value:
+                        progress.update(task_id, status=STATUS.DOWNLOADING.value, refresh=True)
+
+                    async with aiofiles.open(part_path, 'ab') as f:
+                        async for chunk in response.content.iter_chunked(block_size):
+                            if chunk:
+                                await f.write(chunk)
+                                progress.update(task_id, advance=len(chunk))
+            return
+        except Exception as e:
+            if attempts_left > 0:
+                await asyncio.sleep(3)
+            else:
+                # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
+                raise
+
+async def _merge_parts(part_paths: list[str], final_path: str):
+    async with aiofiles.open(final_path, 'wb') as final_file:
+        try:
+            for part_path in part_paths:
+                async with aiofiles.open(part_path, 'rb') as part_file:
+                    while True:
+                        chunk = await part_file.read(8192)
+                        if not chunk:
+                            break
+                        await final_file.write(chunk)
+        except Exception as e:
+            if aio_os.path.exists(final_path):
+                await aio_os.remove(final_path)
+            raise e
+
 
 
 def safe_filename(name: str) -> str:
@@ -114,44 +297,19 @@ def safe_filename(name: str) -> str:
     """
     return re.sub(r'[\\/:*?"<>|]', '_', name)
 
-
-function_cache = {}
-
-def cached_by_kwargs(func):
-    """
-    根据关键字参数缓存函数结果的装饰器。
-
-    Example:
-    >>> @kwargs_cached
-    >>> def add(a, b, c):
-    >>>     return a + b + c
-    >>> result1 = add(1, 2, c=3)  # Calls the function
-    >>> result2 = add(3, 2, c=3)  # Uses cached result
-    >>> assert result1 == result2  # Both results are the same
-    """
-
-    global function_cache
-    if func not in function_cache:
-        function_cache[func] = {}
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if not kwargs:
-            return func(*args, **kwargs)
-
-        key = frozenset(kwargs.items())
-
-        if key not in function_cache[func]:
-            function_cache[func][key] = func(*args, **kwargs)
-        return function_cache[func][key]
-
-    return wrapper
-
-def clear_cache(func):
-    assert hasattr(func, "__wrapped__"), "Function is not wrapped"
-    global function_cache
-
-    wrapped = func.__wrapped__
-
-    if wrapped in function_cache:
-        function_cache[wrapped] = {}
+async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]], retry_times: int = 3) -> str:
+    while retry_times >= 0:
+        try:
+            if callable(url):
+                result = url()
+                if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
+                    return await result
+                return result
+            elif isinstance(url, str):
+                return url
+        except Exception as e:
+            retry_times -= 1
+            if retry_times < 0:
+                raise e
+            await asyncio.sleep(2)
+    raise RuntimeError("Max retries exceeded")
