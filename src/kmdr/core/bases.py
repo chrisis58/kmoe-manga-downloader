@@ -48,10 +48,10 @@ class Lister(SessionContext, TerminalContext):
     @abstractmethod
     async def list(self) -> tuple[BookInfo, list[VolInfo]]: ...
 
-class Picker:
+class Picker(TerminalContext):
 
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @abstractmethod
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
