@@ -3,7 +3,7 @@ from typing import Optional
 from aiohttp import ClientSession
 
 from .bases import KMDR_SESSION
-from .defaults import session_var
+from .defaults import session_var, HEADERS
 
 @KMDR_SESSION.register()
 class KmdrSession(ClientSession):
@@ -12,5 +12,5 @@ class KmdrSession(ClientSession):
     """
 
     def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
-        ClientSession.__init__(self, proxy=proxy, trust_env=True)
+        ClientSession.__init__(self, proxy=proxy, trust_env=True, headers=HEADERS)
         session_var.set(self)

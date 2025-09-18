@@ -16,6 +16,9 @@ from rich.progress import (
 from .utils import singleton
 from .structure import Config
 
+HEADERS = {
+    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
+}
 
 console = Console()
 

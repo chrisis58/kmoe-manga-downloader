@@ -10,10 +10,6 @@ import subprocess
 from .structure import BookInfo, VolInfo
 
 
-HEADERS = {
-    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
-}
-
 def singleton(cls):
     """
     **非线程安全**的单例装饰器
