@@ -285,8 +285,8 @@ async def _merge_parts(part_paths: list[str], final_path: str):
                             break
                         await final_file.write(chunk)
         except Exception as e:
-            if os.path.exists(final_path):
-                os.remove(final_path)
+            if aio_os.path.exists(final_path):
+                await aio_os.remove(final_path)
             raise e
 
 
