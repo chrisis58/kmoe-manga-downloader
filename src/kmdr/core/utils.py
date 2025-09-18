@@ -108,7 +108,6 @@ def async_retry(
                     if attempt == attempts - 1:
                         raise
                 
-                print(f"Attempt {attempt + 1} failed. Retrying in {current_delay} seconds...")
                 await asyncio.sleep(current_delay)
 
                 current_delay *= backoff
