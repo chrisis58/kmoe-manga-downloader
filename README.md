@@ -2,7 +2,7 @@
 
 [![PyPI Downloads](https://static.pepy.tech/badge/kmoe-manga-downloader)](https://pepy.tech/projects/kmoe-manga-downloader) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
-`kmdr (Kmoe Manga Downloader)` 是一个 Python 应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定书籍及其卷，并支持回调脚本执行。
+`kmdr (Kmoe Manga Downloader)` 是一个 Python 应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
 
 <p align="center">
   <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" width="720">
@@ -10,11 +10,11 @@
 
 ## ✨功能特性
 
-- **凭证管理**: 命令行登录并持久化会话
-- **多种下载方式**: 支持通过书籍 URL 或从收藏列表下载
-- **高效下载**: 支持多线程、失败重试及断点续传
-- **配置持久化**: 保存常用下载目录、代理等设置
-- **回调支持**: 下载完成后自动执行自定义脚本
+- **现代化终端界面**: 使用 [rich](https://github.com/Textualize/rich) 构建的终端用户界面（TUI），提供进度条和菜单等现代化、美观的交互式终端界面。
+- **凭证和配置管理**: 应用自动维护登录凭证和下载设置，实现一次配置、持久有效，提升使用效率。
+- **高效下载的性能**:  采用 `asyncio` 并发分片下载技术，充分利用网络带宽，极大加速单个大文件的下载速度。
+- **强大的高可用性**: 内置强大的自动重试与断点续传机制，无惧网络中断，确保下载任务最终成功。
+- **灵活的自动化接口**: 支持下载完成后自动执行自定义回调脚本，轻松集成到您的自动化流程。
 
 ## 🛠️安装应用
 
