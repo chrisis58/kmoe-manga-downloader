@@ -7,5 +7,10 @@ class ConfigClearer(Configurer):
         self._clear = clear
 
     def operate(self) -> None:
-        self._configurer.clear(self._clear)
-        print(f"Cleared configuration: {self._clear}")
+        try:
+            self._configurer.clear(self._clear)
+        except KeyError as e:
+            self._console.print(e.args[0])
+            exit(1)
+
+        self._console.print(f"Cleared configuration: {self._clear}")

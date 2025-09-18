@@ -19,6 +19,9 @@ from .structure import Config
 
 console = Console()
 
+def console_print(*args, **kwargs):
+    console.print(*args, **kwargs)
+
 progress = Progress(
     TextColumn("[blue]{task.fields[filename]}", justify="left"),
     TextColumn("{task.fields[status]}", justify="right"),
@@ -174,7 +177,7 @@ class Configurer:
         elif key == 'option':
             self._config.option = None
         else:
-            raise ValueError(f"Unsupported clear option: {key}")
+            raise KeyError(f"[red]对应配置不存在: {key}。可用配置项：all, cookie, option[/red]")
 
         self.update()
     
