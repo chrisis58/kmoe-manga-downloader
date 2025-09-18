@@ -3,6 +3,7 @@ import os
 import re
 import math
 from typing import Callable, Optional, Union, Awaitable
+from enum import Enum
 
 from deprecation import deprecated
 import aiohttp
@@ -13,6 +14,14 @@ from aiohttp.client_exceptions import ClientPayloadError
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
+
+class STATUS(Enum):
+    WAITING='[blue]等待中[/blue]'
+    DOWNLOADING='[cyan]下载中[/cyan]'
+    RETRYING='[yellow]重试中[/yellow]'
+    MERGING='[magenta]合并中[/magenta]'
+    COMPLETED='[green]完成[/green]'
+    FAILED='[red]失败[/red]'
 
 @deprecated(details="请使用 'download_file_multipart'")
 async def download_file(
@@ -49,7 +58,7 @@ async def download_file(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[yellow]{filename} already exists[/yellow]")
+        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
         return
 
     block_size = 8192
@@ -74,9 +83,9 @@ async def download_file(
                         total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
 
                         if task_id is None:
-                            task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status="[cyan]下载中[/cyan]")
+                            task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
                         else:
-                            progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status="[cyan]下载中[/cyan]")
+                            progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value, refresh=True)
                         
                         async with aiofiles.open(filename_downloading, 'ab') as f:
                             async for chunk in r.content.iter_chunked(block_size):
@@ -89,7 +98,7 @@ async def download_file(
             except Exception as e:
                 if attempts_left > 0:
                     if task_id is not None:
-                        progress.update(task_id, status=f"[yellow]重试中[/yellow]")
+                        progress.update(task_id, status=STATUS.RETRYING.value, refresh=True)
                     if isinstance(e, ClientPayloadError):
                         new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
                         if new_block_size < block_size:
@@ -105,12 +114,12 @@ async def download_file(
     
     except Exception as e:
         if task_id is not None:
-            progress.update(task_id, status='[red]失败[/red]', visible=False)
+            progress.update(task_id, status=STATUS.FAILED.value, visible=False)
 
     finally:
         if await aio_os.path.exists(file_path):
             if task_id is not None:
-                progress.update(task_id, status='[green]完成[/green]', visible=False)
+                progress.update(task_id, status=STATUS.COMPLETED.value, visible=False)
 
             if callback:
                 callback()
@@ -174,7 +183,7 @@ async def download_file_multipart(
             if await aio_os.path.exists(part_path):
                 resumed_size += (await aio_os.stat(part_path)).st_size
 
-        task_id = progress.add_task("download", filename=filename, status='[cyan]下载中[/cyan]', total=total_size, completed=resumed_size)
+        task_id = progress.add_task("download", filename=filename, status=STATUS.WAITING.value, total=total_size, completed=resumed_size)
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
             end = min(start + chunk_size - 1, total_size - 1)
@@ -195,18 +204,18 @@ async def download_file_multipart(
             
         await asyncio.gather(*tasks)
 
-        progress.update(task_id, status='[cyan]合并中[/cyan]', refresh=True)
+        progress.update(task_id, status=STATUS.MERGING.value, refresh=True)
         await _merge_parts(part_paths, filename_downloading)
         
         os.rename(filename_downloading, file_path)
     except Exception as e:
         if task_id is not None:
-            progress.update(task_id, status='[red]失败[/red]', visible=False)
+            progress.update(task_id, status=STATUS.FAILED.value, visible=False)
 
     finally:
         if await aio_os.path.exists(file_path):
             if task_id is not None:
-                progress.update(task_id, status='[green]完成[/green]', completed=total_size, refresh=True)
+                progress.update(task_id, status=STATUS.COMPLETED.value, completed=total_size, refresh=True)
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
             if cleanup_tasks:
@@ -248,7 +257,10 @@ async def _download_part(
             async with semaphore:
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
-                    
+
+                    if progress.tasks[task_id].fields.get("status") != STATUS.DOWNLOADING.value:
+                        progress.update(task_id, status=STATUS.DOWNLOADING.value, refresh=True)
+
                     async with aiofiles.open(part_path, 'ab') as f:
                         async for chunk in response.content.iter_chunked(block_size):
                             if chunk:
