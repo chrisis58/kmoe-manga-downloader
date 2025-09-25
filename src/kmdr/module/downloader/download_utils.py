@@ -202,9 +202,6 @@ async def download_file_multipart(
         await _merge_parts(part_paths, filename_downloading)
         
         os.rename(filename_downloading, file_path)
-    except Exception as e:
-        if task_id is not None:
-            await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
     finally:
         if await aio_os.path.exists(file_path):
@@ -216,6 +213,9 @@ async def download_file_multipart(
                 await asyncio.gather(*cleanup_tasks)
             if callback:
                 callback()
+        else:
+            if task_id is not None:
+                await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
 async def _download_part(
         session: aiohttp.ClientSession,
@@ -265,7 +265,7 @@ async def _download_part(
                 await state_manager.request_status_update(part_id=start, status=STATUS.WAITING)
             else:
                 # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
-                raise
+                await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
 async def _merge_parts(part_paths: list[str], final_path: str):
     async with aiofiles.open(final_path, 'wb') as final_file:
