@@ -55,7 +55,6 @@ class StateManager:
             return
         
         highest_status = max(self._part_states.values())
-        self._progress.console.print(f"Overall status updated to {highest_status.name}")
         if highest_status != self._current_status:
             self._current_status = highest_status
             self._progress.update(self._task_id, status=highest_status.value, refresh=True)
@@ -63,5 +62,4 @@ class StateManager:
     async def request_status_update(self, part_id: int, status: STATUS):
         async with self._lock:
             self._part_states[part_id] = status
-            self._progress.console.print(f"Part {part_id} status updated to {status.name}")
             self._update_status()
