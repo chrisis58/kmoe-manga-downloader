@@ -1,6 +1,6 @@
 from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 
-from .utils import download_file, safe_filename, download_file_multipart
+from .download_utils import download_file, safe_filename, download_file_multipart
 
 @DOWNLOADER.register(
     hasvalues={
