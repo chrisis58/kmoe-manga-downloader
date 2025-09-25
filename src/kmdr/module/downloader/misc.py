@@ -42,6 +42,11 @@ class StateManager:
 
         self._lock = asyncio.Lock()
 
+    @property
+    @staticmethod
+    def PARENT_ID() -> int:
+        return -1
+
     def advance(self, advance: int):
         self._progress.update(self._task_id, advance=advance)
 
@@ -50,22 +55,13 @@ class StateManager:
             return
         
         highest_status = max(self._part_states.values())
+        self._progress.console.print(f"Overall status updated to {highest_status.name}")
         if highest_status != self._current_status:
             self._current_status = highest_status
             self._progress.update(self._task_id, status=highest_status.value, refresh=True)
 
     async def request_status_update(self, part_id: int, status: STATUS):
-        """
-        请求状态更新，用于分片状态更新
-        """
         async with self._lock:
             self._part_states[part_id] = status
-            self._update_status()
-    
-    async def request_status_update(self, status: STATUS):
-        """
-        请求状态更新, 用于整体状态更新
-        """
-        async with self._lock:
-            self._part_states[-1] = status
+            self._progress.console.print(f"Part {part_id} status updated to {status.name}")
             self._update_status()

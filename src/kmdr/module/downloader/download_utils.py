@@ -17,7 +17,6 @@ BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
 
-
 @deprecated(details="请使用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
@@ -199,18 +198,18 @@ async def download_file_multipart(
             
         await asyncio.gather(*tasks)
 
-        await state_manager.request_status_update(status=STATUS.MERGING)
+        await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
         await _merge_parts(part_paths, filename_downloading)
         
         os.rename(filename_downloading, file_path)
     except Exception as e:
         if task_id is not None:
-            await state_manager.request_status_update(status=STATUS.FAILED)
+            await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
     finally:
         if await aio_os.path.exists(file_path):
             if task_id is not None:
-                await state_manager.request_status_update(status=STATUS.COMPLETED)
+                await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.COMPLETED)
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
             if cleanup_tasks:
@@ -252,7 +251,7 @@ async def _download_part(
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
 
-                    state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
+                    await state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
 
                     async with aiofiles.open(part_path, 'ab') as f:
                         async for chunk in response.content.iter_chunked(block_size):
