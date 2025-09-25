@@ -2,7 +2,7 @@
 
 [![PyPI Downloads](https://static.pepy.tech/badge/kmoe-manga-downloader)](https://pepy.tech/projects/kmoe-manga-downloader) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
-`kmdr (Kmoe Manga Downloader)` 是一个 Python 应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
+`kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
 
 <p align="center">
   <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" width="720">
@@ -10,11 +10,17 @@
 
 ## ✨功能特性
 
-- **现代化终端界面**: 使用 [rich](https://github.com/Textualize/rich) 构建的终端用户界面（TUI），提供进度条和菜单等现代化、美观的交互式终端界面。
+- **现代化终端界面**: 基于 [rich](https://github.com/Textualize/rich) 构建的终端用户界面（TUI），提供进度条和菜单等现代化、美观的交互式终端界面。
 - **凭证和配置管理**: 应用自动维护登录凭证和下载设置，实现一次配置、持久有效，提升使用效率。
-- **高效下载的性能**:  采用 `asyncio` 并发分片下载技术，充分利用网络带宽，极大加速单个大文件的下载速度。
-- **强大的高可用性**: 内置强大的自动重试与断点续传机制，无惧网络中断，确保下载任务最终成功。
-- **灵活的自动化接口**: 支持下载完成后自动执行自定义回调脚本，轻松集成到您的自动化流程。
+- **高效下载的性能**:  采用 `asyncio` 并发分片下载方式，充分利用网络带宽，显著加速单个大文件的下载速度。
+- **强大的高可用性**: 内置自动重试与断点续传机制，无惧网络中断，确保下载任务在不稳定环境下依然能够成功。
+- **灵活的自动化接口**: 支持在每个文件下载成功后自动执行自定义回调脚本，轻松集成到您的自动化工作流。
+
+## 🖼️ 使用场景
+
+- **通用的加速体验**: 采用并发分片下载方式，充分地利用不同类型用户的网络带宽，提升数据传输效率，从而有效缩短下载的等待时间。
+- **灵活部署与远程控制**: 支持在远端服务器或 NAS 上运行，可以在其他设备（PC、平板）上浏览，而通过简单的命令触发远程下载任务，实现浏览与存储的分离。
+- **智能化自动追新**: 应用支持识别重复内容，可配合定时任务实等现无人值守下载最新的内容，轻松打造时刻保持同步的个人资料库。
 
 ## 🛠️安装应用
 
@@ -47,25 +53,27 @@ kmdr login -u <your_username>
 ```bash
 # 在当前目录下载第一、二、三卷
 kmdr download --dest . --book-url https://kox.moe/c/50076.htm --volume 1,2,3
+# 下面命令的功能与上面相同
 kmdr download -l https://kox.moe/c/50076.htm -v 1-3
 ```
 
 ```bash
 # 在目标目录下载全部番外篇
 kmdr download --dest path/to/destination --book-url https://kox.moe/c/50076.htm --vol-type extra -v all
+# 下面命令的功能与上面相同
 kmdr download -d path/to/destination -l https://kox.moe/c/50076.htm -t extra -v all
 ```
 
 #### 常用参数说明：
 
-- `-d`, `--dest`: 下载的目标目录（默认为当前目录），在此基础上会额外添加一个为书籍名称的子目录
-- `-l`, `--book-url`: 指定书籍的主页地址
-- `-v`, `--volume`: 指定卷的名称，多个名称使用逗号分隔，`all` 表示下载所有卷
+- `-d`, `--dest`: 下载的目标目录（默认为当前目录），在此基础上会额外添加一个为漫画名称的子目录
+- `-l`, `--book-url`: 指定漫画的主页地址
+- `-v`, `--volume`: 指定下载的卷，多个用逗号分隔，例如 `1,2,3` 或 `1-5,8`，`all` 表示全部
 - `-t`, `--vol-type`: 卷类型，`vol`: 单行本（默认）；`extra`: 番外；`seri`: 连载话；`all`: 全部
 - `-p`, `--proxy`: 代理服务器地址
-- `-r`, `--retry`: 下载失败时的重试次数
+- `-r`, `--retry`: 下载失败时的重试次数，默认为 3
 - `-c`, `--callback`: 下载完成后的回调脚本（使用方式详见 [4. 回调函数](https://github.com/chrisis58/kmoe-manga-downlaoder?tab=readme-ov-file#4-%E5%9B%9E%E8%B0%83%E5%87%BD%E6%95%B0)）
-- `--num-workers`: 最大同时下载数量，默认为 1
+- `--num-workers`: 最大下载并发数量，默认为 8
 
 > 完整的参数说明可以从 `help` 指令中获取。
 
@@ -98,7 +106,7 @@ kmdr download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1
 | b.name   | 对应漫画的名字 |
 | b.author | 对应漫画的作者 |
 
-> 完整的可用参数请参考 [structure.py](https://github.com/chrisis58/kmdr/blob/main/core/structure.py#L11) 中关于 `VolInfo` 的定义。
+> 完整的可用参数请参考 [structure.py](https://github.com/chrisis58/kmoe-manga-downloader/blob/main/src/kmdr/core/structure.py#L11) 中关于 `VolInfo` 的定义。
 
 ### 5. 持久化配置
 
