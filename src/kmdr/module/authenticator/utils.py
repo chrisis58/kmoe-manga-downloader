@@ -2,12 +2,14 @@ from typing import Optional, Callable
 
 from aiohttp import ClientSession
 from rich.console import Console
+from urllib.parse import urljoin
 
 from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
+from kmdr.core.constants import API_ROUTE, BASE_URL
 
-PROFILE_URL = 'https://kox.moe/my.php'
-LOGIN_URL = 'https://kox.moe/login.php'
+PROFILE_ROUTE = '/my.php'
+LOGIN_ROUTE = '/login.php'
 
 NICKNAME_ID = 'div_nickname_display'
 
@@ -19,11 +21,12 @@ LV1_ID = 'div_user_lv1'
 async def check_status(
         session: ClientSession,
         console: Console,
+        base_url: str = BASE_URL.KXO,
         show_quota: bool = False,
         is_vip_setter: Optional[Callable[[int], None]] = None,
         level_setter: Optional[Callable[[int], None]] = None,
 ) -> bool:
-    async with session.get(url = PROFILE_URL) as response:
+    async with session.get(url = urljoin(base_url, API_ROUTE.PROFILE)) as response:
         try:
             response.raise_for_status()
         except Exception as e:
@@ -31,7 +34,7 @@ async def check_status(
             return False
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
-                and str(response.url) == LOGIN_URL:
+                and str(response.url) == LOGIN_ROUTE:
             raise LoginError("凭证已失效，请重新登录。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
         if not is_vip_setter and not level_setter and not show_quota:

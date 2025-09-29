@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from enum import Enum
-
-from deprecation import deprecated
+from warnings import deprecated
 
 
 class _BaseUrl(BaseModel, frozen=True):
