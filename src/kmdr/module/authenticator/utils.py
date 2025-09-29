@@ -8,9 +8,6 @@ from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE, BASE_URL
 
-PROFILE_ROUTE = '/my.php'
-LOGIN_ROUTE = '/login.php'
-
 NICKNAME_ID = 'div_nickname_display'
 
 VIP_ID = 'div_user_vip'
@@ -34,7 +31,7 @@ async def check_status(
             return False
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
-                and str(response.url) == LOGIN_ROUTE:
+                and str(response.url) == urljoin(base_url, API_ROUTE.LOGIN):
             raise LoginError("凭证已失效，请重新登录。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
         if not is_vip_setter and not level_setter and not show_quota:
