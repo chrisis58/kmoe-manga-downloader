@@ -6,7 +6,7 @@ from warnings import deprecated
 class _BaseUrl(BaseModel, frozen=True):
 
     @property
-    @deprecated(message="KOX 已过时，请使用 KXO 或 KOZ。")
+    @deprecated("KOX 已过时，请使用 KXO 或 KOZ。")
     def KOX(self) -> str:
         return 'https://kox.moe'
 
