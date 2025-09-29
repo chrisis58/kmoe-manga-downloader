@@ -17,7 +17,7 @@ BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
 
-@deprecated(details="请使用 'download_file_multipart'")
+@deprecated(message="请使用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
