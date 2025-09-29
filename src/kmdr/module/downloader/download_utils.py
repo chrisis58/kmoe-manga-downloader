@@ -3,8 +3,8 @@ import os
 import re
 import math
 from typing import Callable, Optional, Union, Awaitable
+from warnings import deprecated
 
-from deprecation import deprecated
 import aiohttp
 import aiofiles
 import aiofiles.os as aio_os
