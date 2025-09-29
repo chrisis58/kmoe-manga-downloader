@@ -2,7 +2,7 @@
 
 [![PyPI Downloads](https://static.pepy.tech/badge/kmoe-manga-downloader)](https://pepy.tech/projects/kmoe-manga-downloader) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
-`kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kox.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
+`kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kxo.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
 
 <p align="center">
   <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" width="720">
