@@ -26,9 +26,15 @@ class SessionContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self._base_url: str = base_url_var.get()
-        self._session: ClientSession = session_var.get()
 
-    def _set_base_url(self, value: str):
-        self._base_url = value
+    @property
+    def _session(self) -> ClientSession:
+        return session_var.get()
+
+    @property
+    def _base_url(self) -> str:
+        return base_url_var.get()
+
+    @_base_url.setter
+    def _base_url(self, value: str):
         base_url_var.set(value)
