@@ -2,12 +2,11 @@ from typing import Optional, Callable
 
 from aiohttp import ClientSession
 from rich.console import Console
+from urllib.parse import urljoin, urlsplit
 
 from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
-
-PROFILE_URL = 'https://kox.moe/my.php'
-LOGIN_URL = 'https://kox.moe/login.php'
+from kmdr.core.constants import API_ROUTE, BASE_URL
 
 NICKNAME_ID = 'div_nickname_display'
 
@@ -19,11 +18,12 @@ LV1_ID = 'div_user_lv1'
 async def check_status(
         session: ClientSession,
         console: Console,
+        base_url: str = BASE_URL.KXO,
         show_quota: bool = False,
         is_vip_setter: Optional[Callable[[int], None]] = None,
         level_setter: Optional[Callable[[int], None]] = None,
 ) -> bool:
-    async with session.get(url = PROFILE_URL) as response:
+    async with session.get(url = urljoin(base_url, API_ROUTE.PROFILE)) as response:
         try:
             response.raise_for_status()
         except Exception as e:
@@ -31,7 +31,7 @@ async def check_status(
             return False
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
-                and str(response.url) == LOGIN_URL:
+                and str(response.url) == urljoin(base_url, API_ROUTE.LOGIN):
             raise LoginError("凭证已失效，请重新登录。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
 
         if not is_vip_setter and not level_setter and not show_quota:
@@ -81,3 +81,13 @@ def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] =
         return LV1_ID
     
     return NOR_ID
+
+def extract_base_url(url: Optional[str], default: Optional[str] = None) -> Optional[str]:
+    if not url:
+        return default
+
+    parsed = urlsplit(url)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    return default

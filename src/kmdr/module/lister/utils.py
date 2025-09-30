@@ -1,7 +1,9 @@
 from bs4 import BeautifulSoup
 import re
 from typing import Optional
+from urllib.parse import urljoin
 
+from yarl import URL
 from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
@@ -16,14 +18,21 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
     :param url: 书籍页面的 URL。
     :return: 包含书籍信息和卷信息的元组。
     """
-    async with session.get(url) as response:
+    structured_url = URL(url)
+
+    if structured_url.path.startswith('/m/'):
+        # 移除移动端路径部分，统一为桌面端路径
+        # 因为移动端页面的结构与桌面端不同，可能会影响解析
+        structured_url = structured_url.with_path(structured_url.path.replace('/m/', '', 1))
+
+    async with session.get(structured_url) as response:
         response.raise_for_status()
 
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         book_page = BeautifulSoup(await response.text(), 'html.parser')
 
         book_info = __extract_book_info(url, book_page, book_info)
-        volumes = await __extract_volumes(session, book_page)
+        volumes = await __extract_volumes(session, url, book_page)
 
         return book_info, volumes
 
@@ -42,13 +51,13 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
     )
     
 
-async def __extract_volumes(session: Session, book_page: BeautifulSoup) -> list[VolInfo]:
+async def __extract_volumes(session: Session, url: str, book_page: BeautifulSoup) -> list[VolInfo]:
     script = book_page.find_all('script', language="javascript")[-1].text
 
     pattern = re.compile(r'/book_data.php\?h=\w+')
     book_data_url = pattern.search(script).group(0)
     
-    async with session.get(url = f"https://kox.moe{book_data_url}") as response:
+    async with session.get(url = urljoin(url, book_data_url)) as response:
         response.raise_for_status()
 
         book_data = (await response.text()).split('\n')

@@ -13,3 +13,11 @@ class LoginError(KmdrError):
 
     def __str__(self):
         return f"{self.message}\n{self._solution}"
+
+class RedirectError(KmdrError):
+    def __init__(self, message, new_base_url: str):
+        super().__init__(message)
+        self.new_base_url = new_base_url
+
+    def __str__(self):
+        return f"{self.message} 新的地址: {self.new_base_url}"

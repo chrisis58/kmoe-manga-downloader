@@ -1,11 +1,13 @@
 from functools import partial
+from urllib.parse import urljoin
 
 import json
 from async_lru import alru_cache
 
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
+from kmdr.core.constants import API_ROUTE
 
-from .utils import download_file, safe_filename, download_file_multipart
+from .download_utils import safe_filename, download_file_multipart
 
 
 @DOWNLOADER.register(order=10)
@@ -35,7 +37,14 @@ class ReferViaDownloader(Downloader):
     @alru_cache(maxsize=128)
     async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
 
-        url = f"https://kox.moe/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={self._profile.is_vip}&json=1"
+        url = urljoin(
+            self._base_url,
+            API_ROUTE.GETDOWNURL.format(
+                book_id=book_id,
+                volume_id=volume_id,
+                is_vip=self._profile.is_vip
+            )
+        )
 
         async with self._session.get(url) as response:
             response.raise_for_status()

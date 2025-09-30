@@ -5,6 +5,7 @@ from unittest.mock import patch, AsyncMock, MagicMock
 import aiohttp
 
 from kmdr.core.utils import async_retry
+from kmdr.core.error import RedirectError
 
 class TestAsyncRetryDecorator(unittest.TestCase):
 
@@ -89,3 +90,25 @@ class TestAsyncRetryDecorator(unittest.TestCase):
         self.assertEqual(mock_sleep.call_args_list[0].args[0], 1)
         self.assertEqual(mock_sleep.call_args_list[1].args[0], 2)
         self.assertEqual(mock_sleep.call_args_list[2].args[0], 4)
+    
+    def test_base_url_setter_called_on_redirect(self):
+        mocked_failing_func = AsyncMock(side_effect=[
+            RedirectError("redirected", "http://new-url.com"),
+            "Success after redirect"
+        ])
+
+        url = "http://original-url.com"
+        
+        def base_url_setter(new_url):
+            nonlocal url
+            url = new_url
+
+        @async_retry(base_url_setter=base_url_setter)
+        async def func_to_test():
+            return await mocked_failing_func()
+        
+        asyncio.run(func_to_test())
+
+        # 验证 base_url_setter 被调用并更新了 URL
+        self.assertEqual(url, "http://new-url.com")
+        mocked_failing_func.assert_awaited()

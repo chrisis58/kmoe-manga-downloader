@@ -4,10 +4,10 @@ import asyncio
 
 import aiohttp
 
-from deprecation import deprecated
 import subprocess
 
 from .structure import BookInfo, VolInfo
+from .error import RedirectError
 
 
 def singleton(cls):
@@ -43,7 +43,8 @@ def async_retry(
     attempts: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-    retry_on_status: set[int] = {500, 502, 503, 504, 429, 408}
+    retry_on_status: set[int] = {500, 502, 503, 504, 429, 408},
+    base_url_setter: Optional[Callable[[str], None]] = None,
 ):
     def decorator(func):
         @functools.wraps(func)
@@ -61,6 +62,13 @@ def async_retry(
                 except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                     # 对于所有其他 aiohttp 客户端异常和超时，进行重试
                     if attempt == attempts - 1:
+                        raise
+                except RedirectError as e:
+                    if base_url_setter:
+                        base_url_setter(e.new_base_url)
+                        print(f"检测到重定向，已自动更新 base url 为: {e.new_base_url}。立即重试...")
+                        continue
+                    else:
                         raise
                 
                 await asyncio.sleep(current_delay)
