@@ -2,7 +2,8 @@
     "default": "https://kxx.moe",
     "alternatives": [
         "https://kxo.moe",
-        "https://mox.moe"
+        "https://mox.moe",
+        "https://koz.moe"
     ],
     "deprecated": [
         "https://kox.moe"
