@@ -72,6 +72,60 @@ class TestKmdrDownload(unittest.TestCase):
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
         )
         assert total_size < 3 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
+    
+    def test_download_multiple_volumes_mirror(self):
+        dest = f'{BASE_DIR}/{self.test_download_multiple_volumes_mirror.__name__}'
+
+        kmdr_main(
+            Namespace(
+                command='download',
+                dest=dest,
+                ##################### WARNING #####################
+                # 这个 URL 可能会在未来失效，因为 MOX 站点不保证长期可用
+                # 这里使用 MOX 站点是为了测试多源下载功能
+                # 如果确认是镜像站失效，请替换为其他可用的镜像站
+                book_url=f'{BASE_URL.MOX}/c/51044.htm',
+                vol_type='extra',
+                volume='all',
+                max_size=0.6,
+                limit=1,
+                retry=3,
+            )
+        )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 3 volumes to be downloaded"
+
+        total_size = sum(
+            os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
+        )
+        assert total_size < 1 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
+    
+    def test_download_single_volumes_mobile(self):
+        dest = f'{BASE_DIR}/{self.test_download_single_volumes_mobile.__name__}'
+
+        kmdr_main(
+            Namespace(
+                command='download',
+                dest=dest,
+                book_url=f'{BASE_URL.DEFAULT}/m/c/51044.htm',
+                vol_type='extra',
+                volume='all',
+                max_size=0.6,
+                limit=1,
+                retry=3,
+            )
+        )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volumes to be downloaded"
+
+        total_size = sum(
+            os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
+        )
+        assert total_size < 1 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
 
     def test_download_multiple_volumes_with_multiple_workers(self):
         dest = f'{BASE_DIR}/{self.test_download_multiple_volumes_with_multiple_workers.__name__}'
