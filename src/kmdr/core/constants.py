@@ -30,7 +30,7 @@ class _BaseUrl:
     @property
     def DEFAULT(self) -> str:
         """默认基础 URL"""
-        return self.KXO
+        return self.KXX
 
 
 @dataclass(frozen=True)
