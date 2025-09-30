@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Optional
+from typing import Optional, Any
 import argparse
 from contextvars import ContextVar
 from rich.console import Console
@@ -42,7 +42,6 @@ progress = Progress(
 )
 
 session_var = ContextVar('session')
-base_url_var = ContextVar('base_url', default=BASE_URL.DEFAULT)
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None
@@ -77,6 +76,7 @@ def argument_parser():
     config_parser = subparsers.add_parser('config', help='配置下载器')
     config_parser.add_argument('-l', '--list-option', action='store_true', help='列出所有配置')
     config_parser.add_argument('-s', '--set', nargs='+', type=str, help='设置一个或多个配置项，格式为 `key=value`，例如: `num_workers=8`')
+    config_parser.add_argument('-b', '--base-url', type=str, help='设置镜像站点的基础 URL, 例如: `https://kxx.moe`')
     config_parser.add_argument('-c', '--clear', type=str, help='清除指定配置，可选值为 `all`, `cookie`, `option`')
     config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='删除特定的配置选项')
 
@@ -139,6 +139,9 @@ class Configurer:
             cookie = config.get('cookie', None)
             if cookie is not None and isinstance(cookie, dict):
                 self._config.cookie = cookie
+            base_url = config.get('base_url', None)
+            if base_url is not None and isinstance(base_url, str):
+                self._config.base_url = base_url
 
     @property
     def config(self) -> 'Config':
@@ -164,7 +167,7 @@ class Configurer:
         return self._config.option
     
     @option.setter
-    def option(self, value: Optional[dict[str, any]]):
+    def option(self, value: Optional[dict[str, Any]]):
         if self._config is None:
             self._config = Config()
         self._config.option = value
@@ -198,7 +201,7 @@ class Configurer:
 
         self.update()
     
-    def set_option(self, key: str, value: any):
+    def set_option(self, key: str, value: Any):
         if self._config.option is None:
             self._config.option = {}
 
@@ -223,5 +226,11 @@ def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace
 
 def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
     assert isinstance(dest, argparse.Namespace), "dest must be an argparse.Namespace instance"
-    option = Configurer().config.option
+    option = Configurer().option
+    
+    if option is None:
+        return dest
+
     return __combine_args(dest, option)
+
+base_url_var = ContextVar('base_url', default=Configurer().base_url)
