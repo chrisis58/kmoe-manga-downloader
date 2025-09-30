@@ -158,6 +158,7 @@ async def download_file_multipart(
         return
 
     part_paths = []
+    part_expected_sizes = []
     task_id = None
     try:
         current_url = await fetch_url(url)
@@ -183,6 +184,7 @@ async def download_file_multipart(
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
             end = min(start + chunk_size - 1, total_size - 1)
+            part_expected_sizes.append(end - start + 1)
 
             task = _download_part(
                 session=session,
@@ -199,10 +201,14 @@ async def download_file_multipart(
             
         await asyncio.gather(*tasks)
 
-        await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
-        await _merge_parts(part_paths, filename_downloading)
-        
-        os.rename(filename_downloading, file_path)
+        assert len(part_paths) == len(part_expected_sizes)
+        if all([await _validate_part(part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)]):
+            await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
+            await _merge_parts(part_paths, filename_downloading)
+            os.rename(filename_downloading, file_path)
+        else:
+            # 如果有任何一个分片校验失败，则视为下载失败
+            await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
     finally:
         if await aio_os.path.exists(file_path):
@@ -267,6 +273,12 @@ async def _download_part(
             else:
                 # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
+
+async def _validate_part(part_path: str, expected_size: int) -> bool:
+    if not await aio_os.path.exists(part_path):
+        return False
+    actual_size = (await aio_os.path.getsize(part_path))
+    return actual_size == expected_size
 
 async def _merge_parts(part_paths: list[str], final_path: str):
     async with aiofiles.open(final_path, 'wb') as final_file:
