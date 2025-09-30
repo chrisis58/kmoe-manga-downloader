@@ -32,7 +32,7 @@ class DirectDownloader(Downloader):
     def construct_download_url(self, book: BookInfo, volume: VolInfo) -> str:
         return urljoin(
             self._base_url,
-            API_ROUTE.GETDOWNURL.format(
+            API_ROUTE.DOWNLOAD.format(
                 base_url=self._base_url,
                 book_id=book.id,
                 volume_id=volume.id,
