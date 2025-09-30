@@ -277,7 +277,7 @@ async def _download_part(
 async def _validate_part(part_path: str, expected_size: int) -> bool:
     if not await aio_os.path.exists(part_path):
         return False
-    actual_size = (await aio_os.path.getsize(part_path))
+    actual_size = await aio_os.path.getsize(part_path)
     return actual_size == expected_size
 
 async def _merge_parts(part_paths: list[str], final_path: str):
