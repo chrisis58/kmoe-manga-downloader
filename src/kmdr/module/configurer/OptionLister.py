@@ -19,7 +19,7 @@ class OptionLister(Configurer):
 
         table = Table(title="[green]当前 Kmdr 配置项[/green]", show_header=False, header_style="blue")
 
-        table.add_column("配置项 (Key)", style="magenta", no_wrap=True, min_width=10)
+        table.add_column("配置类型 (Type)", style="magenta", no_wrap=True, min_width=10)
         table.add_column("配置项 (Key)", style="cyan", no_wrap=True, min_width=10)
         table.add_column("值 (Value)", style="white", no_wrap=False, min_width=20)
 
