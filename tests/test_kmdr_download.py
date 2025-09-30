@@ -5,6 +5,7 @@ import unittest
 from argparse import Namespace
 
 from kmdr.main import main_sync as kmdr_main
+from kmdr.core.constants import BASE_URL
 
 BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
@@ -54,7 +55,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51044.htm',
+                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -79,7 +80,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51044.htm',
+                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -105,7 +106,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51044.htm',
+                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
@@ -131,7 +132,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url='https://kox.moe/c/51043.htm',
+                book_url=f'{BASE_URL.DEFAULT}/c/51043.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
