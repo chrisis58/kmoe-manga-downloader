@@ -202,7 +202,8 @@ async def download_file_multipart(
         await asyncio.gather(*tasks)
 
         assert len(part_paths) == len(part_expected_sizes)
-        if all([await _validate_part(part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)]):
+        results = await asyncio.gather(*[_validate_part(part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)])
+        if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
             await _merge_parts(part_paths, filename_downloading)
             os.rename(filename_downloading, file_path)
