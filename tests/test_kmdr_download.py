@@ -95,7 +95,7 @@ class TestKmdrDownload(unittest.TestCase):
 
         assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
         assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
-        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 3 volumes to be downloaded"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
 
         total_size = sum(
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
@@ -120,7 +120,7 @@ class TestKmdrDownload(unittest.TestCase):
 
         assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
         assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
-        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volumes to be downloaded"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
 
         total_size = sum(
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
