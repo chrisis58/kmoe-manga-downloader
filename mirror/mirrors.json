@@ -1,0 +1,10 @@
+{
+    "default": "https://kxx.moe",
+    "alternatives": [
+        "https://kxo.moe",
+        "https://mox.moe"
+    ],
+    "deprecated": [
+        "https://kox.moe"
+    ]
+}
