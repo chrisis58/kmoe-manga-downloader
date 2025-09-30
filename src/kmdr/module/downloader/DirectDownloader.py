@@ -1,6 +1,9 @@
-from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
+from urllib.parse import urljoin
 
-from .download_utils import download_file, safe_filename, download_file_multipart
+from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
+from kmdr.core.constants import API_ROUTE
+
+from .download_utils import safe_filename, download_file_multipart
 
 @DOWNLOADER.register(
     hasvalues={
@@ -27,4 +30,12 @@ class DirectDownloader(Downloader):
         )
 
     def construct_download_url(self, book: BookInfo, volume: VolInfo) -> str:
-        return f'https://kox.moe/dl/{book.id}/{volume.id}/1/2/{self._profile.is_vip}/'
+        return urljoin(
+            self._base_url,
+            API_ROUTE.GETDOWNURL.format(
+                base_url=self._base_url,
+                book_id=book.id,
+                volume_id=volume.id,
+                is_vip=self._profile.is_vip
+            )
+        )

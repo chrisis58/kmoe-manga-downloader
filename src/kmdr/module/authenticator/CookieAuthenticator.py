@@ -4,12 +4,11 @@ from yarl import URL
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 
-from .utils import check_status
-from .utils import PROFILE_URL
+from .utils import check_status, extract_base_url
 
 @AUTHENTICATOR.register()
 class CookieAuthenticator(Authenticator):
-    def __init__(self, proxy: Optional[str] = None, *args, **kwargs):
+    def __init__(self, proxy: Optional[str] = None, book_url: Optional[str] = None, *args, **kwargs):
         super().__init__(proxy, *args, **kwargs)
 
         if 'command' in kwargs and kwargs['command'] == 'status':
@@ -17,17 +16,33 @@ class CookieAuthenticator(Authenticator):
         else:
             self._show_quota = False
 
+        # 根据用户提供的 book_url 来决定访问的镜像站
+        self._inner_base_url = extract_base_url(book_url)
+
     async def _authenticate(self) -> bool:
         cookie = self._configurer.cookie
         
         if not cookie:
             raise LoginError("无法找到 Cookie，请先完成登录。", ['kmdr login -u <username>'])
         
-        self._session.cookie_jar.update_cookies(cookie, response_url=URL(PROFILE_URL))
+        self._session.cookie_jar.update_cookies(cookie, response_url=URL(self.base_url))
         return await check_status(
             self._session,
             self._console,
+            base_url=self.base_url,
             show_quota=self._show_quota,
             is_vip_setter=lambda value: setattr(self._profile, 'is_vip', value),
             level_setter=lambda value: setattr(self._profile, 'user_level', value),
         )
+
+    def _extract_base_url(self, book_url: str) -> str:
+        if not book_url:
+            return self._base_url
+
+        from urllib.parse import urlsplit
+
+        parsed = urlsplit(book_url)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+
+        return self._base_url

@@ -2,7 +2,7 @@ from typing import Optional, Callable
 
 from aiohttp import ClientSession
 from rich.console import Console
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
@@ -81,3 +81,10 @@ def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] =
         return LV1_ID
     
     return NOR_ID
+
+def extract_base_url(url: str) -> str:
+    parsed = urlsplit(url)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    raise ValueError(f"无效的 URL: {url}")

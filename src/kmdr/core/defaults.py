@@ -15,6 +15,7 @@ from rich.progress import (
 
 from .utils import singleton
 from .structure import Config
+from .constants import BASE_URL
 
 HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
@@ -166,6 +167,19 @@ class Configurer:
         if self._config is None:
             self._config = Config()
         self._config.option = value
+        self.update()
+    
+    @property
+    def base_url(self) -> str:
+        if self._config is None or self._config.base_url is None:
+            return BASE_URL.DEFAULT 
+        return self._config.base_url
+    
+    @base_url.setter
+    def set_base_url(self, value: str):
+        if self._config is None:
+            self._config = Config()
+        self._config.base_url = value
         self.update()
     
     def update(self):

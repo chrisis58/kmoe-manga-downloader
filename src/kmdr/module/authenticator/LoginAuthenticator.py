@@ -1,11 +1,15 @@
 from typing import Optional
 import re
+from yarl import URL
+from urllib.parse import urljoin
 
 from rich.prompt import Prompt
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
+from kmdr.core.constants import API_ROUTE
+from kmdr.core.error import RedirectError
 
-from .utils import check_status
+from .utils import check_status, extract_base_url
 
 CODE_OK = 'm100'
 
@@ -33,15 +37,21 @@ class LoginAuthenticator(Authenticator):
     async def _authenticate(self) -> bool:
 
         async with self._session.post(
-            url = 'https://kox.moe/login_do.php', 
+            url = urljoin(self._base_url, API_ROUTE.LOGIN_DO),
             data = {
                 'email': self._username,
                 'passwd': self._password,
                 'keepalive': 'on'
             },
+            allow_redirects = False
         ) as response:
 
             response.raise_for_status()
+
+            if response.status in (301, 302, 307, 308) and 'Location' in response.headers:
+                new_location = response.headers['Location']
+                raise RedirectError("检测到重定向", new_base_url=extract_base_url(new_location))
+
             match = re.search(r'"\w+"', await response.text())
 
             if not match:
@@ -51,8 +61,8 @@ class LoginAuthenticator(Authenticator):
             if code != CODE_OK:
                 raise LoginError(f"认证失败，错误代码：{code} " + CODE_MAPPING.get(code, "未知错误。"))
 
-            if await check_status(self._session, self._console, show_quota=self._show_quota):
-                cookie = self._session.cookie_jar.filter_cookies('https://kox.moe')
+            if await check_status(self._session, self._console, base_url=self.base_url, show_quota=self._show_quota):
+                cookie = self._session.cookie_jar.filter_cookies(URL(self._base_url))
                 self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
 
                 return True

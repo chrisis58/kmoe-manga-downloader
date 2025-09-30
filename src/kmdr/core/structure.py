@@ -66,3 +66,5 @@ class Config:
     """
 
     cookie: Optional[dict[str, str]] = None
+
+    base_url: Optional[str] = None
