@@ -3,6 +3,7 @@ import re
 from typing import Optional
 from urllib.parse import urljoin
 
+from yarl import URL
 from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
@@ -17,7 +18,14 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
     :param url: 书籍页面的 URL。
     :return: 包含书籍信息和卷信息的元组。
     """
-    async with session.get(url) as response:
+    structured_url = URL(url)
+
+    if structured_url.path.startswith('/m/'):
+        # 移除移动端路径部分，统一为桌面端路径
+        # 因为移动端页面的结构与桌面端不同，可能会影响解析
+        structured_url = structured_url.with_path(structured_url.path.replace('/m/', '', 1))
+
+    async with session.get(structured_url) as response:
         response.raise_for_status()
 
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
