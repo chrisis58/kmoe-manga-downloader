@@ -2,7 +2,7 @@
 
 [![PyPI Downloads](https://static.pepy.tech/badge/kmoe-manga-downloader)](https://pepy.tech/projects/kmoe-manga-downloader) [![PyPI version](https://img.shields.io/pypi/v/kmoe-manga-downloader.svg)](https://pypi.org/project/kmoe-manga-downloader/) [![Unit Tests](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml/badge.svg)](https://github.com/chrisis58/kmdr/actions/workflows/unit-test.yml) [![Interpretor](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/) [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/chrisis58/kmdr/blob/main/LICENSE)
 
-`kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kxo.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
+`kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kxx.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
 
 <p align="center">
   <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" width="720">
@@ -34,7 +34,7 @@ pip install kmoe-manga-downloader
 
 ### 1. 登录 `kmoe`
 
-首先需要登录 `kox.moe` 并保存登录状态（Cookie）。
+首先需要登录 `kmoe` 并保存登录状态（Cookie）。
 
 ```bash
 kmdr login -u <your_username> -p <your_password>
@@ -52,16 +52,16 @@ kmdr login -u <your_username>
 
 ```bash
 # 在当前目录下载第一、二、三卷
-kmdr download --dest . --book-url https://kox.moe/c/50076.htm --volume 1,2,3
+kmdr download --dest . --book-url https://kxx.moe/c/50076.htm --volume 1,2,3
 # 下面命令的功能与上面相同
-kmdr download -l https://kox.moe/c/50076.htm -v 1-3
+kmdr download -l https://kxx.moe/c/50076.htm -v 1-3
 ```
 
 ```bash
 # 在目标目录下载全部番外篇
-kmdr download --dest path/to/destination --book-url https://kox.moe/c/50076.htm --vol-type extra -v all
+kmdr download --dest path/to/destination --book-url https://kxx.moe/c/50076.htm --vol-type extra -v all
 # 下面命令的功能与上面相同
-kmdr download -d path/to/destination -l https://kox.moe/c/50076.htm -t extra -v all
+kmdr download -d path/to/destination -l https://kxx.moe/c/50076.htm -t extra -v all
 ```
 
 #### 常用参数说明：
@@ -90,7 +90,7 @@ kmdr status
 你可以设置一个回调函数，下载完成后执行。回调可以是任何你想要的命令：
 
 ```bash
-kmdr download -d path/to/destination --book-url https://kox.moe/c/50076.htm -v 1-3 \
+kmdr download -d path/to/destination --book-url https://kxx.moe/c/50076.htm -v 1-3 \
 	--callback "echo '{b.name} {v.name} downloaded!' >> ~/kmdr.log"
 ```
 
@@ -129,6 +129,20 @@ kmdr config -s num_workers=5 "callback=echo '{b.name} {v.name} downloaded!' >> ~
 - `-d`, `--delete`, `--unset`: 清除单项配置
 
 > 当前仅支持部分下载参数的持久化：`num_workers`, `dest`, `retry`, `callback`, `proxy`
+
+### 6. 镜像源切换
+
+为了保证服务的长期可用性，并让用户能根据自己的网络环境选择最快的服务器，应用支持灵活地切换镜像源。
+
+当您发现默认源（当前为 `kxx.moe`）访问缓慢或失效时，可以通过 `config` 命令轻松切换到其他备用镜像源：
+
+```
+kmdr config --base-url https://mox.moe
+# 或者
+kmdr config -b https://mox.moe
+```
+
+你可以参考 [镜像目录](./mirror/mirrors.json) 来选择合适的镜像源，如果你发现部分镜像源过时或者有缺失，欢迎贡献你的内容！
 
 ## ⚠️ 声明
 
