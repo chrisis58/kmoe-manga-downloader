@@ -33,7 +33,6 @@ class DirectDownloader(Downloader):
         return urljoin(
             self._base_url,
             API_ROUTE.DOWNLOAD.format(
-                base_url=self._base_url,
                 book_id=book.id,
                 volume_id=volume.id,
                 is_vip=self._profile.is_vip
