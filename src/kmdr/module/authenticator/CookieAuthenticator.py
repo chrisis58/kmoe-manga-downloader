@@ -17,7 +17,7 @@ class CookieAuthenticator(Authenticator):
             self._show_quota = False
 
         # 根据用户提供的 book_url 来决定访问的镜像站
-        self._inner_base_url = extract_base_url(book_url)
+        self._inner_base_url = extract_base_url(book_url, default=self._base_url)
 
     async def _authenticate(self) -> bool:
         cookie = self._configurer.cookie
@@ -34,15 +34,3 @@ class CookieAuthenticator(Authenticator):
             is_vip_setter=lambda value: setattr(self._profile, 'is_vip', value),
             level_setter=lambda value: setattr(self._profile, 'user_level', value),
         )
-
-    def _extract_base_url(self, book_url: str) -> str:
-        if not book_url:
-            return self._base_url
-
-        from urllib.parse import urlsplit
-
-        parsed = urlsplit(book_url)
-        if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}"
-
-        return self._base_url

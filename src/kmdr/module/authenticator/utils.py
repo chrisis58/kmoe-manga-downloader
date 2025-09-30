@@ -82,9 +82,12 @@ def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] =
     
     return NOR_ID
 
-def extract_base_url(url: str) -> str:
+def extract_base_url(url: Optional[str], default: Optional[str] = None) -> Optional[str]:
+    if not url:
+        return default
+
     parsed = urlsplit(url)
     if parsed.scheme and parsed.netloc:
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    raise ValueError(f"无效的 URL: {url}")
+    return default
