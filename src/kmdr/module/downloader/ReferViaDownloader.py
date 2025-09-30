@@ -10,7 +10,7 @@ from kmdr.core.constants import API_ROUTE
 from .download_utils import safe_filename, download_file_multipart
 
 
-# @DOWNLOADER.register(order=10)
+@DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
     def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
