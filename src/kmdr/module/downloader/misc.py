@@ -42,10 +42,7 @@ class StateManager:
 
         self._lock = asyncio.Lock()
 
-    @property
-    @staticmethod
-    def PARENT_ID() -> int:
-        return -1
+    PARENT_ID: int = -1
 
     def advance(self, advance: int):
         self._progress.update(self._task_id, advance=advance)
