@@ -50,7 +50,7 @@ class LoginAuthenticator(Authenticator):
 
             if response.status in (301, 302, 307, 308) and 'Location' in response.headers:
                 new_location = response.headers['Location']
-                raise RedirectError("检测到重定向", new_base_url=extract_base_url(new_location))
+                raise RedirectError("检测到重定向", new_base_url=extract_base_url(new_location) or self._base_url)
 
             match = re.search(r'"\w+"', await response.text())
 
