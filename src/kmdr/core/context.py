@@ -1,8 +1,7 @@
 from aiohttp import ClientSession
 
 
-from .constants import BASE_URL
-from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, progress, console
+from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, progress, console, base_url_var
 
 class TerminalContext:
 
@@ -27,5 +26,9 @@ class SessionContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self._base_url: str = BASE_URL.DEFAULT
+        self._base_url: str = base_url_var.get()
         self._session: ClientSession = session_var.get()
+
+    def _set_base_url(self, value: str):
+        self._base_url = value
+        base_url_var.set(value)

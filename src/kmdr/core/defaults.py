@@ -42,6 +42,7 @@ progress = Progress(
 )
 
 session_var = ContextVar('session')
+base_url_var = ContextVar('base_url', default=BASE_URL.DEFAULT)
 
 parser: Optional[argparse.ArgumentParser] = None
 args: Optional[argparse.Namespace] = None
@@ -175,7 +176,6 @@ class Configurer:
             return BASE_URL.DEFAULT 
         return self._config.base_url
     
-    @base_url.setter
     def set_base_url(self, value: str):
         if self._config is None:
             self._config = Config()
