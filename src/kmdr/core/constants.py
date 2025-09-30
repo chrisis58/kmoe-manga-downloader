@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 from enum import Enum
-from warnings import deprecated
+from typing_extensions import deprecated
 
 
-class _BaseUrl(BaseModel, frozen=True):
+@dataclass(frozen=True)
+class _BaseUrl:
 
     @property
     @deprecated("KOX 已过时，请使用 KXO 或 KOZ。")
@@ -32,7 +33,8 @@ class _BaseUrl(BaseModel, frozen=True):
         return self.KXO
 
 
-class _ApiRoute(BaseModel, frozen=True):
+@dataclass(frozen=True)
+class _ApiRoute():
     PROFILE: str = '/my.php'
     """用户信息页面"""
 
