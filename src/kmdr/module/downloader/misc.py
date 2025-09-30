@@ -1,7 +1,7 @@
 from enum import Enum
 import asyncio
 
-from rich.progress import Progress
+from rich.progress import Progress, TaskID
 
 
 class STATUS(Enum):
@@ -34,7 +34,7 @@ class STATUS(Enum):
 
 class StateManager:
 
-    def __init__(self, progress: Progress, task_id: int):
+    def __init__(self, progress: Progress, task_id: TaskID):
         self._part_states: dict[int, STATUS] = {}
         self._progress = progress
         self._task_id = task_id
