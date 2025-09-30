@@ -3,7 +3,8 @@ import os
 import re
 import math
 from typing import Callable, Optional, Union, Awaitable
-from warnings import deprecated
+
+from typing_extensions import deprecated
 
 import aiohttp
 import aiofiles
