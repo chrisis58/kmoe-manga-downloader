@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
+
 from typing_extensions import deprecated
 
 
@@ -71,6 +73,11 @@ class LoginResponse(Enum):
     def from_code(cls, code: str) -> 'LoginResponse':
         return cls.__members__.get(code, cls.unknown)
 
+    @classmethod
+    def ok(cls, code: Union[str, 'LoginResponse']) -> bool:
+        if isinstance(code, LoginResponse):
+            return code == cls.m100
+        return cls.from_code(code) == cls.m100
 
 API_ROUTE = _ApiRoute()
 """API 路由常量实例"""
