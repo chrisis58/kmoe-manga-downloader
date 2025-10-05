@@ -19,6 +19,14 @@ class Configurer(ConfigContext, TerminalContext):
     @abstractmethod
     def operate(self) -> None: ...
 
+class SessionManager(SessionContext):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abstractmethod
+    def session(self) -> ClientSession: ...
+
 class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
@@ -101,7 +109,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
     @abstractmethod
     async def _download(self, book: BookInfo, volume: VolInfo): ...
 
-KMDR_SESSION = Registry[ClientSession]('KmdrSession', True)
+SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')
 LISTERS = Registry[Lister]('Lister')
 PICKERS = Registry[Picker]('Picker')

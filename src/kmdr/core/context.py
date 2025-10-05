@@ -30,6 +30,10 @@ class SessionContext:
     @property
     def _session(self) -> ClientSession:
         return session_var.get()
+    
+    @_session.setter
+    def _session(self, value: ClientSession):
+        session_var.set(value)
 
     @property
     def _base_url(self) -> str:
