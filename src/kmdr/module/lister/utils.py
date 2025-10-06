@@ -23,7 +23,7 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
     if structured_url.path.startswith('/m/'):
         # 移除移动端路径部分，统一为桌面端路径
         # 因为移动端页面的结构与桌面端不同，可能会影响解析
-        structured_url = structured_url.with_path(structured_url.path.replace('/m/', '', 1))
+        structured_url = structured_url.with_path(structured_url.path[2:])
 
     async with session.get(structured_url) as response:
         response.raise_for_status()
