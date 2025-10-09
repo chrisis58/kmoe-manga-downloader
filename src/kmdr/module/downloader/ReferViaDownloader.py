@@ -37,16 +37,13 @@ class ReferViaDownloader(Downloader):
     @alru_cache(maxsize=128)
     async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
 
-        url = urljoin(
-            self._base_url,
+        async with self._session.get(
             API_ROUTE.GETDOWNURL.format(
                 book_id=book_id,
                 volume_id=volume_id,
                 is_vip=self._profile.is_vip
             )
-        )
-
-        async with self._session.get(url) as response:
+        ) as response:
             response.raise_for_status()
             data = await response.text()
             data = json.loads(data)
