@@ -303,6 +303,30 @@ async def _merge_parts(part_paths: list[str], final_path: str):
             raise e
 
 
+CHAR_MAPPING = {
+    '\\': '＼',
+    '/': '／',
+    ':': '：',
+    '*': '＊',
+    '?': '？',
+    '"': '＂',
+    '<': '＜',
+    '>': '＞',
+    '|': '｜',
+}
+DEFAULT_ILLEGAL_CHARS_REPLACEMENT = '_'
+ILLEGAL_CHARS_RE = re.compile(r'[\\/:*?"<>|]')
+
+def readable_safe_filename(name: str) -> str:
+    """
+    将字符串转换为安全的文件名，替换掉非法字符。
+    """
+    def replace_char(match):
+        char = match.group(0)
+        return CHAR_MAPPING.get(char, DEFAULT_ILLEGAL_CHARS_REPLACEMENT)
+
+    return ILLEGAL_CHARS_RE.sub(replace_char, name).strip()
+
 
 def safe_filename(name: str) -> str:
     """
