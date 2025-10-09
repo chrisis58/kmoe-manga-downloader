@@ -4,36 +4,27 @@ from typing import Union
 
 from typing_extensions import deprecated
 
-
-@dataclass(frozen=True)
-class _BaseUrl:
+class BASE_URL(Enum):
 
     @property
     @deprecated("KOX 已过时，请使用 KXO 或 KOZ。")
     def KOX(self) -> str:
         return 'https://kox.moe'
     
-    @property
-    def KXX(self) -> str:
-        return 'https://kxx.moe'
+    KXX = 'https://kxx.moe'
 
-    @property
-    def KXO(self) -> str:
-        return 'https://kxo.moe'
+    KXO = 'https://kxo.moe'
 
-    @property
-    def KOZ(self) -> str:
-        return 'https://koz.moe'
+    KOZ = 'https://koz.moe'
 
-    @property
-    def MOX(self) -> str:
-        return 'https://mox.moe'
+    MOX = 'https://mox.moe'
 
-    @property
-    def DEFAULT(self) -> str:
-        """默认基础 URL"""
-        return self.KXX
+    @classmethod
+    def alternatives(cls) -> set[str]:
+        """返回备用的基础 URL 列表"""
+        return {cls.KXO.value, cls.KOZ.value, cls.MOX.value}
 
+    DEFAULT = KXX
 
 @dataclass(frozen=True)
 class _ApiRoute():
@@ -81,6 +72,3 @@ class LoginResponse(Enum):
 
 API_ROUTE = _ApiRoute()
 """API 路由常量实例"""
-
-BASE_URL = _BaseUrl()
-"""基础 URL 实例"""

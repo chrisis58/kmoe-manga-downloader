@@ -46,6 +46,7 @@ def async_retry(
     backoff: float = 2.0,
     retry_on_status: set[int] = {500, 502, 503, 504, 429, 408},
     base_url_setter: Optional[Consumer[str]] = None,
+    on_failure: Optional[Callable[[Exception], None]] = None
 ):
     def decorator(func):
         @functools.wraps(func)
@@ -69,6 +70,12 @@ def async_retry(
                         base_url_setter(e.new_base_url)
                         print(f"检测到重定向，已自动更新 base url 为: {e.new_base_url}。立即重试...")
                         continue
+                    else:
+                        raise
+                except Exception as e:
+                    if on_failure:
+                        on_failure(e)
+                        break
                     else:
                         raise
                 

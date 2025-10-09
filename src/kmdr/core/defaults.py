@@ -176,7 +176,7 @@ class Configurer:
     @property
     def base_url(self) -> str:
         if self._config is None or self._config.base_url is None:
-            return BASE_URL.DEFAULT 
+            return BASE_URL.DEFAULT.value
         return self._config.base_url
     
     def set_base_url(self, value: str):
