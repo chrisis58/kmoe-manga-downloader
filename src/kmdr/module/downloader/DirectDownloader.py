@@ -1,4 +1,5 @@
 from urllib.parse import urljoin
+from functools import partial
 
 from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 from kmdr.core.constants import API_ROUTE
@@ -22,7 +23,7 @@ class DirectDownloader(Downloader):
             self._session,
             self._semaphore,
             self._progress,
-            lambda: self.construct_download_url(book, volume),
+            partial(self.construct_download_url, book, volume),
             download_path,
             safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
