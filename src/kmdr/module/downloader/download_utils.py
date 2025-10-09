@@ -267,6 +267,12 @@ async def _download_part(
                                 await f.write(chunk)
                                 state_manager.advance(len(chunk))
             return
+    
+        except asyncio.CancelledError:
+            # 如果任务被取消，更新状态为已取消
+            await state_manager.request_status_update(part_id=start, status=STATUS.CANCELLED)
+            raise
+
         except Exception as e:
             if attempts_left > 0:
                 await asyncio.sleep(3)
