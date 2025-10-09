@@ -41,7 +41,7 @@ def entry_point():
         main_coro = main(args, lambda: parser.print_help())
         asyncio.run(main_coro)
     except KeyboardInterrupt:
-        print("\n操作已取消（KeyboardInterrupt）")
+        console.print("\n操作已取消（KeyboardInterrupt）", style="yellow")
         exit(130)
 
 if __name__ == '__main__':
