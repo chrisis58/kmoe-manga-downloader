@@ -44,8 +44,6 @@ class KmdrSessionManager(SessionManager):
                 headers=HEADERS,
             )
 
-            self._console.print(f"[green]使用的镜像站地址: {base_url}[/green]")
-
             return self._session
     
     async def validate_url(self, session: ClientSession, url_supplier: Suppiler[str]) -> bool:
