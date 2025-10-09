@@ -35,10 +35,10 @@ class KmdrSessionManager(SessionManager):
 
         with self._console.status("初始化中..."):
             
-            base_url = await self._probing_base_url()
+            self._base_url = await self._probing_base_url()
 
             self._session = ClientSession(
-                base_url=base_url,
+                base_url=self._base_url,
                 proxy=self._proxy,
                 trust_env=True,
                 headers=HEADERS,
