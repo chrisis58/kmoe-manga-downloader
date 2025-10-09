@@ -31,8 +31,6 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 这里的 base url 可能会在认证过程中被更新
-        self._inner_base_url: Optional[str] = None
 
     # 在使用代理登录时，可能会出现问题，但是现在还不清楚是不是代理的问题。
     # 主站正常情况下不使用代理也能登录成功。但是不排除特殊的网络环境下需要代理。
@@ -41,21 +39,11 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
     async def authenticate(self) -> None:
         with self._console.status("认证中..."):
             try:
-                # 这里添加了 base_url_setter，以便在重定向时更新 base_url
-                assert await async_retry(
-                    base_url_setter=self._configurer.set_base_url
-                )(self._authenticate)()
-
-                # 登录成功后，更新 base_url
-                self._base_url = self.base_url
+                assert await async_retry()(self._authenticate)()
             except LoginError as e:
                 self._console.print(f"[yellow]详细信息：{e}[/yellow]")
                 self._console.print("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
                 exit(1)
-    
-    @property
-    def base_url(self) -> str:
-        return self._inner_base_url or self._configurer.base_url
 
     @abstractmethod
     async def _authenticate(self) -> bool: ...

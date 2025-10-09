@@ -1,15 +1,13 @@
 from typing import Optional
 import re
 from yarl import URL
-from urllib.parse import urljoin
 
 from rich.prompt import Prompt
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 from kmdr.core.constants import API_ROUTE, LoginResponse
-from kmdr.core.error import RedirectError
 
-from .utils import check_status, extract_base_url
+from .utils import check_status
 
 
 @AUTHENTICATOR.register(
@@ -29,20 +27,15 @@ class LoginAuthenticator(Authenticator):
     async def _authenticate(self) -> bool:
 
         async with self._session.post(
-            url = urljoin(self._base_url, API_ROUTE.LOGIN_DO),
+            url = API_ROUTE.LOGIN_DO,
             data = {
                 'email': self._username,
                 'passwd': self._password,
                 'keepalive': 'on'
             },
-            allow_redirects = False
         ) as response:
 
             response.raise_for_status()
-
-            if response.status in (301, 302, 307, 308) and 'Location' in response.headers:
-                new_location = response.headers['Location']
-                raise RedirectError("检测到重定向", new_base_url=extract_base_url(new_location) or self._base_url)
 
             match = re.search(r'"\w+"', await response.text())
 
@@ -55,7 +48,7 @@ class LoginAuthenticator(Authenticator):
             if not LoginResponse.ok(login_response):
                 raise LoginError(f"认证失败，错误代码：{login_response.name} {login_response.value}" )
 
-            if await check_status(self._session, self._console, base_url=self.base_url, show_quota=self._show_quota):
+            if await check_status(self._session, self._console, show_quota=self._show_quota):
                 cookie = self._session.cookie_jar.filter_cookies(URL(self._base_url))
                 self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
 
