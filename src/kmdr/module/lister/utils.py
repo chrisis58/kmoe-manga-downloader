@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 import re
 from typing import Optional
-from urllib.parse import urljoin
 
 from yarl import URL
 from aiohttp import ClientSession as Session

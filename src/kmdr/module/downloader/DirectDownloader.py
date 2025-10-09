@@ -1,4 +1,3 @@
-from urllib.parse import urljoin
 from functools import partial
 
 from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER

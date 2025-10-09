@@ -1,5 +1,4 @@
 from functools import partial
-from urllib.parse import urljoin
 
 import json
 from async_lru import alru_cache
