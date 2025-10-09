@@ -8,6 +8,7 @@ import subprocess
 
 from .structure import BookInfo, VolInfo
 from .error import RedirectError
+from .protocol import Consumer
 
 
 def singleton(cls):
@@ -44,7 +45,7 @@ def async_retry(
     delay: float = 1.0,
     backoff: float = 2.0,
     retry_on_status: set[int] = {500, 502, 503, 504, 429, 408},
-    base_url_setter: Optional[Callable[[str], None]] = None,
+    base_url_setter: Optional[Consumer[str]] = None,
 ):
     def decorator(func):
         @functools.wraps(func)

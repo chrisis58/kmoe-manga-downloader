@@ -19,13 +19,13 @@ class Configurer(ConfigContext, TerminalContext):
     @abstractmethod
     def operate(self) -> None: ...
 
-class SessionManager(SessionContext):
+class SessionManager(SessionContext, ConfigContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def session(self) -> ClientSession: ...
+    async def session(self) -> ClientSession: ...
 
 class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
 
@@ -49,8 +49,8 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
                 # 登录成功后，更新 base_url
                 self._base_url = self.base_url
             except LoginError as e:
-                self._console.print("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
                 self._console.print(f"[yellow]详细信息：{e}[/yellow]")
+                self._console.print("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
                 exit(1)
     
     @property

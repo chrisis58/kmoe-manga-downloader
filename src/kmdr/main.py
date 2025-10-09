@@ -11,7 +11,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
         CONFIGURER.get(args).operate()
         return
 
-    async with SESSION_MANAGER.get(args).session():
+    async with (await SESSION_MANAGER.get(args).session()):
         if args.command == 'login':
             await AUTHENTICATOR.get(args).authenticate()
 

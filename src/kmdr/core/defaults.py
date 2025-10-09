@@ -185,6 +185,9 @@ class Configurer:
         self._config.base_url = value
         self.update()
     
+    def get_base_url(self) -> str:
+        return self._config.base_url
+    
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
             json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)
