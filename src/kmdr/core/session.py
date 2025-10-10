@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 from aiohttp import ClientSession
 
 from .constants import BASE_URL
-from .utils import async_retry
+from .utils import async_retry, PrioritySorter
 from .bases import SESSION_MANAGER, SessionManager
 from .defaults import HEADERS
 from .error import InitializationError, RedirectError
@@ -24,25 +24,16 @@ class KmdrSessionManager(SessionManager):
         super().__init__(*args, **kwargs)
         self._proxy = proxy
 
-        # TODO: 可以从远程仓库获取最新的镜像列表，当前为硬编码
-        self._alternatives = BASE_URL.alternatives()
+        self._sorter = PrioritySorter[str]()
+        [self._sorter.set(alt) for alt in BASE_URL.alternatives()]
+        self._sorter.incr(BASE_URL.DEFAULT.value, 2)
+        self._sorter.incr(self._base_url, 5)
 
         if book_url is not None and book_url.strip() != "" :
-            # 从书籍 URL 中提取地址，优先级最高
-            # self._base_url 是在 Configurer 中初始化的，默认为 BASE_URL.DEFAULT
-            # 或者是用户手动配置的值
             splited = urlsplit(book_url)
             primary_base_url = f"{splited.scheme}://{splited.netloc}"
 
-            if primary_base_url != self._base_url:
-                # 如果从书籍 URL 中提取的地址与当前 base_url 不同，则将其作为首选地址
-                # 并将当前 base_url 添加到备用地址列表中
-                self._alternatives.add(self._base_url)
-                self._base_url = primary_base_url
-        
-        if self._base_url != BASE_URL.DEFAULT.value:
-            # 如果当前 base_url 不是默认值，则将默认值添加到备用地址列表中
-            self._alternatives.add(BASE_URL.DEFAULT.value)
+            self._sorter.incr(primary_base_url, 10)
 
     async def session(self) -> ClientSession:
         try:
@@ -90,26 +81,26 @@ class KmdrSessionManager(SessionManager):
         :raises InitializationError: 如果所有镜像地址均不可用。
         :return: 可用的镜像地址。
         """
+
+        ret_base_url: str
     
         def get_base_url() -> str:
-            return self._base_url
+            nonlocal ret_base_url
+            return ret_base_url
         
         def set_base_url(value: str) -> None:
-            self._base_url = value
+            nonlocal ret_base_url
+            ret_base_url = value
 
         async with ClientSession(proxy=self._proxy, trust_env=True, headers=HEADERS) as probe_session:
-            if await async_retry(
-                base_url_setter=set_base_url,
-                on_failure=lambda e: self._console.print(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
-            )(self.validate_url)(probe_session, get_base_url):
-                # 首选地址可用，直接返回
-                return get_base_url()
+            # TODO: 请求远程仓库中的镜像列表，并添加到 sorter 中
 
-            for bu in self._alternatives:
-                # 尝试备用地址
+            for bu in self._sorter.sort():
                 set_base_url(bu)
+
                 if await async_retry(
                     base_url_setter=set_base_url,
+                    on_failure=lambda e: self._console.print(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 
