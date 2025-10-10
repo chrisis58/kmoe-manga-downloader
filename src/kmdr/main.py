@@ -40,6 +40,9 @@ def entry_point():
 
         main_coro = main(args, lambda: parser.print_help())
         asyncio.run(main_coro)
+    except KmdrError as e:
+        console.print(f"[red]错误: {e}[/red]")
+        exit(1)
     except KeyboardInterrupt:
         console.print("\n操作已取消（KeyboardInterrupt）", style="yellow")
         exit(130)
