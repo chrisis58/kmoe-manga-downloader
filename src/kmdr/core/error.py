@@ -28,3 +28,11 @@ class RedirectError(KmdrError):
 
     def __str__(self):
         return f"{self.message} 新的地址: {self.new_base_url}"
+
+class ResponseError(KmdrError):
+    def __init__(self, message, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+    def __str__(self):
+        return f"{self.message} (状态码: {self.status_code})"

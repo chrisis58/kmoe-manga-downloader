@@ -82,7 +82,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
 
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
-            self._console.print("No volumes to download.")
+            self._console.print("没有可下载的卷。", style="blue")
             exit(0)
 
         try:
