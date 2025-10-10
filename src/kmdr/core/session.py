@@ -8,7 +8,7 @@ from .utils import async_retry, PrioritySorter
 from .bases import SESSION_MANAGER, SessionManager
 from .defaults import HEADERS
 from .error import InitializationError, RedirectError
-from .protocol import Suppiler
+from .protocol import Supplier
 
 
 
@@ -59,7 +59,7 @@ class KmdrSessionManager(SessionManager):
 
             return self._session
     
-    async def validate_url(self, session: ClientSession, url_supplier: Suppiler[str]) -> bool:
+    async def validate_url(self, session: ClientSession, url_supplier: Supplier[str]) -> bool:
         try:
             async with session.head(
                 # 这里只请求登录页面的头信息保证快速响应

@@ -1,9 +1,10 @@
 from typing import Protocol, TypeVar
 
-T = TypeVar('T')
+S = TypeVar('S', covariant=True)
+T = TypeVar('T', contravariant=True)
 
-class Suppiler(Protocol[T]):
-    def __call__(self) -> T: ...
+class Supplier(Protocol[S]):
+    def __call__(self) -> S: ...
 
 class Consumer(Protocol[T]):
     def __call__(self, value: T) -> None: ...
