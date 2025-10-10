@@ -111,5 +111,5 @@ class KmdrSessionManager(SessionManager):
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 
-            raise InitializationError(f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json",)
+            raise InitializationError(f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json")
 
