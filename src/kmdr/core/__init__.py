@@ -1,9 +1,9 @@
-from .bases import Authenticator, Lister, Picker, Downloader, Configurer
+from .bases import Authenticator, Lister, Picker, Downloader, Configurer, SessionManager
 from .structure import VolInfo, BookInfo, VolumeType
-from .bases import AUTHENTICATOR, LISTERS, PICKERS, DOWNLOADER, CONFIGURER, KMDR_SESSION
+from .bases import AUTHENTICATOR, LISTERS, PICKERS, DOWNLOADER, CONFIGURER, SESSION_MANAGER
 
-from .defaults import argument_parser, session_var
+from .defaults import argument_parser, console
 
 from .error import KmdrError, LoginError
 
-from .session import KmdrSession
+from .session import KmdrSessionManager

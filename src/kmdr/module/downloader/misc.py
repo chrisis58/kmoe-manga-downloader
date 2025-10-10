@@ -12,6 +12,7 @@ class STATUS(Enum):
     COMPLETED='[green]完成[/green]'
     PARTIALLY_FAILED='[red]分片失败[/red]'
     FAILED='[red]失败[/red]'
+    CANCELLED='[yellow]已取消[/yellow]'
 
     @property
     def order(self) -> int:
@@ -23,6 +24,7 @@ class STATUS(Enum):
             STATUS.COMPLETED: 5,
             STATUS.PARTIALLY_FAILED: 6,
             STATUS.FAILED: 7,
+            STATUS.CANCELLED: 8,
         }
         return order_mapping[self]
     

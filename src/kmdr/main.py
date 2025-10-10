@@ -11,8 +11,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
         CONFIGURER.get(args).operate()
         return
 
-    async with KMDR_SESSION.get(args):
-
+    async with (await SESSION_MANAGER.get(args).session()):
         if args.command == 'login':
             await AUTHENTICATOR.get(args).authenticate()
 
@@ -41,8 +40,11 @@ def entry_point():
 
         main_coro = main(args, lambda: parser.print_help())
         asyncio.run(main_coro)
+    except KmdrError as e:
+        console.print(f"[red]错误: {e}[/red]")
+        exit(1)
     except KeyboardInterrupt:
-        print("\n操作已取消（KeyboardInterrupt）")
+        console.print("\n操作已取消（KeyboardInterrupt）", style="yellow")
         exit(130)
 
 if __name__ == '__main__':

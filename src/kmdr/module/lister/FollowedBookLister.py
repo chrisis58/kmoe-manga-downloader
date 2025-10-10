@@ -1,5 +1,4 @@
 import asyncio
-from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 from rich.table import Table
@@ -63,7 +62,7 @@ class FollowedBookLister(Lister):
     
     @async_retry()
     async def _list_followed_books(self) -> 'list[BookInfo]':
-        async with self._session.get(urljoin(self._base_url, API_ROUTE.MY_FOLLOW)) as response:
+        async with self._session.get(API_ROUTE.MY_FOLLOW) as response:
             response.raise_for_status()
             html_text = await response.text()
 

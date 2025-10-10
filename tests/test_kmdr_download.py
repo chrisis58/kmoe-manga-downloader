@@ -11,6 +11,9 @@ BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
 KMOE_PASSWORD = os.environ.get('KMOE_PASSWORD')
 
+DEFAULT_BASE_URL = BASE_URL.DEFAULT.value
+ALTERNATIVE_BASE_URL = BASE_URL.MOX.value
+
 @unittest.skipUnless(KMOE_USERNAME and KMOE_PASSWORD, "KMOE_USERNAME and KMOE_PASSWORD must be set in environment variables")
 class TestKmdrDownload(unittest.TestCase):
 
@@ -55,7 +58,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
+                book_url=f'{DEFAULT_BASE_URL}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -84,7 +87,7 @@ class TestKmdrDownload(unittest.TestCase):
                 # 这个 URL 可能会在未来失效，因为 MOX 站点不保证长期可用
                 # 这里使用 MOX 站点是为了测试多源下载功能
                 # 如果确认是镜像站失效，请替换为其他可用的镜像站
-                book_url=f'{BASE_URL.MOX}/c/51044.htm',
+                book_url=f'{ALTERNATIVE_BASE_URL}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -109,7 +112,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url=f'{BASE_URL.DEFAULT}/m/c/51044.htm',
+                book_url=f'{DEFAULT_BASE_URL}/m/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -134,7 +137,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
+                book_url=f'{DEFAULT_BASE_URL}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.6,
@@ -160,7 +163,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url=f'{BASE_URL.DEFAULT}/c/51044.htm',
+                book_url=f'{DEFAULT_BASE_URL}/c/51044.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
@@ -186,7 +189,7 @@ class TestKmdrDownload(unittest.TestCase):
             Namespace(
                 command='download',
                 dest=dest,
-                book_url=f'{BASE_URL.DEFAULT}/c/51043.htm',
+                book_url=f'{DEFAULT_BASE_URL}/c/51043.htm',
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
