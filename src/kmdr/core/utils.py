@@ -1,5 +1,5 @@
 import functools
-from typing import Optional, Callable
+from typing import Optional, Callable, TypeVar, Hashable, Generic
 import asyncio
 
 import aiohttp
@@ -84,3 +84,44 @@ def async_retry(
                 current_delay *= backoff
         return wrapper
     return decorator
+
+
+H = TypeVar('H', bound=Hashable)
+class PrioritySorter(Generic[H]):
+    """
+    根据优先级对元素进行排序的工具类
+    """
+
+    DEFAULT_ORDER = 10
+
+    def __init__(self):
+        self._items: dict[H, int] = {}
+
+    def __repr__(self) -> str:
+        return f"PrioritySorter({self._items})"
+
+    def get(self, key: H) -> Optional[int]:
+        """获取对应元素的优先级"""
+        return self._items.get(key)
+
+    def set(self, key: H, value: int = DEFAULT_ORDER) -> None:
+        """设置对应元素的优先级"""
+        self._items[key] = value
+
+    def remove(self, key: H) -> None:
+        """移除对应元素"""
+        self._items.pop(key, None)
+
+    def incr(self, key: H, offset: int = 1) -> None:
+        """提升对应元素的优先级"""
+        current_value = self._items.get(key, self.DEFAULT_ORDER)
+        self._items[key] = current_value + offset
+
+    def decr(self, key: H, offset: int = 1) -> None:
+        """降低对应元素的优先级"""
+        current_value = self._items.get(key, self.DEFAULT_ORDER)
+        self._items[key] = current_value - offset
+
+    def sort(self) -> list[H]:
+        """返回根据优先级排序后的元素列表，优先级高的元素排在前面"""
+        return [k for k, v in sorted(self._items.items(), key=lambda item: item[1], reverse=True)]
