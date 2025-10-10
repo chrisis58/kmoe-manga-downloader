@@ -1,9 +1,9 @@
 from typing import Optional
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urljoin
 
 from aiohttp import ClientSession
 
-from .constants import BASE_URL
+from .constants import BASE_URL, API_ROUTE
 from .utils import async_retry, PrioritySorter
 from .bases import SESSION_MANAGER, SessionManager
 from .defaults import HEADERS
@@ -61,10 +61,17 @@ class KmdrSessionManager(SessionManager):
     
     async def validate_url(self, session: ClientSession, url_supplier: Suppiler[str]) -> bool:
         try:
-            async with session.head(url_supplier(), allow_redirects=False) as response:
+            async with session.head(
+                # 这里只请求登录页面的头信息保证快速响应
+                # 选择登录页面，一个是因为登录页面对所有用户都开放
+                # 另外是因为不同网站的登录页面通常是不同的，可以有效区分不同的网站
+                # 如果后续发现有更合适的探测方式，可以考虑替换
+                urljoin(url_supplier(), API_ROUTE.LOGIN),
+                allow_redirects=False
+            ) as response:
                 if response.status in (301, 302, 307, 308) and 'Location' in response.headers:
-                    new_location = response.headers['Location']
-                    raise RedirectError("检测到重定向", new_base_url=new_location)
+                    new_location = urlsplit(response.headers['Location'])
+                    raise RedirectError("检测到重定向", new_base_url=f"{new_location.scheme}://{new_location.netloc}")
 
                 return response.status == 200
         except Exception as e:
