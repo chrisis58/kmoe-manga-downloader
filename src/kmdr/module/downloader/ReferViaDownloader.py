@@ -7,7 +7,7 @@ from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import ResponseError
 
-from .download_utils import safe_filename, download_file_multipart
+from .download_utils import download_file_multipart, readable_safe_filename
 
 
 @DOWNLOADER.register(order=10)
@@ -17,7 +17,7 @@ class ReferViaDownloader(Downloader):
 
 
     async def _download(self, book: BookInfo, volume: VolInfo):
-        sub_dir = safe_filename(book.name)
+        sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
         await download_file_multipart(
@@ -26,7 +26,7 @@ class ReferViaDownloader(Downloader):
             self._progress,
             partial(self.fetch_download_url, book.id, volume.id),
             download_path,
-            safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
+            readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
             headers={
                 "X-Km-From": "kb_http_down"

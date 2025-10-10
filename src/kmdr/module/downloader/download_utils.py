@@ -327,7 +327,7 @@ def readable_safe_filename(name: str) -> str:
 
     return ILLEGAL_CHARS_RE.sub(replace_char, name).strip()
 
-
+@deprecated("请使用 'readable_safe_filename'")
 def safe_filename(name: str) -> str:
     """
     替换非法文件名字符为下划线
