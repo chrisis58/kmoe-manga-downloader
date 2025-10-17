@@ -160,6 +160,8 @@ async def download_file_multipart(
     part_paths = []
     part_expected_sizes = []
     task_id = None
+
+    state_manager: Optional[StateManager] = None
     try:
         current_url = await fetch_url(url)
 
@@ -213,7 +215,7 @@ async def download_file_multipart(
 
     finally:
         if await aio_os.path.exists(file_path):
-            if task_id is not None:
+            if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.COMPLETED)
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
@@ -222,7 +224,7 @@ async def download_file_multipart(
             if callback:
                 callback()
         else:
-            if task_id is not None:
+            if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
 async def _download_part(

@@ -1,6 +1,6 @@
 [project]
 name = "kmoe-manga-downloader"
-version = "1.2.2"
+version = "1.2.3a"
 authors = [
     { name="Chris Zheng", email="chrisis58@outlook.com" },
 ]
