@@ -193,7 +193,7 @@ class TestKmdrDownload(unittest.TestCase):
                 vol_type='extra',
                 volume='all',
                 max_size=0.4,
-                method=1, # use direct download method
+                method=2, # use direct download method
                 limit=1,
                 retry=3,
                 num_workers=1
