@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 import asyncio
 from aiohttp import ClientSession
+from rich.traceback import Traceback
 
 from .error import LoginError
 from .registry import Registry
@@ -88,7 +89,15 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
         try:
             with self._progress:
                 tasks = [self._download(book, volume) for volume in volumes]
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            exceptions = [res for res in results if isinstance(res, Exception)]
+            if exceptions:
+                self._console.print(f"[red]下载过程中出现 {len(exceptions)} 个错误：[/red]")
+                for exc in exceptions:
+                    self._console.print(f"[red]- {exc}[/red]")
+                    self._console.print(Traceback.from_exception(type(exc), exc, exc.__traceback__))
+                exit(1)
 
         except KeyboardInterrupt:
             self._console.print("\n操作已取消（KeyboardInterrupt）")
