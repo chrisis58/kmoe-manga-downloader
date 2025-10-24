@@ -29,9 +29,6 @@ try:
 except io.UnsupportedOperation:
     console = Console()
 
-def console_print(*args, **kwargs):
-    console.print(*args, **kwargs)
-
 progress_definition = (
     TextColumn("[blue]{task.fields[filename]}", justify="left"),
     TextColumn("{task.fields[status]}", justify="right"),

@@ -7,3 +7,5 @@ from .defaults import argument_parser, console
 from .error import KmdrError, LoginError
 
 from .session import KmdrSessionManager
+
+from .console import info, debug, exception

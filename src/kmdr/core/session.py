@@ -9,6 +9,7 @@ from .bases import SESSION_MANAGER, SessionManager
 from .defaults import HEADERS
 from .error import InitializationError, RedirectError
 from .protocol import Supplier
+from .console import *
 
 
 
@@ -75,7 +76,7 @@ class KmdrSessionManager(SessionManager):
 
                 return response.status == 200
         except Exception as e:
-            self._console.print(f"[yellow]无法连接到镜像: {url_supplier()}，错误信息: {e}[/yellow]")
+            info(f"[yellow]无法连接到镜像: {url_supplier()}，错误信息: {e}[/yellow]")
             return False
 
     async def _probing_base_url(self) -> str:
@@ -107,7 +108,7 @@ class KmdrSessionManager(SessionManager):
 
                 if await async_retry(
                     base_url_setter=set_base_url,
-                    on_failure=lambda e: self._console.print(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
+                    on_failure=lambda e: info(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 

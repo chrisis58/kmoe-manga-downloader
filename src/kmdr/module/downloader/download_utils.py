@@ -12,6 +12,8 @@ import aiofiles.os as aio_os
 from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
+from kmdr.core.console import info
+
 from .misc import STATUS, StateManager
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
@@ -53,7 +55,7 @@ async def download_file(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
+        info(f"[yellow]{filename} 已经存在[/yellow]")
         return
 
     block_size = 8192
@@ -154,7 +156,7 @@ async def download_file_multipart(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[blue]{filename} 已经存在[/blue]")
+        info(f"[blue]{filename} 已经存在[/blue]")
         return
 
     part_paths = []

@@ -3,7 +3,8 @@ from typing import Optional
 from aiohttp import ClientSession
 from rich.progress import Progress
 
-from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, console, base_url_var, progress_definition
+from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, base_url_var, progress_definition
+from .console import _console
 
 _lazy_progress: Optional[Progress] = None
 
@@ -11,7 +12,7 @@ class TerminalContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self._console = console
+        self._console = _console
 
     @property
     def _progress(self) -> Progress:

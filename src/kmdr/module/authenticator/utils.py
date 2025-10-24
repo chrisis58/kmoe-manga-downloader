@@ -8,6 +8,7 @@ from yarl import URL
 from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE
+from kmdr.core.console import *
 
 NICKNAME_ID = 'div_nickname_display'
 
@@ -27,7 +28,7 @@ async def check_status(
         try:
             response.raise_for_status()
         except Exception as e:
-            console.print(f"Error: {type(e).__name__}: {e}")
+            info(f"Error: {type(e).__name__}: {e}")
             return False
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
@@ -62,9 +63,9 @@ async def check_status(
         quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip().replace('\xa0', '')
 
         if console.is_interactive:
-            console.print(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
+            info(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
         else:
-            console.log(f"当前登录为 {nickname}")
+            info(f"当前登录为 {nickname}")
 
         return True
 

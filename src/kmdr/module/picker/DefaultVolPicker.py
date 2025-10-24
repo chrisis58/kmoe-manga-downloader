@@ -2,6 +2,7 @@ from rich.table import Table
 from rich.prompt import Prompt
 
 from kmdr.core import Picker, PICKERS, VolInfo
+from kmdr.core.console import info
 
 from .utils import resolve_volume
 
@@ -35,7 +36,7 @@ class DefaultVolPicker(Picker):
                 f"{volume.size:.2f}"
             )
         
-        self._console.print(table)
+        info(table)
         
         choice_str = Prompt.ask(
             "[green]请选择要下载的卷序号 (例如 'all', '1,2,3', '1-3,4-6')[/green]",

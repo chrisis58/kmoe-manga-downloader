@@ -3,8 +3,8 @@ from abc import abstractmethod
 
 import asyncio
 from aiohttp import ClientSession
-from rich.traceback import Traceback
 
+from .console import *
 from .error import LoginError
 from .registry import Registry
 from .structure import VolInfo, BookInfo
@@ -42,8 +42,8 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
             try:
                 assert await async_retry()(self._authenticate)()
             except LoginError as e:
-                self._console.print(f"[yellow]详细信息：{e}[/yellow]")
-                self._console.print("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
+                info(f"[yellow]详细信息：{e}[/yellow]")
+                info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
                 exit(1)
 
     @abstractmethod
@@ -83,7 +83,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
 
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
-            self._console.print("没有可下载的卷。", style="blue")
+            info("没有可下载的卷。", style="blue")
             exit(0)
 
         try:
@@ -93,14 +93,14 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
 
             exceptions = [res for res in results if isinstance(res, Exception)]
             if exceptions:
-                self._console.print(f"[red]下载过程中出现 {len(exceptions)} 个错误：[/red]")
+                info(f"[red]下载过程中出现 {len(exceptions)} 个错误：[/red]")
                 for exc in exceptions:
-                    self._console.print(f"[red]- {exc}[/red]")
-                    self._console.print(Traceback.from_exception(type(exc), exc, exc.__traceback__))
+                    info(f"[red]- {exc}[/red]")
+                    exception(exc)
                 exit(1)
 
         except KeyboardInterrupt:
-            self._console.print("\n操作已取消（KeyboardInterrupt）")
+            info("\n操作已取消（KeyboardInterrupt）")
             exit(130)
 
     @abstractmethod

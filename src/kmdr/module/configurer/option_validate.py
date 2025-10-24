@@ -2,7 +2,7 @@ from typing import Optional
 from functools import wraps
 import os
 
-from kmdr.core.defaults import console_print as print
+from kmdr.core.console import info
 
 __OPTIONS_VALIDATOR = {}
 
@@ -17,7 +17,7 @@ def validate(key: str, value: str) -> Optional[object]:
     if key in __OPTIONS_VALIDATOR:
         return __OPTIONS_VALIDATOR[key](value)
     else:
-        print(f"[red]不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
+        info(f"[red]不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
         return None
 
 def check_key(key: str, exit_if_invalid: bool = True) -> None:
@@ -29,7 +29,7 @@ def check_key(key: str, exit_if_invalid: bool = True) -> None:
     :param exit_if_invalid: 如果键名无效，是否退出程序
     """
     if key not in __OPTIONS_VALIDATOR:
-        print(f"[red]未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
+        info(f"[red]未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
         if exit_if_invalid:
             exit(1)
 
@@ -65,24 +65,24 @@ def validate_num_workers(value: str) -> Optional[int]:
             raise ValueError("必须是正值。")
         return num_workers
     except ValueError as e:
-        print(f"[red]无效的 num_workers 值: {value}。{str(e)}[/red]")
+        info(f"[red]无效的 num_workers 值: {value}。{str(e)}[/red]")
         return None
 
 @register_validator('dest')
 def validate_dest(value: str) -> Optional[str]:
     if not value:
-        print("[red]目标目录不能为空。[/red]")
+        info("[red]目标目录不能为空。[/red]")
         return None
     if not os.path.exists(value) or not os.path.isdir(value):
-        print(f"[red]目标目录不存在或不是目录: {value}[/red]")
+        info(f"[red]目标目录不存在或不是目录: {value}[/red]")
         return None
 
     if not os.access(value, os.W_OK):
-        print(f"[red]目标目录不可写: {value}[/red]")
+        info(f"[red]目标目录不可写: {value}[/red]")
         return None
 
     if not os.path.isabs(value):
-        print(f"[yellow]目标目录最好是绝对路径: {value}[/yellow]")
+        info(f"[yellow]目标目录最好是绝对路径: {value}[/yellow]")
 
     return value
 
@@ -94,19 +94,19 @@ def validate_retry(value: str) -> Optional[int]:
             raise ValueError("必须是正值。")
         return retry
     except ValueError as e:
-        print(f"[red]无效的 retry 值: {value}。{str(e)}[/red]")
+        info(f"[red]无效的 retry 值: {value}。{str(e)}[/red]")
         return None
 
 @register_validator('callback')
 def validate_callback(value: str) -> Optional[str]:
     if not value:
-        print("[red]回调不能为空。[/red]")
+        info("[red]回调不能为空。[/red]")
         return None
     return value
 
 @register_validator('proxy')
 def validate_proxy(value: str) -> Optional[str]:
     if not value:
-        print("[red]代理不能为空。[/red]")
+        info("[red]代理不能为空。[/red]")
         return None
     return value

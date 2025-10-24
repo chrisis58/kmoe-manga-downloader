@@ -1,4 +1,5 @@
 from kmdr.core import Configurer, CONFIGURER
+from kmdr.core.console import info
 
 @CONFIGURER.register()
 class ConfigClearer(Configurer):
@@ -10,7 +11,7 @@ class ConfigClearer(Configurer):
         try:
             self._configurer.clear(self._clear)
         except KeyError as e:
-            self._console.print(e.args[0])
+            info(f"[red]{e.args[0]}[/red]")
             exit(1)
 
-        self._console.print(f"Cleared configuration: {self._clear}")
+        info(f"Cleared configuration: {self._clear}")

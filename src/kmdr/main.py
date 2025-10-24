@@ -10,7 +10,7 @@ from kmdr.module import *
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     if args.command == 'version':
-        console.print(f"[green]{__version__}[/green]")
+        info(f"[green]{__version__}[/green]")
 
     elif args.command == 'config':
         CONFIGURER.get(args).operate()
@@ -47,11 +47,15 @@ def entry_point():
         main_coro = main(args, lambda: parser.print_help())
         asyncio.run(main_coro)
     except KmdrError as e:
-        console.print(f"[red]错误: {e}[/red]")
+        info(f"[red]错误: {e}[/red]")
         exit(1)
     except KeyboardInterrupt:
-        console.print("\n操作已取消（KeyboardInterrupt）", style="yellow")
+        info("\n操作已取消（KeyboardInterrupt）", style="yellow")
         exit(130)
+    except Exception as e:
+        exception(e)
+        exit(1)
+    
 
 if __name__ == '__main__':
     entry_point()
