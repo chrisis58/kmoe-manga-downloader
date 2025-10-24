@@ -6,6 +6,7 @@ from async_lru import alru_cache
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import ResponseError
+from kmdr.core.console import debug
 
 from .download_utils import download_file_multipart, readable_safe_filename
 
@@ -47,6 +48,7 @@ class ReferViaDownloader(Downloader):
             response.raise_for_status()
             data = await response.text()
             data = json.loads(data)
+            debug(f"获取下载链接响应数据: {data}")
             if (code := data.get('code')) != 200:
                 raise ResponseError(f"Failed to fetch download URL: {data.get('msg', 'Unknown error')}", code)
 
