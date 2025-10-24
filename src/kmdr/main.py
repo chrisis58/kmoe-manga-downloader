@@ -10,8 +10,9 @@ from kmdr.module import *
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     post_init(args)
+    log('[Lifecycle:Start] 启动 kmdr 版本:', __version__)
     debug(f'[bold green]以调试模式启动[/bold green]')
-    log('[Lifecycle] 启动 kmdr 版本:', __version__)
+    debug(f'接收到的参数: {args}')
 
     if args.command == 'version':
         info(f"[green]{__version__}[/green]")
@@ -41,7 +42,6 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     else:
         fallback()
-    log('[Lifecycle] 运行结束，kmdr 已退出')
 
 def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
     asyncio.run(main(args, fallback))
@@ -62,6 +62,8 @@ def entry_point():
     except Exception as e:
         exception(e)
         exit(1)
+    finally:
+        log('[Lifecycle:End] 运行结束，kmdr 已退出')
     
 
 if __name__ == '__main__':
