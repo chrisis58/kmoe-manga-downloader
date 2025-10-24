@@ -54,6 +54,8 @@ def argument_parser():
     parser = argparse.ArgumentParser(description='Kmoe 漫画下载器')
     subparsers = parser.add_subparsers(title='可用的子命令', dest='command')
 
+    version_parser = subparsers.add_parser('version', help='显示当前版本信息')
+
     download_parser = subparsers.add_parser('download', help='下载指定的漫画')
     download_parser.add_argument('-d', '--dest', type=str, help='指定下载文件的保存路径，默认为当前目录', required=False)
     download_parser.add_argument('-l', '--book-url', type=str, help='漫画详情页面的 URL', required=False)

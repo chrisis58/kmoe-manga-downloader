@@ -1,3 +1,5 @@
+from kmdr import __version__
+
 from typing import Callable
 from argparse import Namespace
 import asyncio
@@ -7,18 +9,22 @@ from kmdr.module import *
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
-    if args.command == 'config':
+    if args.command == 'version':
+        console.print(f"[green]{__version__}[/green]")
+
+    elif args.command == 'config':
         CONFIGURER.get(args).operate()
-        return
 
-    async with (await SESSION_MANAGER.get(args).session()):
-        if args.command == 'login':
+    elif args.command == 'login':
+        async with (await SESSION_MANAGER.get(args).session()):
             await AUTHENTICATOR.get(args).authenticate()
 
-        elif args.command == 'status':
+    elif args.command == 'status':
+        async with (await SESSION_MANAGER.get(args).session()):
             await AUTHENTICATOR.get(args).authenticate()
 
-        elif args.command == 'download':
+    elif args.command == 'download':
+        async with (await SESSION_MANAGER.get(args).session()):
             await AUTHENTICATOR.get(args).authenticate()
 
             book, volumes = await LISTERS.get(args).list()
@@ -27,8 +33,8 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
             await DOWNLOADER.get(args).download(book, volumes)
 
-        else:
-            fallback()
+    else:
+        fallback()
 
 def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
     asyncio.run(main(args, fallback))
