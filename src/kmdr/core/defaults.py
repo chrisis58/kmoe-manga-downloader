@@ -1,3 +1,5 @@
+import io
+import sys
 import os
 import json
 from typing import Optional, Any
@@ -21,7 +23,11 @@ HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
-console = Console()
+try:
+    utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='backslashreplace')
+    console = Console(file=utf8_stdout)
+except io.UnsupportedOperation:
+    console = Console()
 
 def console_print(*args, **kwargs):
     console.print(*args, **kwargs)
