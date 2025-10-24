@@ -23,11 +23,6 @@ HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
-try:
-    utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='backslashreplace')
-    console = Console(file=utf8_stdout)
-except io.UnsupportedOperation:
-    console = Console()
 
 progress_definition = (
     TextColumn("[blue]{task.fields[filename]}", justify="left"),
@@ -54,6 +49,9 @@ def argument_parser():
         return parser
 
     parser = argparse.ArgumentParser(description='Kmoe 漫画下载器')
+
+    parser.add_argument('-v', '--verbose', action='store_true', help='启用详细输出')
+
     subparsers = parser.add_subparsers(title='可用的子命令', dest='command')
 
     version_parser = subparsers.add_parser('version', help='显示当前版本信息')
@@ -242,3 +240,12 @@ def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
     return __combine_args(dest, option)
 
 base_url_var = ContextVar('base_url', default=Configurer().base_url)
+
+_verbose = False
+
+def is_verbose() -> bool:
+    return _verbose
+
+def post_init(args) -> None:
+    global _verbose
+    _verbose = getattr(args, 'verbose', False)

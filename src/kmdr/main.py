@@ -9,6 +9,9 @@ from kmdr.module import *
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
+    post_init(args)
+    debug(f'[bold green]以调试模式启动[/bold green]')
+
     if args.command == 'version':
         info(f"[green]{__version__}[/green]")
 
