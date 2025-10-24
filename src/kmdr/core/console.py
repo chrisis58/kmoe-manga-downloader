@@ -21,9 +21,9 @@ def info(*args, **kwargs):
 def debug(*args, **kwargs):
     if is_verbose():
         if _console.is_interactive:
-            _console.print(*args, **kwargs)
+            _console.print("[dim]DEBUG:[/]", *args, **kwargs)
         else:
-            _console.log(*args, **kwargs, _stack_offset=2)
+            _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
 
 def exception(exception: Exception):
     _console.print((Traceback.from_exception(type(exception), exception, exception.__traceback__)))
