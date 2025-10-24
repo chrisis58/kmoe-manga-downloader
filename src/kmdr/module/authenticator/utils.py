@@ -58,10 +58,14 @@ async def check_status(
         if not show_quota:
             return True
 
-        nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0]
-        quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip()
+        nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0].replace('\xa0', '')
+        quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip().replace('\xa0', '')
 
-        console.print(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
+        if console.is_interactive:
+            console.print(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
+        else:
+            console.log(f"当前登录为 {nickname}")
+
         return True
 
 def extract_var_define(script_text) -> dict[str, str]:
