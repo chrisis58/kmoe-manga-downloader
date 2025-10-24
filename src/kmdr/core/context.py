@@ -1,14 +1,24 @@
+from typing import Optional
+
 from aiohttp import ClientSession
+from rich.progress import Progress
 
+from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, console, base_url_var, progress_definition
 
-from .defaults import Configurer as InnerConfigurer, UserProfile, session_var, progress, console, base_url_var
+_lazy_progress: Optional[Progress] = None
 
 class TerminalContext:
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self._progress = progress
         self._console = console
+
+    @property
+    def _progress(self) -> Progress:
+        global _lazy_progress
+        if _lazy_progress is None:
+            _lazy_progress = Progress(*progress_definition, console=self._console)
+        return _lazy_progress
 
 class UserProfileContext:
 

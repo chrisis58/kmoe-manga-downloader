@@ -26,7 +26,7 @@ console = Console()
 def console_print(*args, **kwargs):
     console.print(*args, **kwargs)
 
-progress = Progress(
+progress_definition = (
     TextColumn("[blue]{task.fields[filename]}", justify="left"),
     TextColumn("{task.fields[status]}", justify="right"),
     TextColumn("{task.percentage:>3.1f}%"),
@@ -38,7 +38,6 @@ progress = Progress(
     ",",
     TimeRemainingColumn(),
     "]",
-    console=console,
 )
 
 session_var = ContextVar('session')
