@@ -188,7 +188,7 @@ class Configurer:
         self._config.base_url = value
         self.update()
     
-    def get_base_url(self) -> str:
+    def get_base_url(self) -> Optional[str]:
         return self._config.base_url
     
     def update(self):
