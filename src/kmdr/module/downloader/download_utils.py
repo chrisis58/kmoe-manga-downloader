@@ -12,7 +12,7 @@ import aiofiles.os as aio_os
 from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
-from kmdr.core.console import info
+from kmdr.core.console import info, log
 
 from .misc import STATUS, StateManager
 
@@ -57,6 +57,8 @@ async def download_file(
     if await aio_os.path.exists(file_path):
         info(f"[yellow]{filename} 已经存在[/yellow]")
         return
+    
+    log(f"开始下载文件: {filename} 到路径: {dest_path}")
 
     block_size = 8192
     attempts_left = retry_times + 1
@@ -158,6 +160,8 @@ async def download_file_multipart(
     if await aio_os.path.exists(file_path):
         info(f"[blue]{filename} 已经存在[/blue]")
         return
+
+    log(f"开始下载文件: {filename} 到路径: {dest_path}")
 
     part_paths = []
     part_expected_sizes = []

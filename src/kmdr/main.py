@@ -11,6 +11,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     post_init(args)
     debug(f'[bold green]以调试模式启动[/bold green]')
+    log('[Lifecycle] 启动 kmdr 版本:', __version__)
 
     if args.command == 'version':
         info(f"[green]{__version__}[/green]")
@@ -40,6 +41,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     else:
         fallback()
+    log('[Lifecycle] 运行结束，kmdr 已退出')
 
 def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
     asyncio.run(main(args, fallback))

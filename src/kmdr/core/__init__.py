@@ -8,4 +8,4 @@ from .error import KmdrError, LoginError
 
 from .session import KmdrSessionManager
 
-from .console import info, debug, exception
+from .console import info, debug, exception, log

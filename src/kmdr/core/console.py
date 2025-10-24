@@ -25,5 +25,9 @@ def debug(*args, **kwargs):
         else:
             _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
 
+def log(*args, **kwargs):
+    if not _console.is_interactive:
+        _console.log(*args, **kwargs, _stack_offset=2)
+
 def exception(exception: Exception):
     _console.print((Traceback.from_exception(type(exception), exception, exception.__traceback__)))
