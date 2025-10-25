@@ -1,5 +1,7 @@
 from typing import Optional
 
+from kmdr.core.error import ArgsResolveError
+
 def resolve_volume(volume: str) -> Optional[set[int]]:
     if volume == 'all':
         return None
@@ -18,20 +20,26 @@ def resolve_volume(volume: str) -> Optional[set[int]]:
 
     if (volume := volume.strip()).isdigit():
         # 只有一个数字
-        assert (volume := int(volume)) > 0, "Volume number must be greater than 0."
-        return {volume}
+        if (volume_digit := int(volume)) <= 0:
+            raise ArgsResolveError(f"卷号必须大于 0，当前值为 {volume_digit}。")
+        return {volume_digit}
     elif '-' in volume and volume.count('-') == 1 and ',' not in volume:
         # 使用了范围符号
         start, end = volume.split('-')
 
-        assert start.strip().isdigit() and end.strip().isdigit(), "Invalid range format. Use 'start-end' or 'start, end'."
+        if not start.strip().isdigit() or not end.strip().isdigit():
+            raise ArgsResolveError(f"无效的范围格式: {volume}。请使用 'start-end' 或 'start, end'。")
 
         start = int(start.strip())
         end = int(end.strip())
 
-        assert start > 0 and end > 0, "Volume numbers must be greater than 0."
-        assert start <= end, "Start of range must be less than or equal to end."
+        if start <= 0:
+            raise ArgsResolveError(f"卷号必须大于 0，当前值为 {start}。")
+        if end <= 0:
+            raise ArgsResolveError(f"卷号必须大于 0，当前值为 {end}。")
+        if start > end:
+            raise ArgsResolveError(f"起始卷号必须小于或等于结束卷号，当前值为 {start} - {end}。")
 
         return set(range(start, end + 1))
 
-    raise ValueError(f"Invalid volume format: {volume}. Use 'all', '1,2,3', '1-3', or '1-3,4-6'.")
+    raise ArgsResolveError(f"无效的卷号格式: {volume}。请使用 'all', '1,2,3', '1-3', 或 '1-3,4-6'。")

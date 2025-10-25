@@ -14,6 +14,13 @@ class InitializationError(KmdrError):
     def __str__(self):
         return f"{self.message}\n{self._solution}"
 
+class ArgsResolveError(KmdrError):
+    def __init__(self, message, solution: Optional[list[str]] = None):
+        super().__init__(message, solution)
+
+    def __str__(self):
+        return f"{self.message}\n{self._solution}"
+
 class LoginError(KmdrError):
     def __init__(self, message, solution: Optional[list[str]] = None):
         super().__init__(message, solution)
