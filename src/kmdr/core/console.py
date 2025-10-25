@@ -3,7 +3,7 @@ KMDR 用于管理控制台输出的模块。
 
 提供信息、调试和日志记录功能，确保在交互式和非交互式环境中均能正确输出。
 """
-
+from typing import Any
 import sys
 import io
 
@@ -12,11 +12,17 @@ from rich.traceback import Traceback
 
 from kmdr.core.defaults import is_verbose
 
+_console_config = dict[str, Any](
+    log_time_format="[%Y-%m-%d %H:%M:%S]",
+)
+
 try:
     utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='backslashreplace')
-    _console = Console(file=utf8_stdout)
+    _console_config['file'] = utf8_stdout
 except io.UnsupportedOperation:
-    _console = Console()
+    pass
+
+_console = Console(**_console_config)
 
 def info(*args, **kwargs):
     """
