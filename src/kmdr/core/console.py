@@ -1,3 +1,9 @@
+"""
+KMDR 用于管理控制台输出的模块。
+
+提供信息、调试和日志记录功能，确保在交互式和非交互式环境中均能正确输出。
+"""
+
 import sys
 import io
 
@@ -13,12 +19,22 @@ except io.UnsupportedOperation:
     _console = Console()
 
 def info(*args, **kwargs):
+    """
+    在终端中输出信息
+    
+    会根据终端是否为交互式选择合适的输出方式。
+    """
     if _console.is_interactive:
         _console.print(*args, **kwargs)
     else:
         _console.log(*args, **kwargs, _stack_offset=2)
 
 def debug(*args, **kwargs):
+    """
+    在终端中输出调试信息
+    
+    `info` 的条件版本，仅当启用详细模式时才会输出。
+    """
     if is_verbose():
         if _console.is_interactive:
             _console.print("[dim]DEBUG:[/]", *args, **kwargs)
@@ -26,6 +42,11 @@ def debug(*args, **kwargs):
             _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
 
 def log(*args, **kwargs):
+    """
+    仅在非交互式终端中记录日志信息
+
+    :warning: 仅在非交互式终端中输出日志信息，避免干扰交互式用户界面。
+    """
     if not _console.is_interactive:
         _console.log(*args, **kwargs, _stack_offset=2)
 
