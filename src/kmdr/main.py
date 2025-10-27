@@ -11,8 +11,8 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     post_init(args)
     log('[Lifecycle:Start] 启动 kmdr 版本:', __version__)
-    debug(f'[bold green]以调试模式启动[/bold green]')
-    debug(f'接收到的参数: {args}')
+    debug('[bold green]以调试模式启动[/bold green]')
+    debug('接收到的参数:', args)
 
     if args.command == 'version':
         info(f"[green]{__version__}[/green]")
@@ -33,10 +33,10 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
             await AUTHENTICATOR.get(args).authenticate()
 
             book, volumes = await LISTERS.get(args).list()
-            debug(f"获取到书籍《{book.name}》及其 {len(volumes)} 个章节信息。")
+            debug("获取到书籍《", book.name, "》及其", len(volumes), "个章节信息。")
 
             volumes = PICKERS.get(args).pick(volumes)
-            debug(f"选择了 {len(volumes)} 个章节进行下载: {', '.join(volume.name for volume in volumes)}")
+            debug("选择了", len(volumes), "个章节进行下载:", ', '.join(volume.name for volume in volumes))
 
             await DOWNLOADER.get(args).download(book, volumes)
 

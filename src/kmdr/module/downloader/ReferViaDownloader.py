@@ -48,7 +48,7 @@ class ReferViaDownloader(Downloader):
             response.raise_for_status()
             data = await response.text()
             data = json.loads(data)
-            debug(f"获取下载链接响应数据: {data}")
+            debug("获取下载链接响应数据:", data)
             if (code := data.get('code')) != 200:
                 raise ResponseError(f"Failed to fetch download URL: {data.get('msg', 'Unknown error')}", code)
 

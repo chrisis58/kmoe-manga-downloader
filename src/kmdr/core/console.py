@@ -47,13 +47,20 @@ def debug(*args, **kwargs):
         else:
             _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
 
-def log(*args, **kwargs):
+def log(*args, debug=False, **kwargs):
     """
     仅在非交互式终端中记录日志信息
 
     :warning: 仅在非交互式终端中输出日志信息，避免干扰交互式用户界面。
     """
-    if not _console.is_interactive:
+    if _console.is_interactive:
+        # 如果是交互式终端，则不记录日志
+        return
+
+    if debug and is_verbose():
+        # 仅在调试模式和启用详细模式时记录调试日志
+        _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
+    else:
         _console.log(*args, **kwargs, _stack_offset=2)
 
 def exception(exception: Exception):

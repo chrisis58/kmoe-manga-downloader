@@ -51,7 +51,7 @@ async def check_status(
             is_vip = int(var_define.get('is_vip', '0'))
             user_level = int(var_define.get('user_level', '0'))
 
-            debug(f"解析到用户状态: is_vip={is_vip}, user_level={user_level}")
+            debug("解析到用户状态: is_vip=", is_vip, ", user_level=", user_level)
 
             if is_vip_setter:
                 is_vip_setter(is_vip)

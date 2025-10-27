@@ -33,10 +33,10 @@ class KmdrSessionManager(SessionManager):
         if book_url is not None and book_url.strip() != "" :
             splited = urlsplit(book_url)
             primary_base_url = f"{splited.scheme}://{splited.netloc}"
-            debug(f"提升书籍链接所在镜像地址优先级: {primary_base_url}")
+            debug("提升书籍链接所在镜像地址优先级:", primary_base_url)
 
             self._sorter.incr(primary_base_url, 10)
-        debug(f"镜像地址优先级排序: {self._sorter}")
+        debug("镜像地址优先级排序:", self._sorter)
 
     async def session(self) -> ClientSession:
         try:
@@ -52,7 +52,7 @@ class KmdrSessionManager(SessionManager):
             self._base_url = await self._probing_base_url()
             # 持久化配置
             self._configurer.set_base_url(self._base_url)
-            debug(f"使用的基础 URL: {self._base_url}")
+            debug("使用的基础 URL:", self._base_url)
 
             self._session = ClientSession(
                 base_url=self._base_url,

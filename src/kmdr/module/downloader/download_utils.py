@@ -12,7 +12,7 @@ import aiofiles.os as aio_os
 from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
-from kmdr.core.console import info, log
+from kmdr.core.console import info, log, debug
 
 from .misc import STATUS, StateManager
 
@@ -57,8 +57,8 @@ async def download_file(
     if await aio_os.path.exists(file_path):
         info(f"[yellow]{filename} 已经存在[/yellow]")
         return
-    
-    log(f"开始下载文件: {filename} 到路径: {dest_path}")
+
+    log("开始下载文件:", filename, "到路径:", dest_path)
 
     block_size = 8192
     attempts_left = retry_times + 1
@@ -267,6 +267,7 @@ async def _download_part(
             local_headers['Range'] = f'bytes={current_start}-{end}'
             
             async with semaphore:
+                debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
 
@@ -277,6 +278,7 @@ async def _download_part(
                             if chunk:
                                 await f.write(chunk)
                                 state_manager.advance(len(chunk))
+                log("分片", os.path.basename(part_path), "下载完成。")
             return
     
         except asyncio.CancelledError:
@@ -286,10 +288,12 @@ async def _download_part(
 
         except Exception as e:
             if attempts_left > 0:
+                debug("分片", os.path.basename(part_path), "下载出错:", e, "，正在重试... 剩余重试次数:", attempts_left)
                 await asyncio.sleep(3)
                 await state_manager.request_status_update(part_id=start, status=STATUS.WAITING)
             else:
                 # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
+                debug("分片", os.path.basename(part_path), "下载失败:", e)
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
 async def _validate_part(part_path: str, expected_size: int) -> bool:
@@ -299,6 +303,7 @@ async def _validate_part(part_path: str, expected_size: int) -> bool:
     return actual_size == expected_size
 
 async def _merge_parts(part_paths: list[str], final_path: str):
+    debug("合并分片到最终文件:", final_path)
     async with aiofiles.open(final_path, 'wb') as final_file:
         try:
             for part_path in part_paths:
