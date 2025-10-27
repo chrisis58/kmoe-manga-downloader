@@ -109,7 +109,7 @@ async def download_file(
         else: 
             raise IOError(f"Failed to download {filename} after {retry_times} retries.")
 
-        os.rename(filename_downloading, file_path)
+        await aio_os.rename(filename_downloading, file_path)
     
     except Exception as e:
         if task_id is not None:
