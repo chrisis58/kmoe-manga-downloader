@@ -20,7 +20,7 @@ BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
 
-@deprecated("请使用 'download_file_multipart'")
+@deprecated("本函数可能不会积极维护，请改用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
@@ -172,6 +172,9 @@ async def download_file_multipart(
         current_url = await fetch_url(url)
 
         async with session.head(current_url, headers=headers, allow_redirects=True) as response:
+            # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
+            #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
+            #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
             response.raise_for_status()
             total_size = int(response.headers['Content-Length'])
 
