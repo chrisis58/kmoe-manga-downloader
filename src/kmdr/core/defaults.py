@@ -1,3 +1,5 @@
+import io
+import sys
 import os
 import json
 from typing import Optional, Any
@@ -21,12 +23,8 @@ HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 }
 
-console = Console()
 
-def console_print(*args, **kwargs):
-    console.print(*args, **kwargs)
-
-progress = Progress(
+progress_definition = (
     TextColumn("[blue]{task.fields[filename]}", justify="left"),
     TextColumn("{task.fields[status]}", justify="right"),
     TextColumn("{task.percentage:>3.1f}%"),
@@ -38,7 +36,6 @@ progress = Progress(
     ",",
     TimeRemainingColumn(),
     "]",
-    console=console,
 )
 
 session_var = ContextVar('session')
@@ -52,7 +49,12 @@ def argument_parser():
         return parser
 
     parser = argparse.ArgumentParser(description='Kmoe 漫画下载器')
+
+    parser.add_argument('-v', '--verbose', action='store_true', help='启用详细输出')
+
     subparsers = parser.add_subparsers(title='可用的子命令', dest='command')
+
+    version_parser = subparsers.add_parser('version', help='显示当前版本信息')
 
     download_parser = subparsers.add_parser('download', help='下载指定的漫画')
     download_parser.add_argument('-d', '--dest', type=str, help='指定下载文件的保存路径，默认为当前目录', required=False)
@@ -65,6 +67,7 @@ def argument_parser():
     download_parser.add_argument('-p', '--proxy', type=str, help='设置下载使用的代理服务器', required=False)
     download_parser.add_argument('-r', '--retry', type=int, help='网络请求失败时的重试次数', required=False)
     download_parser.add_argument('-c', '--callback', type=str, help='每个卷下载完成后执行的回调脚本，例如: `echo {v.name} downloaded!`', required=False)
+    download_parser.add_argument('-m', '--method', type=int, help='下载方法，对应网站上的不同下载方式', required=False, choices=[1, 2], default=1)
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
@@ -185,7 +188,7 @@ class Configurer:
         self._config.base_url = value
         self.update()
     
-    def get_base_url(self) -> str:
+    def get_base_url(self) -> Optional[str]:
         return self._config.base_url
     
     def update(self):
@@ -237,3 +240,12 @@ def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
     return __combine_args(dest, option)
 
 base_url_var = ContextVar('base_url', default=Configurer().base_url)
+
+_verbose = False
+
+def is_verbose() -> bool:
+    return _verbose
+
+def post_init(args) -> None:
+    global _verbose
+    _verbose = getattr(args, 'verbose', False)

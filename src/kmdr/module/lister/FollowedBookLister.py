@@ -7,6 +7,7 @@ from rich.prompt import IntPrompt
 from kmdr.core import Lister, LISTERS, BookInfo, VolInfo
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE
+from kmdr.core.console import info
 
 from .utils import extract_book_info_and_volumes
 
@@ -23,7 +24,7 @@ class FollowedBookLister(Lister):
             books = await self._list_followed_books()
         
         if not books:
-            self._console.print("[yellow]关注列表为空。[/yellow]")
+            info("[yellow]关注列表为空。[/yellow]")
             exit(0)
 
         table = Table(title="关注的书籍列表", show_header=True, header_style="bold blue")
@@ -42,7 +43,7 @@ class FollowedBookLister(Lister):
                 book.status
             )
         
-        self._console.print(table)
+        info(table)
 
         valid_choices = [str(i) for i in range(1, len(books) + 1)]
         

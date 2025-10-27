@@ -9,6 +9,7 @@ from .bases import SESSION_MANAGER, SessionManager
 from .defaults import HEADERS
 from .error import InitializationError, RedirectError
 from .protocol import Supplier
+from .console import *
 
 
 
@@ -32,8 +33,10 @@ class KmdrSessionManager(SessionManager):
         if book_url is not None and book_url.strip() != "" :
             splited = urlsplit(book_url)
             primary_base_url = f"{splited.scheme}://{splited.netloc}"
+            debug("提升书籍链接所在镜像地址优先级:", primary_base_url)
 
             self._sorter.incr(primary_base_url, 10)
+        debug("镜像地址优先级排序:", self._sorter)
 
     async def session(self) -> ClientSession:
         try:
@@ -49,6 +52,7 @@ class KmdrSessionManager(SessionManager):
             self._base_url = await self._probing_base_url()
             # 持久化配置
             self._configurer.set_base_url(self._base_url)
+            debug("使用的基础 URL:", self._base_url)
 
             self._session = ClientSession(
                 base_url=self._base_url,
@@ -75,7 +79,7 @@ class KmdrSessionManager(SessionManager):
 
                 return response.status == 200
         except Exception as e:
-            self._console.print(f"[yellow]无法连接到镜像: {url_supplier()}，错误信息: {e}[/yellow]")
+            info(f"[yellow]无法连接到镜像: {url_supplier()}，错误信息: {e}[/yellow]")
             return False
 
     async def _probing_base_url(self) -> str:
@@ -107,7 +111,7 @@ class KmdrSessionManager(SessionManager):
 
                 if await async_retry(
                     base_url_setter=set_base_url,
-                    on_failure=lambda e: self._console.print(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
+                    on_failure=lambda e: info(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 

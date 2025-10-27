@@ -2,6 +2,7 @@ from rich.table import Table
 from rich.pretty import Pretty
 
 from kmdr.core import CONFIGURER, Configurer
+from kmdr.core.console import info
 
 @CONFIGURER.register(
     hasvalues={
@@ -14,7 +15,7 @@ class OptionLister(Configurer):
 
     def operate(self) -> None:
         if self._configurer.option is None and self._configurer.base_url is None:
-            self._console.print("[blue]当前没有任何配置项。[/blue]")
+            info("[blue]当前没有任何配置项。[/blue]")
             return
 
         table = Table(title="[green]当前 Kmdr 配置项[/green]", show_header=False, header_style="blue")
@@ -35,4 +36,4 @@ class OptionLister(Configurer):
         if self._configurer.base_url is not None:
             table.add_row('应用配置', '镜像地址', self._configurer.base_url or '未设置')
 
-        self._console.print(table)
+        info(table)

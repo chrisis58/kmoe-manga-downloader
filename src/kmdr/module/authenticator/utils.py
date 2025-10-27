@@ -8,6 +8,7 @@ from yarl import URL
 from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE
+from kmdr.core.console import *
 
 NICKNAME_ID = 'div_nickname_display'
 
@@ -27,7 +28,7 @@ async def check_status(
         try:
             response.raise_for_status()
         except Exception as e:
-            console.print(f"Error: {type(e).__name__}: {e}")
+            info(f"Error: {type(e).__name__}: {e}")
             return False
         
         if response.history and any(resp.status in (301, 302, 307) for resp in response.history) \
@@ -50,6 +51,8 @@ async def check_status(
             is_vip = int(var_define.get('is_vip', '0'))
             user_level = int(var_define.get('user_level', '0'))
 
+            debug("解析到用户状态: is_vip=", is_vip, ", user_level=", user_level)
+
             if is_vip_setter:
                 is_vip_setter(is_vip)
             if level_setter:
@@ -58,10 +61,14 @@ async def check_status(
         if not show_quota:
             return True
 
-        nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0]
-        quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip()
+        nickname = soup.find('div', id=NICKNAME_ID).text.strip().split(' ')[0].replace('\xa0', '')
+        quota = soup.find('div', id=__resolve_quota_id(is_vip, user_level)).text.strip().replace('\xa0', '')
 
-        console.print(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
+        if console.is_interactive:
+            info(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{quota}")
+        else:
+            info(f"当前登录为 {nickname}")
+
         return True
 
 def extract_var_define(script_text) -> dict[str, str]:

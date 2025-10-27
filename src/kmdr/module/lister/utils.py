@@ -7,6 +7,7 @@ from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
 from kmdr.core.utils import async_retry
+from kmdr.core.console import debug
 
 @async_retry()
 async def extract_book_info_and_volumes(session: Session, url: str, book_info: Optional[BookInfo] = None) -> tuple[BookInfo, list[VolInfo]]:
@@ -21,7 +22,10 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
 
     # 移除移动端路径部分，统一为桌面端路径
     # 因为移动端页面的结构与桌面端不同，可能会影响解析
-    route = structured_url.path[2:] if structured_url.path.startswith('/m/') else structured_url.path
+    route = structured_url.path
+    if structured_url.path.startswith('/m/'):
+        debug("检测到移动端链接，转换为桌面端链接进行处理。")
+        route = structured_url.path[2:]
 
     async with session.get(route) as response:
         response.raise_for_status()

@@ -12,13 +12,15 @@ import aiofiles.os as aio_os
 from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
+from kmdr.core.console import info, log, debug
+
 from .misc import STATUS, StateManager
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
 
-@deprecated("请使用 'download_file_multipart'")
+@deprecated("本函数可能不会积极维护，请改用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
@@ -53,8 +55,10 @@ async def download_file(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[yellow]{filename} 已经存在[/yellow]")
+        info(f"[yellow]{filename} 已经存在[/yellow]")
         return
+
+    log("开始下载文件:", filename, "到路径:", dest_path)
 
     block_size = 8192
     attempts_left = retry_times + 1
@@ -105,7 +109,7 @@ async def download_file(
         else: 
             raise IOError(f"Failed to download {filename} after {retry_times} retries.")
 
-        os.rename(filename_downloading, file_path)
+        await aio_os.rename(filename_downloading, file_path)
     
     except Exception as e:
         if task_id is not None:
@@ -154,16 +158,23 @@ async def download_file_multipart(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
-        progress.console.print(f"[blue]{filename} 已经存在[/blue]")
+        info(f"[blue]{filename} 已经存在[/blue]")
         return
+
+    log(f"开始下载文件: {filename} 到路径: {dest_path}")
 
     part_paths = []
     part_expected_sizes = []
     task_id = None
+
+    state_manager: Optional[StateManager] = None
     try:
         current_url = await fetch_url(url)
 
         async with session.head(current_url, headers=headers, allow_redirects=True) as response:
+            # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
+            #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
+            #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
             response.raise_for_status()
             total_size = int(response.headers['Content-Length'])
 
@@ -206,14 +217,14 @@ async def download_file_multipart(
         if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
             await _merge_parts(part_paths, filename_downloading)
-            os.rename(filename_downloading, file_path)
+            await aio_os.rename(filename_downloading, file_path)
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
     finally:
         if await aio_os.path.exists(file_path):
-            if task_id is not None:
+            if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.COMPLETED)
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
@@ -222,7 +233,7 @@ async def download_file_multipart(
             if callback:
                 callback()
         else:
-            if task_id is not None:
+            if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
 async def _download_part(
@@ -256,6 +267,7 @@ async def _download_part(
             local_headers['Range'] = f'bytes={current_start}-{end}'
             
             async with semaphore:
+                debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
 
@@ -266,6 +278,7 @@ async def _download_part(
                             if chunk:
                                 await f.write(chunk)
                                 state_manager.advance(len(chunk))
+                log("分片", os.path.basename(part_path), "下载完成。")
             return
     
         except asyncio.CancelledError:
@@ -275,10 +288,12 @@ async def _download_part(
 
         except Exception as e:
             if attempts_left > 0:
+                debug("分片", os.path.basename(part_path), "下载出错:", e, "，正在重试... 剩余重试次数:", attempts_left)
                 await asyncio.sleep(3)
                 await state_manager.request_status_update(part_id=start, status=STATUS.WAITING)
             else:
                 # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
+                debug("分片", os.path.basename(part_path), "下载失败:", e)
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
 async def _validate_part(part_path: str, expected_size: int) -> bool:
@@ -288,6 +303,7 @@ async def _validate_part(part_path: str, expected_size: int) -> bool:
     return actual_size == expected_size
 
 async def _merge_parts(part_paths: list[str], final_path: str):
+    debug("合并分片到最终文件:", final_path)
     async with aiofiles.open(final_path, 'wb') as final_file:
         try:
             for part_path in part_paths:

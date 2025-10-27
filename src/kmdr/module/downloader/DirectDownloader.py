@@ -7,7 +7,7 @@ from .download_utils import download_file_multipart, readable_safe_filename
 
 @DOWNLOADER.register(
     hasvalues={
-        'method': 1
+        'method': 2
     }
 )
 class DirectDownloader(Downloader):
