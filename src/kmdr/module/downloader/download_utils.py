@@ -214,7 +214,7 @@ async def download_file_multipart(
         if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
             await _merge_parts(part_paths, filename_downloading)
-            os.rename(filename_downloading, file_path)
+            await aio_os.rename(filename_downloading, file_path)
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
