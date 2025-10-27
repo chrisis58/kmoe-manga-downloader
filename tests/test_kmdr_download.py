@@ -175,7 +175,7 @@ class TestKmdrDownload(unittest.TestCase):
 
         assert len(files := os.listdir(dest)) == 2, "Expected one subdirectory and one callback log file in the destination"
         assert 'callback.log' in files, "Expected callback log file to be present"
-        with open(os.path.join(dest, 'callback.log'), 'r') as f:
+        with open(os.path.join(dest, 'callback.log'), 'r', encoding='utf-8') as f:
             log_content = f.read()
             assert "CALLBACK:" in log_content, "Expected callback log to contain the correct message"
         files.remove('callback.log')

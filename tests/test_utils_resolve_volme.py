@@ -1,7 +1,7 @@
 import unittest
 
 from kmdr.module.picker.utils import resolve_volume
-
+from kmdr.core.error import ArgsResolveError
 class TestVolumeResolve(unittest.TestCase):
 
     def test_resolve_volume_all(self):
@@ -45,10 +45,10 @@ class TestVolumeResolve(unittest.TestCase):
 
     def test_resolve_volume_invalid(self):
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ArgsResolveError):
             resolve_volume("invalid")
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ArgsResolveError):
             resolve_volume("-1,2")
 
         
