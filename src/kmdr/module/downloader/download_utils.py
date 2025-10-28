@@ -161,8 +161,7 @@ async def download_file_multipart(
         info(f"[blue]{filename} 已经存在[/blue]")
         return
 
-    log(f"开始下载文件: {filename} 到路径: {dest_path}")
-
+    log("开始下载文件:", filename)
     part_paths = []
     part_expected_sizes = []
     task_id = None
