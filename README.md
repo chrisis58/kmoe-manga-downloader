@@ -8,7 +8,7 @@
   <tbody>
     <tr>
       <td style="text-align: center;">
-        <nobr>交互</nobr><br>模式
+        交互模式
       </td>
       <td style="text-align: center;">
         <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" />
@@ -16,7 +16,7 @@
     </tr>
     <tr>
       <td style="text-align: center;">
-        日志<br>模式
+        日志模式
       </td>
       <td style="text-align: center;">
         <img src="assets/kmdr-log-demo.gif" alt="kmdr 日志使用演示" />
