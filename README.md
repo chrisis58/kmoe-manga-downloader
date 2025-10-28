@@ -7,7 +7,7 @@
 <table style="min-width: 600px;">
   <tbody>
     <tr>
-      <td style="text-align: center;">
+      <td style="text-align: center; min-width: 6rem;">
         交互模式
       </td>
       <td style="text-align: center;">
@@ -15,7 +15,7 @@
       </td>
     </tr>
     <tr>
-      <td style="text-align: center;">
+      <td style="text-align: center; min-width: 6rem;">
         日志模式
       </td>
       <td style="text-align: center;">
