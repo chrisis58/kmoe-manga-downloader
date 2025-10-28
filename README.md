@@ -4,16 +4,20 @@
 
 `kmdr (Kmoe Manga Downloader)` 是一个 Python 终端应用，用于从 [Kmoe](https://kxx.moe/) 网站下载漫画。它支持在终端环境下的登录、下载指定漫画及其卷，并支持回调脚本执行。
 
-<table>
+<table style="min-width: 600px;">
   <tbody>
     <tr>
-      <td style="text-align: center; white-space: nowrap;">交互模式</td>
+      <td style="text-align: center;">
+        <nobr>交互模式</nobr>
+      </td>
       <td style="text-align: center;">
         <img src="assets/kmdr-demo.gif" alt="kmdr 使用演示" />
       </td>
     </tr>
     <tr>
-      <td style="text-align: center; white-space: nowrap;">日志模式</td>
+      <td style="text-align: center;">
+        <nobr>日志模式</nobr>
+      </td>
       <td style="text-align: center;">
         <img src="assets/kmdr-log-demo.gif" alt="kmdr 日志使用演示" />
       </td>
