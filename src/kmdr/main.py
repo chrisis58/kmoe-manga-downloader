@@ -10,7 +10,7 @@ from kmdr.module import *
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
 
     post_init(args)
-    log('[Lifecycle:Start] 启动 kmdr 版本:', __version__)
+    log('[Lifecycle:Start] 启动 kmdr, 版本', __version__)
     debug('[bold green]以调试模式启动[/bold green]')
     debug('接收到的参数:', args)
 
