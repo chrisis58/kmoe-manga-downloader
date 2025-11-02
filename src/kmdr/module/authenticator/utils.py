@@ -79,7 +79,7 @@ def extract_var_define(script_text) -> dict[str, str]:
             var_name, var_value = line[4:].split("=", 1)
             var_value = var_value.strip().strip(";").strip('"')
             if var_name and var_value:
-                var_define[var_name.strip()] = var_value.strip()
+                var_define[var_name.strip()] = var_value
     debug("解析到变量定义: ", var_define)
     return var_define
 
