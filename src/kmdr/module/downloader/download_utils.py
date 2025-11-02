@@ -13,6 +13,7 @@ from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
 from kmdr.core.console import info, log, debug
+from kmdr.core.error import ResponseError
 
 from .misc import STATUS, StateManager
 
@@ -178,6 +179,8 @@ async def download_file_multipart(
                 #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
                 #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
                 response.raise_for_status()
+                if 'Content-Length' not in response.headers:
+                    raise ResponseError("无法从服务器获取文件大小，请检查网络连接或稍后重试。", status_code=response.status)
                 total_size = int(response.headers['Content-Length'])
 
         chunk_size = chunk_size_mb * 1024 * 1024
