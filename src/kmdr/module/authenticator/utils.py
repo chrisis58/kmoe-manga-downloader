@@ -77,7 +77,10 @@ def extract_var_define(script_text) -> dict[str, str]:
         line = line.strip()
         if line.startswith("var ") and "=" in line:
             var_name, var_value = line[4:].split("=", 1)
-            var_define[var_name.strip()] = var_value.strip().strip(";").strip('"')
+            var_value = var_value.strip().strip(";").strip('"')
+            if var_name and var_value:
+                var_define[var_name.strip()] = var_value.strip()
+    debug("解析到变量定义: ", var_define)
     return var_define
 
 def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] = None):
