@@ -53,6 +53,7 @@ class KmdrSessionManager(SessionManager):
             # 持久化配置
             self._configurer.set_base_url(self._base_url)
             debug("使用的基础 URL:", self._base_url)
+            debug("使用的代理:", self._proxy)
 
             self._session = ClientSession(
                 base_url=self._base_url,

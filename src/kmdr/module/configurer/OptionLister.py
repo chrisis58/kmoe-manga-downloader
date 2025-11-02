@@ -26,7 +26,7 @@ class OptionLister(Configurer):
 
         if self._configurer.option is not None:
             for idx, (key, value) in enumerate(self._configurer.option.items()):
-                value_to_display = value
+                value_to_display = str(value)
                 if isinstance(value, (dict, list, set, tuple)):
                     value_to_display = Pretty(value)
 
