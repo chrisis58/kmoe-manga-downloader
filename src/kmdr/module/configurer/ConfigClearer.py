@@ -14,4 +14,4 @@ class ConfigClearer(Configurer):
             info(f"[red]{e.args[0]}[/red]")
             exit(1)
 
-        info(f"Cleared configuration: {self._clear}")
+        info(f"[green]已清除: {self._clear}[/green]")
