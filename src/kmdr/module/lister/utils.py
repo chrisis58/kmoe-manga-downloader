@@ -8,6 +8,7 @@ from aiohttp import ClientSession as Session
 from kmdr.core import BookInfo, VolInfo, VolumeType
 from kmdr.core.utils import async_retry
 from kmdr.core.console import debug, info
+from kmdr.core.error import KmdrError
 
 @async_retry()
 async def extract_book_info_and_volumes(session: Session, url: str, book_info: Optional[BookInfo] = None) -> tuple[BookInfo, list[VolInfo]]:
@@ -42,7 +43,10 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
     book_name = book_page.find('font', class_='text_bglight_big').text
 
     if '為符合要求，此書內容已屏蔽' in book_name:
-        info(f"[yellow]注意：该书籍内容已被屏蔽，请检查代理配置。[/yellow]")
+        raise KmdrError(
+            "[yellow]该书籍内容已被屏蔽，请检查代理配置。[/yellow]", 
+            solution=["kmdr config -s proxy=<your_proxy>  # 设置可用的代理地址"]
+        )
 
     id = book_page.find('input', attrs={'name': 'bookid'})['value']
 
