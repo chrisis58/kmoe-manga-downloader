@@ -1,7 +1,6 @@
 import functools
 from typing import Optional, Callable, TypeVar, Hashable, Generic
 import asyncio
-from functools import wraps
 from asyncio.proactor_events import _ProactorBasePipeTransport
 
 import aiohttp
@@ -136,7 +135,7 @@ def _silence_event_loop_closed(func):
     
     @see https://github.com/aio-libs/aiohttp/issues/4324
     """
-    @wraps(func)
+    @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)

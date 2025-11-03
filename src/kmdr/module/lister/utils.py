@@ -7,7 +7,7 @@ from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
 from kmdr.core.utils import async_retry
-from kmdr.core.console import debug, info
+from kmdr.core.console import debug
 from kmdr.core.error import KmdrError
 
 @async_retry()
