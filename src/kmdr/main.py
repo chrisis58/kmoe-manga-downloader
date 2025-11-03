@@ -1,9 +1,8 @@
-from kmdr import __version__
-
 from typing import Callable
 from argparse import Namespace
 import asyncio
 
+from kmdr import __version__
 from kmdr.core import *
 from kmdr.module import *
 
