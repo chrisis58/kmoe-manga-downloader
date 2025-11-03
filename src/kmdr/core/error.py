@@ -51,9 +51,6 @@ class EmptyResultError(KmdrError):
     def __init__(self, message):
         super().__init__(message)
 
-    def __str__(self):
-        return f"{self.message}"
-
 class ResponseError(KmdrError):
     def __init__(self, message, status_code: int):
         super().__init__(message)
