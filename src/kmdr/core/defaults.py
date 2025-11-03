@@ -5,6 +5,7 @@ import json
 from typing import Optional, Any
 import argparse
 from contextvars import ContextVar
+
 from rich.console import Console
 from rich.progress import (
     Progress,
@@ -95,7 +96,6 @@ def parse_args():
 
     if args.command is None:
         parser.print_help()
-        exit(1)
 
     return args
 
@@ -249,3 +249,5 @@ def is_verbose() -> bool:
 def post_init(args) -> None:
     global _verbose
     _verbose = getattr(args, 'verbose', False)
+
+

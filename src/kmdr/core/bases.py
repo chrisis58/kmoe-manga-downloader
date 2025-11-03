@@ -84,7 +84,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
             info("没有可下载的卷。", style="blue")
-            exit(0)
+            return
 
         try:
             with self._progress:
@@ -97,11 +97,10 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
                 for exc in exceptions:
                     info(f"[red]- {exc}[/red]")
                     exception(exc)
-                exit(1)
 
-        except KeyboardInterrupt:
-            info("\n操作已取消（KeyboardInterrupt）")
-            exit(130)
+        except asyncio.CancelledError:
+            await asyncio.sleep(0.01)
+            raise
 
     @abstractmethod
     async def _download(self, book: BookInfo, volume: VolInfo): ...

@@ -39,6 +39,21 @@ class RedirectError(KmdrError):
     def __str__(self):
         return f"{self.message} 新的地址: {self.new_base_url}"
 
+class ValidationError(KmdrError):
+    def __init__(self, message, field: str):
+        super().__init__(message)
+        self.field = field
+
+    def __str__(self):
+        return f"{self.message} (字段: {self.field})"
+
+class EmptyResultError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"{self.message}"
+
 class ResponseError(KmdrError):
     def __init__(self, message, status_code: int):
         super().__init__(message)

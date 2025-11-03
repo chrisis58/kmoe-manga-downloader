@@ -8,6 +8,7 @@ from kmdr.core import Lister, LISTERS, BookInfo, VolInfo
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.console import info
+from kmdr.core.error import EmptyResultError
 
 from .utils import extract_book_info_and_volumes
 
@@ -24,8 +25,7 @@ class FollowedBookLister(Lister):
             books = await self._list_followed_books()
         
         if not books:
-            info("[yellow]关注列表为空。[/yellow]")
-            exit(0)
+            raise EmptyResultError("关注列表为空。")
 
         table = Table(title="关注的书籍列表", show_header=True, header_style="bold blue")
         table.add_column("序号", style="dim", width=4, justify="center")

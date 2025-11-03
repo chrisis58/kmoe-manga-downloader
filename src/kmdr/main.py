@@ -50,17 +50,14 @@ def entry_point():
         parser = argument_parser()
         args = parser.parse_args()
 
-        main_coro = main(args, lambda: parser.print_help())
+        main_coro = main(args, parser.print_help)
         asyncio.run(main_coro)
     except KmdrError as e:
         info(f"[red]错误: {e}[/red]")
-        exit(1)
     except KeyboardInterrupt:
         info("\n操作已取消（KeyboardInterrupt）", style="yellow")
-        exit(130)
     except Exception as e:
         exception(e)
-        exit(1)
     finally:
         log('[Lifecycle:End] 运行结束，kmdr 已退出')
     
