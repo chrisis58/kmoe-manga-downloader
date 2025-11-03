@@ -20,8 +20,18 @@ from .misc import STATUS, StateManager
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
-_HEAD_REQUEST_SEMAPHORE = asyncio.Semaphore(3)
+_HEAD_SEMAPHORE_VALUE = 3
+_HEAD_SEMAPHORE: Optional[asyncio.Semaphore] = None
 """定义的用于 HEAD 请求的信号量，限制并发数量以避免触发服务器限流。"""
+
+def _get_head_request_semaphore() -> asyncio.Semaphore:
+    """惰性初始化 HEAD 请求信号量。"""
+    global _HEAD_SEMAPHORE
+    
+    if _HEAD_SEMAPHORE is None:
+        _HEAD_SEMAPHORE = asyncio.Semaphore(_HEAD_SEMAPHORE_VALUE)
+    return _HEAD_SEMAPHORE
+
 
 @deprecated("本函数可能不会积极维护，请改用 'download_file_multipart'")
 async def download_file(
@@ -173,7 +183,7 @@ async def download_file_multipart(
     try:
         current_url = await fetch_url(url)
 
-        async with _HEAD_REQUEST_SEMAPHORE:
+        async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
             async with session.head(current_url, headers=headers, allow_redirects=True) as response:
