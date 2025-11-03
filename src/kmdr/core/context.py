@@ -18,7 +18,7 @@ class TerminalContext:
     def _progress(self) -> Progress:
         global _lazy_progress
         if _lazy_progress is None:
-            _lazy_progress = Progress(*progress_definition, console=self._console)
+            _lazy_progress = Progress(*progress_definition, console=self._console, refresh_per_second=4)
         return _lazy_progress
 
 class UserProfileContext:
