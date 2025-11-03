@@ -1,6 +1,9 @@
 from typing import Optional
 from urllib.parse import urlsplit, urljoin
+from typing import Type
+from types import TracebackType
 
+import asyncio
 from aiohttp import ClientSession
 
 from .constants import BASE_URL, API_ROUTE
@@ -10,6 +13,7 @@ from .defaults import HEADERS
 from .error import InitializationError, RedirectError
 from .protocol import Supplier
 from .console import *
+from .protocol import AsyncCtxManager
 
 
 
@@ -38,11 +42,11 @@ class KmdrSessionManager(SessionManager):
             self._sorter.incr(primary_base_url, 10)
         debug("镜像地址优先级排序:", self._sorter)
 
-    async def session(self) -> ClientSession:
+    async def session(self) -> AsyncCtxManager[ClientSession]:
         try:
             if self._session is not None and not self._session.closed:
                 # 幂等性检查：如果 session 已经存在且未关闭，直接返回
-                return self._session
+                return SessionCtxManager(self._session)
         except LookupError:
             # session_var 尚未设置
             pass
@@ -62,7 +66,7 @@ class KmdrSessionManager(SessionManager):
                 headers=HEADERS,
             )
 
-            return self._session
+            return SessionCtxManager(self._session)
     
     async def validate_url(self, session: ClientSession, url_supplier: Supplier[str]) -> bool:
         try:
@@ -118,3 +122,22 @@ class KmdrSessionManager(SessionManager):
 
             raise InitializationError(f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json")
 
+class SessionCtxManager:
+    def __init__(self, session: ClientSession):
+        self._session = session
+
+    async def __aenter__(self) -> ClientSession:
+        await self._session.__aenter__()
+        return self._session
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType]
+    ):
+        await self._session.__aexit__(exc_type, exc_value, traceback)
+
+        if exc_type in (KeyboardInterrupt, asyncio.CancelledError):
+            debug("任务被取消，正在清理资源")
+            await asyncio.sleep(0.01)
