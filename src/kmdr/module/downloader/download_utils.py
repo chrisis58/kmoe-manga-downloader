@@ -20,6 +20,8 @@ from .misc import STATUS, StateManager
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
 
+_HEAD_REQUEST_SEMAPHORE = asyncio.Semaphore(3)
+"""定义的用于 HEAD 请求的信号量，限制并发数量以避免触发服务器限流。"""
 
 @deprecated("本函数可能不会积极维护，请改用 'download_file_multipart'")
 async def download_file(
@@ -171,9 +173,9 @@ async def download_file_multipart(
     try:
         current_url = await fetch_url(url)
 
-        async with semaphore:
+        async with _HEAD_REQUEST_SEMAPHORE:
             # 获取文件信息，请求以获取文件大小
-            # 复用 semaphore 以控制并发，避免过多并发请求触发服务器限流
+            # 控制并发，避免过多并发请求触发服务器限流
             async with session.head(current_url, headers=headers, allow_redirects=True) as response:
                 # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
                 #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
