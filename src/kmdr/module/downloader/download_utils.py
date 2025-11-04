@@ -319,6 +319,7 @@ async def _download_part(
                             if chunk:
                                 await f.write(chunk)
                                 state_manager.advance(len(chunk))
+                await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_COMPLETED)
                 log("分片", os.path.basename(part_path), "下载完成。")
             return
     

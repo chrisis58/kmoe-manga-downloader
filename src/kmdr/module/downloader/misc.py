@@ -5,6 +5,7 @@ from rich.progress import Progress, TaskID
 
 
 class STATUS(Enum):
+    PARTIALLY_COMPLETED='[yellow]分片完成[/yellow]'
     WAITING='[blue]等待中[/blue]'
     RETRYING='[yellow]重试中[/yellow]'
     DOWNLOADING='[cyan]下载中[/cyan]'
@@ -17,6 +18,7 @@ class STATUS(Enum):
     @property
     def order(self) -> int:
         order_mapping = {
+            STATUS.PARTIALLY_COMPLETED: 0,
             STATUS.WAITING: 1,
             STATUS.RETRYING: 2,
             STATUS.DOWNLOADING: 3,
