@@ -59,6 +59,11 @@ class StateManager:
             self._progress.update(self._task_id, status=highest_status.value)
 
     async def pop_part(self, part_id: int):
+        """
+        下载完成后移除分片状态记录，不再参与状态计算
+        
+        :note: 为避免状态闪烁，调用后不会更新状态
+        """
         async with self._lock:
             if part_id in self._part_states:
                 self._part_states.pop(part_id)
