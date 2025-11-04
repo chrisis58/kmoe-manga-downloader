@@ -10,8 +10,6 @@ import io
 from rich.console import Console
 from rich.traceback import Traceback
 
-from kmdr.core.defaults import is_verbose
-
 _console_config = dict[str, Any](
     log_time_format="[%Y-%m-%d %H:%M:%S]",
 )
@@ -23,6 +21,12 @@ except io.UnsupportedOperation:
     pass
 
 _console = Console(**_console_config)
+
+_is_verbose = False
+
+def _update_verbose_setting(value: bool):
+    global _is_verbose
+    _is_verbose = value
 
 def info(*args, **kwargs):
     """
@@ -41,7 +45,7 @@ def debug(*args, **kwargs):
     
     `info` 的条件版本，仅当启用详细模式时才会输出。
     """
-    if is_verbose():
+    if _is_verbose:
         if _console.is_interactive:
             _console.print("[dim]DEBUG:[/]", *args, **kwargs)
         else:
@@ -57,7 +61,7 @@ def log(*args, debug=False, **kwargs):
         # 如果是交互式终端，则不记录日志
         return
 
-    if debug and is_verbose():
+    if debug and _is_verbose:
         # 仅在调试模式和启用详细模式时记录调试日志
         _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
     else:

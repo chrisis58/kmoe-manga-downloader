@@ -10,6 +10,7 @@ import subprocess
 from .structure import BookInfo, VolInfo
 from .error import RedirectError
 from .protocol import Consumer
+from .console import debug
 
 
 def singleton(cls):
@@ -69,7 +70,6 @@ def async_retry(
                 except RedirectError as e:
                     if base_url_setter:
                         base_url_setter(e.new_base_url)
-                        from .console import debug
                         debug("检测到重定向，已自动更新 base url 为", e.new_base_url)
                         continue
                     else:
