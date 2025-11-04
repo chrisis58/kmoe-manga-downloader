@@ -330,8 +330,8 @@ async def _download_part(
         except Exception as e:
             if attempts_left > 0:
                 debug("分片", os.path.basename(part_path), "下载出错:", e, "，正在重试... 剩余重试次数:", attempts_left)
-                await asyncio.sleep(3)
                 await state_manager.request_status_update(part_id=start, status=STATUS.WAITING)
+                await asyncio.sleep(3)
             else:
                 # console.print(f"[red]分片 {os.path.basename(part_path)} 下载失败: {e}[/red]")
                 debug("分片", os.path.basename(part_path), "下载失败:", e)
