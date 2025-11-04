@@ -12,6 +12,6 @@ class ConfigClearer(Configurer):
             self._configurer.clear(self._clear)
         except KeyError as e:
             info(f"[red]{e.args[0]}[/red]")
-            exit(1)
+            return
 
-        info(f"Cleared configuration: {self._clear}")
+        info(f"[green]已清除: {self._clear}[/green]")

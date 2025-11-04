@@ -5,6 +5,7 @@ import json
 from typing import Optional, Any
 import argparse
 from contextvars import ContextVar
+
 from rich.console import Console
 from rich.progress import (
     Progress,
@@ -18,6 +19,7 @@ from rich.progress import (
 from .utils import singleton
 from .structure import Config
 from .constants import BASE_URL
+from .console import _update_verbose_setting
 
 HEADERS = {
     'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
@@ -95,7 +97,6 @@ def parse_args():
 
     if args.command is None:
         parser.print_help()
-        exit(1)
 
     return args
 
@@ -241,11 +242,6 @@ def combine_args(dest: argparse.Namespace) -> argparse.Namespace:
 
 base_url_var = ContextVar('base_url', default=Configurer().base_url)
 
-_verbose = False
-
-def is_verbose() -> bool:
-    return _verbose
-
 def post_init(args) -> None:
-    global _verbose
     _verbose = getattr(args, 'verbose', False)
+    _update_verbose_setting(_verbose)

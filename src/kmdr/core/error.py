@@ -7,6 +7,9 @@ class KmdrError(RuntimeError):
 
         self._solution = "" if solution is None else "\n[bold cyan]推荐解决方法:[/bold cyan] \n" + "\n".join(f"[cyan]>>> {sol}[/cyan]" for sol in solution)
 
+    def __str__(self):
+        return f"{self.message}\n{self._solution}"
+
 class InitializationError(KmdrError):
     def __init__(self, message, solution: Optional[list[str]] = None):
         super().__init__(message, solution)
@@ -35,6 +38,18 @@ class RedirectError(KmdrError):
 
     def __str__(self):
         return f"{self.message} 新的地址: {self.new_base_url}"
+
+class ValidationError(KmdrError):
+    def __init__(self, message, field: str):
+        super().__init__(message)
+        self.field = field
+
+    def __str__(self):
+        return f"{self.message} (字段: {self.field})"
+
+class EmptyResultError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
 
 class ResponseError(KmdrError):
     def __init__(self, message, status_code: int):

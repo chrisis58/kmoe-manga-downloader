@@ -3,6 +3,7 @@ from functools import wraps
 import os
 
 from kmdr.core.console import info
+from kmdr.core.error import ValidationError
 
 __OPTIONS_VALIDATOR = {}
 
@@ -20,18 +21,19 @@ def validate(key: str, value: str) -> Optional[object]:
         info(f"[red]不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
         return None
 
-def check_key(key: str, exit_if_invalid: bool = True) -> None:
+def check_key(key: str, raise_if_invalid: bool = True) -> None:
     """
     供外部调用的验证函数，用于检查配置项的键名是否有效。
     如果键名无效，函数会打印错误信息并退出程序。
 
     :param key: 配置项的键名
-    :param exit_if_invalid: 如果键名无效，是否退出程序
+    :param raise_if_invalid: 如果键名无效，是否抛出异常
     """
     if key not in __OPTIONS_VALIDATOR:
-        info(f"[red]未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
-        if exit_if_invalid:
-            exit(1)
+        if raise_if_invalid:
+            raise ValidationError(f"未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}", field=key)
+        else:
+            info(f"[red]未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
 
 def register_validator(arg_name):
     """

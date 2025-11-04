@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from argparse import Namespace
 
 from .defaults import combine_args
+from .console import debug
 
 T = TypeVar('T')
 
@@ -76,6 +77,7 @@ class Registry(Generic[T]):
     def get(self, condition: Namespace) -> T:
         if self._combine_args:
             condition = combine_args(condition)
+            debug("合并默认参数后，条件为:", condition)
         return self._get(condition)
     
     def _get(self, condition: Namespace) -> T:

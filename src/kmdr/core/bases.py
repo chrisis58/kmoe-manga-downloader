@@ -9,6 +9,7 @@ from .error import LoginError
 from .registry import Registry
 from .structure import VolInfo, BookInfo
 from .utils import construct_callback, async_retry
+from .protocol import AsyncCtxManager
 
 from .context import TerminalContext, SessionContext, UserProfileContext, ConfigContext
 
@@ -26,7 +27,7 @@ class SessionManager(SessionContext, ConfigContext, TerminalContext):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    async def session(self) -> ClientSession: ...
+    async def session(self) -> AsyncCtxManager[ClientSession]: ...
 
 class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
 
@@ -44,7 +45,6 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
             except LoginError as e:
                 info(f"[yellow]详细信息：{e}[/yellow]")
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
-                exit(1)
 
     @abstractmethod
     async def _authenticate(self) -> bool: ...
@@ -84,7 +84,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
     async def download(self, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
             info("没有可下载的卷。", style="blue")
-            exit(0)
+            return
 
         try:
             with self._progress:
@@ -97,11 +97,10 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
                 for exc in exceptions:
                     info(f"[red]- {exc}[/red]")
                     exception(exc)
-                exit(1)
 
-        except KeyboardInterrupt:
-            info("\n操作已取消（KeyboardInterrupt）")
-            exit(130)
+        except asyncio.CancelledError:
+            await asyncio.sleep(0.01)
+            raise
 
     @abstractmethod
     async def _download(self, book: BookInfo, volume: VolInfo): ...

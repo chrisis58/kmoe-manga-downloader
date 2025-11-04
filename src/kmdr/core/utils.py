@@ -1,6 +1,7 @@
 import functools
 from typing import Optional, Callable, TypeVar, Hashable, Generic
 import asyncio
+from asyncio.proactor_events import _ProactorBasePipeTransport
 
 import aiohttp
 
@@ -9,6 +10,7 @@ import subprocess
 from .structure import BookInfo, VolInfo
 from .error import RedirectError
 from .protocol import Consumer
+from .console import debug
 
 
 def singleton(cls):
@@ -68,7 +70,7 @@ def async_retry(
                 except RedirectError as e:
                     if base_url_setter:
                         base_url_setter(e.new_base_url)
-                        print(f"检测到重定向，已自动更新 base url 为: {e.new_base_url}。立即重试...")
+                        debug("检测到重定向，已自动更新 base url 为", e.new_base_url)
                         continue
                     else:
                         raise
@@ -125,3 +127,23 @@ class PrioritySorter(Generic[H]):
     def sort(self) -> list[H]:
         """返回根据优先级排序后的元素列表，优先级高的元素排在前面"""
         return [k for k, v in sorted(self._items.items(), key=lambda item: item[1], reverse=True)]
+    
+def _silence_event_loop_closed(func):
+    """
+    用于静默处理 'Event loop is closed' 异常的装饰器。
+    该异常在某些情况下（如 Windows 平台使用 Proactor 事件循环）会在对象销毁时抛出，
+    导致程序输出不必要的错误信息。此装饰器捕获该异常并忽略它。
+    
+    @see https://github.com/aio-libs/aiohttp/issues/4324
+    """
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except RuntimeError as e:
+            if str(e) != 'Event loop is closed':
+                raise
+ 
+    return wrapper
+
+_ProactorBasePipeTransport.__del__ = _silence_event_loop_closed(_ProactorBasePipeTransport.__del__)

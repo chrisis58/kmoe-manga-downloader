@@ -12,6 +12,6 @@ class BaseUrlUpdator(Configurer):
             self._configurer.set_base_url(self._base_url)
         except KeyError as e:
             info(f"[red]{e.args[0]}[/red]")
-            exit(1)
+            return
 
         info(f"已设置基础 URL: {self._base_url}")
