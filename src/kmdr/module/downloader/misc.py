@@ -5,7 +5,6 @@ from rich.progress import Progress, TaskID
 
 
 class STATUS(Enum):
-    PARTIALLY_COMPLETED='[yellow]分片完成[/yellow]'
     WAITING='[blue]等待中[/blue]'
     RETRYING='[yellow]重试中[/yellow]'
     DOWNLOADING='[cyan]下载中[/cyan]'
@@ -18,7 +17,6 @@ class STATUS(Enum):
     @property
     def order(self) -> int:
         order_mapping = {
-            STATUS.PARTIALLY_COMPLETED: 0,
             STATUS.WAITING: 1,
             STATUS.RETRYING: 2,
             STATUS.DOWNLOADING: 3,
@@ -59,6 +57,11 @@ class StateManager:
         if highest_status != self._current_status:
             self._current_status = highest_status
             self._progress.update(self._task_id, status=highest_status.value)
+
+    async def pop_part(self, part_id: int):
+        async with self._lock:
+            if part_id in self._part_states:
+                self._part_states.pop(part_id)
 
     async def request_status_update(self, part_id: int, status: STATUS):
         async with self._lock:
