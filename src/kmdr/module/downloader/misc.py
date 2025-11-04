@@ -3,6 +3,8 @@ import asyncio
 
 from rich.progress import Progress, TaskID
 
+from kmdr.core.console import debug
+
 
 class STATUS(Enum):
     WAITING='[blue]等待中[/blue]'
@@ -53,6 +55,7 @@ class StateManager:
         if not self._part_states:
             return
         
+        debug("当前状态:", self._part_states)
         highest_status = max(self._part_states.values())
         if highest_status != self._current_status:
             self._current_status = highest_status
@@ -70,5 +73,6 @@ class StateManager:
 
     async def request_status_update(self, part_id: int, status: STATUS):
         async with self._lock:
+            debug("分片", part_id, "请求状态更新为", status)
             self._part_states[part_id] = status
             self._update_status()
