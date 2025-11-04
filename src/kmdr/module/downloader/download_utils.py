@@ -14,6 +14,7 @@ from aiohttp.client_exceptions import ClientPayloadError
 
 from kmdr.core.console import info, log, debug
 from kmdr.core.error import ResponseError
+from kmdr.core.utils import async_retry
 
 from .misc import STATUS, StateManager
 
@@ -186,14 +187,7 @@ async def download_file_multipart(
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
-            async with session.head(current_url, headers=headers, allow_redirects=True) as response:
-                # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
-                #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
-                #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
-                response.raise_for_status()
-                if 'Content-Length' not in response.headers:
-                    raise ResponseError("无法从服务器获取文件大小，请检查网络连接或稍后重试。", status_code=response.status)
-                total_size = int(response.headers['Content-Length'])
+            total_size = await _fetch_content_length(session, current_url, headers=headers)
 
         chunk_size = chunk_size_mb * 1024 * 1024
         num_chunks = math.ceil(total_size / chunk_size)
@@ -252,6 +246,36 @@ async def download_file_multipart(
         else:
             if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
+
+@async_retry()
+async def _fetch_content_length(
+        session: aiohttp.ClientSession,
+        url: str,
+        headers: Optional[dict] = None,
+) -> int:
+    """
+    获取文件的内容长度（字节数）
+
+    :note: 这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
+    - 注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
+    - 注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
+
+    :param session: aiohttp.ClientSession 对象
+    :param url: 文件 URL
+    :param headers: 请求头
+    :return: 文件大小（字节数）
+    """
+    if headers is None:
+        headers = {}
+    
+    async with session.head(url, headers=headers, allow_redirects=True) as response:
+        # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
+        #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
+        #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
+        response.raise_for_status()
+        if 'Content-Length' not in response.headers:
+            raise ResponseError("无法从服务器获取文件大小，请检查网络连接或稍后重试。", status_code=response.status)
+        return int(response.headers['Content-Length'])
 
 async def _download_part(
         session: aiohttp.ClientSession,
