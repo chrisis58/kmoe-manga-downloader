@@ -1,6 +1,7 @@
 from functools import partial
 
 import json
+import aiohttp
 from async_lru import alru_cache
 
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
@@ -52,6 +53,15 @@ class ReferViaDownloader(Downloader):
             data = json.loads(data)
             debug("获取下载链接响应数据:", data)
             if (code := data.get('code')) != 200:
-                raise ResponseError(f"Failed to fetch download URL: {data.get('msg', 'Unknown error')}", code)
+
+                if code in {401, 403, 404}:
+                    raise ResponseError("无法获取下载链接" + data.get('msg', 'Unknown error'), code)
+
+                raise aiohttp.ClientResponseError(
+                    response.request_info,
+                    history=response.history,
+                    status=code,
+                    message=data.get('msg', 'Unknown error')
+                )
 
             return data['url']
