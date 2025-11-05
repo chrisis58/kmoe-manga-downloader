@@ -55,7 +55,6 @@ class StateManager:
         if not self._part_states:
             return
         
-        debug("当前状态:", self._part_states)
         highest_status = max(self._part_states.values())
         if highest_status != self._current_status:
             self._current_status = highest_status
