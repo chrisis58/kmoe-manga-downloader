@@ -13,9 +13,9 @@ from .download_utils import download_file_multipart, readable_safe_filename
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, *args, **kwargs):
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
-
+        self._use_vip = vip
 
     async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = readable_safe_filename(book.name)
@@ -42,7 +42,7 @@ class ReferViaDownloader(Downloader):
             API_ROUTE.GETDOWNURL.format(
                 book_id=book_id,
                 volume_id=volume_id,
-                is_vip=self._profile.is_vip
+                is_vip=self._profile.is_vip if not self._use_vip else 0
             )
         ) as response:
             response.raise_for_status()

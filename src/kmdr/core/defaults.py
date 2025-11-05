@@ -70,6 +70,7 @@ def argument_parser():
     download_parser.add_argument('-r', '--retry', type=int, help='网络请求失败时的重试次数', required=False)
     download_parser.add_argument('-c', '--callback', type=str, help='每个卷下载完成后执行的回调脚本，例如: `echo {v.name} downloaded!`', required=False)
     download_parser.add_argument('-m', '--method', type=int, help='下载方法，对应网站上的不同下载方式', required=False, choices=[1, 2], default=1)
+    download_parser.add_argument('--vip', action='store_true', help='尝试使用 VIP 链接进行下载（下载速度可能不及 CDN 方式）')
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)

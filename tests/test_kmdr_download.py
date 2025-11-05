@@ -129,6 +129,55 @@ class TestKmdrDownload(unittest.TestCase):
             os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
         )
         assert total_size < 1 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
+    
+    def test_download_single_volume_use_vip(self):
+        dest = f'{BASE_DIR}/{self.test_download_single_volume_use_vip.__name__}'
+
+        kmdr_main(
+            Namespace(
+                command='download',
+                dest=dest,
+                book_url=f'{DEFAULT_BASE_URL}/c/51044.htm',
+                vol_type='extra',
+                volume='all',
+                max_size=0.6,
+                limit=1,
+                retry=3,
+                vip=True
+            )
+        )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
+
+        total_size = sum(
+            os.path.getsize(os.path.join(dest, book_dir, f)) for f in os.listdir(os.path.join(dest, book_dir)) if os.path.isfile(os.path.join(dest, book_dir, f))
+        )
+        assert total_size < 1 * 0.6 * 1024 * 1024, "Total size of downloaded files exceeds 0.6 MB"
+
+    def test_download_volume_with_direct_downloader_and_use_vip(self):
+        dest = f'{BASE_DIR}/{self.test_download_volume_with_direct_downloader_and_use_vip.__name__}'
+
+        kmdr_main(
+            Namespace(
+                command='download',
+                dest=dest,
+                book_url=f'{DEFAULT_BASE_URL}/c/51043.htm',
+                vol_type='extra',
+                volume='all',
+                max_size=0.4,
+                method=2, # use direct download method
+                limit=1,
+                retry=3,
+                num_workers=1,
+                vip=True
+            )
+        )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
 
     def test_download_multiple_volumes_with_multiple_workers(self):
         dest = f'{BASE_DIR}/{self.test_download_multiple_volumes_with_multiple_workers.__name__}'
