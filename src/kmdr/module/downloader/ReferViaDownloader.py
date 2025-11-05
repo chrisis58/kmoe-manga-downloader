@@ -44,7 +44,7 @@ class ReferViaDownloader(Downloader):
             API_ROUTE.GETDOWNURL.format(
                 book_id=book_id,
                 volume_id=volume_id,
-                is_vip=self._profile.is_vip if not self._use_vip else 0
+                is_vip=self._profile.is_vip if self._use_vip else 0
             )
         ) as response:
             response.raise_for_status()

@@ -34,5 +34,5 @@ class DirectDownloader(Downloader):
         return API_ROUTE.DOWNLOAD.format(
             book_id=book.id,
             volume_id=volume.id,
-            is_vip=self._profile.is_vip if not self._use_vip else 0
+            is_vip=self._profile.is_vip if self._use_vip else 0
         )
