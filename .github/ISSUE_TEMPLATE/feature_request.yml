@@ -1,0 +1,55 @@
+name: 功能请求
+description: 建议一个新功能或改进
+labels: ['enhancement']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您抽出宝贵时间提出功能请求！
+        请详细描述您的想法，以便我们更好地理解它。
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: 您的功能请求是否与某个问题/痛点相关？
+      description: 请详细描述您遇到的问题或痛点。
+      placeholder: "当我...时，我希望能..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution-description
+    attributes:
+      label: 您希望的解决方案是什么？
+      description: |
+        请清晰简洁地描述您希望发生什么。
+        如果是 CLI 相关的，可以提供理想中的命令用法。
+      placeholder: |
+        我希望 `kmdr download` 增加一个 `--format epub` 标志...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: 您是否考虑过其他替代方案？
+      description: 请描述您可能考虑过的任何替代解决方案或功能，以及为什么提议的方案更好。
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 额外信息
+      description: 在这里添加任何其他关于功能请求的信息，例如伪代码、流程图、截图或外部链接。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认
+      options:
+        - label: 我已经搜索了现有 issue，以确保这个功能尚未被提议。
+          required: true
