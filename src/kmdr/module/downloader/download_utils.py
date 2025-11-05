@@ -267,11 +267,16 @@ async def _fetch_content_length(
     """
     if headers is None:
         headers = {}
-    
+
     async with session.head(url, headers=headers, allow_redirects=True) as response:
-        # 注意：这个请求完成后，服务器就会记录这次下载，并消耗对应的流量配额，详细的规则请参考网站说明：
-        #   注 1 : 訂閱連載中的漫畫，有更新時自動推送的卷(冊)，暫不計算在使用額度中，不扣減使用額度。
-        #   注 2 : 對同一卷(冊)書在 12 小時內重複*下載*，不會重複扣減額度。但重復推送是會扣減的。
+        response.raise_for_status()
+        if 'Content-Length' in response.headers:
+            return int(response.headers['Content-Length'])
+
+    async with session.get(url, headers=headers, allow_redirects=True) as response:
+        # 普通下载链接可能不支持 HEAD 请求，尝试使用 GET 请求获取文件大小
+        # see: https://github.com/chrisis58/kmoe-manga-downloader/issues/25
+        debug("HEAD 请求未返回 Content-Length，尝试使用 GET 请求获取文件大小")
         response.raise_for_status()
         if 'Content-Length' not in response.headers:
             raise ResponseError("无法从服务器获取文件大小，请检查网络连接或稍后重试。", status_code=response.status)
