@@ -6,6 +6,7 @@ from async_lru import alru_cache
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import ResponseError
+from kmdr.core.utils import async_retry
 from kmdr.core.console import debug
 
 from .download_utils import download_file_multipart, readable_safe_filename
@@ -36,6 +37,7 @@ class ReferViaDownloader(Downloader):
         )
 
     @alru_cache(maxsize=128)
+    @async_retry()
     async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
 
         async with self._session.get(

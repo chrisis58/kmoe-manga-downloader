@@ -397,19 +397,22 @@ def safe_filename(name: str) -> str:
     """
     return re.sub(r'[\\/:*?"<>|]', '_', name)
 
-async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]], retry_times: int = 3) -> str:
-    while retry_times >= 0:
-        try:
-            if callable(url):
-                result = url()
-                if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
-                    return await result
-                return result
-            elif isinstance(url, str):
-                return url
-        except Exception as e:
-            retry_times -= 1
-            if retry_times < 0:
-                raise e
-            await asyncio.sleep(2)
-    raise RuntimeError("Max retries exceeded")
+async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]]) -> str:
+    """
+    获取下载链接的包装函数，支持直接传入字符串或异步/同步的 Supplier 函数。
+
+    :note: 不包含重试机制，调用方需自行处理。
+    :param url: 下载链接或其 Supplier
+    :return: 下载链接
+    """
+
+    if callable(url):
+        result = url()
+        if asyncio.iscoroutine(result) or isinstance(result, Awaitable):
+            # 如果 url() 是一个异步函数，等待它
+            return await result
+        # 如果 url() 是一个同步函数，直接返回
+        return result
+    elif isinstance(url, str):
+        # 如果 url 只是个字符串，直接返回
+        return url
