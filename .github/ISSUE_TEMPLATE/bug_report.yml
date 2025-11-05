@@ -1,0 +1,81 @@
+name: Bug 报告
+description: 提交一个 Bug 帮助我们改进
+labels: ['bug']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交 Bug！
+        请确保已阅读相关文档，并按照模版提供信息，否则 issue 可能会被关闭。
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本
+      description: 请提供您使用的应用版本号，可以通过 `kmdr --version` 获取。
+    validations:
+      required: true
+  
+  - type: textarea
+    id: actual-command
+    attributes:
+      label: 实际执行的命令
+      description: 请提供您实际执行的命令。
+      placeholder: kmdr download -l <book_url> -v <volume_selected>
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: 预期是什么？
+      description: 您期望发生什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-happened
+    attributes:
+      label: 实际发生了什么？
+      description: 实际发生了什么，可以附带截图等说明问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 应用输出信息
+      description: 请在此处粘贴任何相关的日志、报错信息或堆栈跟踪。
+      render: shell
+    validations:
+      required: true
+  
+  - type: textarea
+    id: debug-logs
+    attributes:
+      label: 调试输出信息
+      description: |
+        如果问题可以复现，请启用调试模式（添加 `--verbose` 参数）并粘贴调试日志。
+        如 `kmdr --verbose status`。
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他上下文信息
+      description: |
+        请提供任何其他有助于理解问题的上下文信息，例如操作系统、使用的 shell 等。
+      placeholder: "OS: ..., Shell: ..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 这不是重复的 issue
+      options:
+        - label: 我已经搜索了现有 issue，以确保该错误尚未被报告。
+          required: true
