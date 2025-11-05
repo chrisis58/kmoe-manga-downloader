@@ -11,8 +11,9 @@ from .download_utils import download_file_multipart, readable_safe_filename
     }
 )
 class DirectDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, *args, **kwargs):
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
+        self._use_vip = vip
 
     async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = readable_safe_filename(book.name)
@@ -33,5 +34,5 @@ class DirectDownloader(Downloader):
         return API_ROUTE.DOWNLOAD.format(
             book_id=book.id,
             volume_id=volume.id,
-            is_vip=self._profile.is_vip
+            is_vip=self._profile.is_vip if not self._use_vip else 0
         )
