@@ -182,11 +182,10 @@ async def download_file_multipart(
 
     state_manager: Optional[StateManager] = None
     try:
-        current_url = await fetch_url(url)
-
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
+            current_url = await fetch_url(url)
             total_size = await _fetch_content_length(session, current_url, headers=headers)
 
         chunk_size = chunk_size_mb * 1024 * 1024

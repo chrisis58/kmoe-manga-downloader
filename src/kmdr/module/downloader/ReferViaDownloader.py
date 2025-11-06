@@ -38,7 +38,11 @@ class ReferViaDownloader(Downloader):
         )
 
     @alru_cache(maxsize=128)
-    @async_retry()
+    @async_retry(
+        delay=3,
+        backoff=1.5,
+        retry_on_status={500, 502, 503, 504, 429, 408, 403} # 这里加入 403 重试
+    )
     async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
 
         async with self._session.get(
