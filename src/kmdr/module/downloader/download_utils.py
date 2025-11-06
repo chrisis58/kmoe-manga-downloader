@@ -189,7 +189,7 @@ async def download_file_multipart(
             current_url = await fetch_url(url)
             total_size = await _fetch_content_length(session, current_url, headers=headers)
 
-        chunk_size = determin_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
+        chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
 
         tasks = []
@@ -382,7 +382,7 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
         raise e
 
 
-def determin_chunk_size(
+def determine_chunk_size(
         file_size: int, 
         base_chunk_mb: int = 10,
         max_chunks_limit: int = 100,
@@ -405,7 +405,7 @@ def determin_chunk_size(
     if file_size <= base_chunk * (1 + min_chunk_threshold_factor):
         # 如果文件较小，直接使用单分片下载，避免无谓的分片开销 
         # 例如 10.2MB 会被视为单分片下载
-        return file_size if file_size > 0 else 1
+        return file_size
 
     num_chunks = math.ceil(file_size / base_chunk)
 
