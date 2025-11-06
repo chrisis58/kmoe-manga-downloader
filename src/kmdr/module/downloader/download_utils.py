@@ -370,6 +370,7 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
     :note: 这个函数应该在线程池中运行。
     :usage: await asyncio.to_thread(_sync_merge_parts, part_paths, final_path)
     """
+    debug("合并分片到最终文件:", final_path)
     try:
         with open(final_path, 'wb') as final_file:
             for part_path in part_paths:
@@ -379,22 +380,6 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
         if os.path.exists(final_path):
             os.remove(final_path)
         raise e
-
-async def _merge_parts(part_paths: list[str], final_path: str):
-    debug("合并分片到最终文件:", final_path)
-    async with aiofiles.open(final_path, 'wb') as final_file:
-        try:
-            for part_path in part_paths:
-                async with aiofiles.open(part_path, 'rb') as part_file:
-                    while True:
-                        chunk = await part_file.read(8192)
-                        if not chunk:
-                            break
-                        await final_file.write(chunk)
-        except Exception as e:
-            if aio_os.path.exists(final_path):
-                await aio_os.remove(final_path)
-            raise e
 
 
 CHAR_MAPPING = {
