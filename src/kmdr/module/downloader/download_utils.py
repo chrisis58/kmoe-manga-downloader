@@ -3,6 +3,7 @@ import os
 import re
 import math
 from typing import Callable, Optional, Union, Awaitable
+import shutil
 
 from typing_extensions import deprecated
 
@@ -223,10 +224,13 @@ async def download_file_multipart(
         await asyncio.gather(*tasks)
 
         assert len(part_paths) == len(part_expected_sizes)
-        results = await asyncio.gather(*[_validate_part(part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)])
+        results = await asyncio.gather(*[
+            asyncio.to_thread(_sync_validate_part, part_paths[i], part_expected_sizes[i]) 
+            for i in range(num_chunks)
+        ])
         if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
-            await _merge_parts(part_paths, filename_downloading)
+            await asyncio.to_thread(_sync_merge_parts, part_paths, filename_downloading)
             await aio_os.rename(filename_downloading, file_path)
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
@@ -342,11 +346,39 @@ async def _download_part(
                 debug("分片", os.path.basename(part_path), "下载失败:", e)
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
-async def _validate_part(part_path: str, expected_size: int) -> bool:
-    if not await aio_os.path.exists(part_path):
+def _sync_validate_part(part_path: str, expected_size: int) -> bool:
+    """
+    使用同步的 IO 来验证分片文件的完整性。
+
+    :param part_path: 分片文件路径
+    :param expected_size: 预期的文件大小
+    :return: 如果文件大小匹配则返回 True，否则返回 False
+    :note: 这个函数应该在线程池中运行。
+    :usage: await asyncio.to_thread(_sync_validate_part, part_path, expected_size)
+    """
+    if not os.path.exists(part_path):
         return False
-    actual_size = await aio_os.path.getsize(part_path)
+    actual_size = os.path.getsize(part_path)
     return actual_size == expected_size
+
+def _sync_merge_parts(part_paths: list[str], final_path: str):
+    """
+    使用同步的 IO 来合并文件。
+
+    :param part_paths: 分片文件路径列表
+    :param final_path: 最终合并后的文件路径
+    :note: 这个函数应该在线程池中运行。
+    :usage: await asyncio.to_thread(_sync_merge_parts, part_paths, final_path)
+    """
+    try:
+        with open(final_path, 'wb') as final_file:
+            for part_path in part_paths:
+                with open(part_path, 'rb') as part_file:
+                    shutil.copyfileobj(part_file, final_file)
+    except Exception as e:
+        if os.path.exists(final_path):
+            os.remove(final_path)
+        raise e
 
 async def _merge_parts(part_paths: list[str], final_path: str):
     debug("合并分片到最终文件:", final_path)
