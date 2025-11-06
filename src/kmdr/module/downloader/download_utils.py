@@ -389,6 +389,13 @@ def determine_chunk_size(
         min_chunk_threshold_factor: float = 0.2
 ) -> int:
     """
+    计算合适的分片大小以优化下载性能。
+
+    TODO: 这个算法可以进一步优化，例如考虑网络状况、服务器限制等因素。10 这个魔法数字也许可以调整。
+    需要收集更多的信息：
+    - 文件大小的分布
+    - 用户的下载速度分布
+    - 连接开销的大致值
 
     :param file_size: 文件总大小（字节）
     :param base_chunk_mb: 基础分片大小 (MB)
