@@ -3,6 +3,7 @@ import os
 import re
 import math
 from typing import Callable, Optional, Union, Awaitable
+import shutil
 
 from typing_extensions import deprecated
 
@@ -182,14 +183,13 @@ async def download_file_multipart(
 
     state_manager: Optional[StateManager] = None
     try:
-        current_url = await fetch_url(url)
-
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
+            current_url = await fetch_url(url)
             total_size = await _fetch_content_length(session, current_url, headers=headers)
 
-        chunk_size = chunk_size_mb * 1024 * 1024
+        chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
 
         tasks = []
@@ -224,10 +224,13 @@ async def download_file_multipart(
         await asyncio.gather(*tasks)
 
         assert len(part_paths) == len(part_expected_sizes)
-        results = await asyncio.gather(*[_validate_part(part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)])
+        results = await asyncio.gather(*[
+            asyncio.to_thread(_sync_validate_part, part_paths[i], part_expected_sizes[i]) 
+            for i in range(num_chunks)
+        ])
         if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
-            await _merge_parts(part_paths, filename_downloading)
+            await asyncio.to_thread(_sync_merge_parts, part_paths, filename_downloading)
             await aio_os.rename(filename_downloading, file_path)
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
@@ -343,28 +346,91 @@ async def _download_part(
                 debug("分片", os.path.basename(part_path), "下载失败:", e)
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
-async def _validate_part(part_path: str, expected_size: int) -> bool:
-    if not await aio_os.path.exists(part_path):
+def _sync_validate_part(part_path: str, expected_size: int) -> bool:
+    """
+    使用同步的 IO 来验证分片文件的完整性。
+
+    :param part_path: 分片文件路径
+    :param expected_size: 预期的文件大小
+    :return: 如果文件大小匹配则返回 True，否则返回 False
+    :note: 这个函数应该在线程池中运行。
+    :usage: await asyncio.to_thread(_sync_validate_part, part_path, expected_size)
+    """
+    if not os.path.exists(part_path):
         return False
-    actual_size = await aio_os.path.getsize(part_path)
+    actual_size = os.path.getsize(part_path)
     return actual_size == expected_size
 
-async def _merge_parts(part_paths: list[str], final_path: str):
-    debug("合并分片到最终文件:", final_path)
-    async with aiofiles.open(final_path, 'wb') as final_file:
-        try:
-            for part_path in part_paths:
-                async with aiofiles.open(part_path, 'rb') as part_file:
-                    while True:
-                        chunk = await part_file.read(8192)
-                        if not chunk:
-                            break
-                        await final_file.write(chunk)
-        except Exception as e:
-            if aio_os.path.exists(final_path):
-                await aio_os.remove(final_path)
-            raise e
+def _sync_merge_parts(part_paths: list[str], final_path: str):
+    """
+    使用同步的 IO 来合并文件。
 
+    :param part_paths: 分片文件路径列表
+    :param final_path: 最终合并后的文件路径
+    :note: 这个函数应该在线程池中运行。
+    :usage: await asyncio.to_thread(_sync_merge_parts, part_paths, final_path)
+    """
+    debug("合并分片到最终文件:", final_path)
+    try:
+        with open(final_path, 'wb') as final_file:
+            for part_path in part_paths:
+                with open(part_path, 'rb') as part_file:
+                    shutil.copyfileobj(part_file, final_file)
+    except Exception as e:
+        if os.path.exists(final_path):
+            os.remove(final_path)
+        raise e
+
+
+def determine_chunk_size(
+        file_size: int, 
+        base_chunk_mb: int = 10,
+        max_chunks_limit: int = 100,
+        min_chunk_threshold_factor: float = 0.2
+) -> int:
+    """
+    计算合适的分片大小以优化下载性能。
+
+    TODO: 这个算法可以进一步优化，例如考虑网络状况、服务器限制等因素。10 这个魔法数字也许可以调整。
+    需要收集更多的信息：
+    - 文件大小的分布
+    - 用户的下载速度分布
+    - 连接开销的大致值
+
+    :param file_size: 文件总大小（字节）
+    :param base_chunk_mb: 基础分片大小 (MB)
+    :param max_chunks_limit: 限制的最大分片数
+    :param min_chunk_threshold_factor: 最小分片的体积因子
+    :return: 最佳的每个分片的大小（字节）
+    """
+    base_chunk = int(base_chunk_mb * 1024 * 1024)
+
+    if not isinstance(file_size, int) or file_size <= 0:
+        # 如果文件大小不正常，返回基础分片大小
+        return base_chunk
+
+    if file_size <= base_chunk * (1 + min_chunk_threshold_factor):
+        # 如果文件较小，直接使用单分片下载，避免无谓的分片开销 
+        # 例如 10.2MB 会被视为单分片下载
+        return file_size
+
+    num_chunks = math.ceil(file_size / base_chunk)
+
+    if num_chunks > max_chunks_limit:
+        # 如果文件太大导致分片数量过多 (2GB -> 200 块)
+        # 增加分片大小，将分片数限制在 100
+        return int(math.ceil(file_size / max_chunks_limit))
+
+    # 计算最后一个分片的大小，如果过小则调整分片大小
+    # 例如 250.2MB - (10MB * (26 - 1)) = 0.2MB
+    last_chunk_size = file_size - (base_chunk * (num_chunks - 1))
+
+    if last_chunk_size < base_chunk * min_chunk_threshold_factor:
+        # 如果最后一个分片过小，则均摊到前面的分片中
+        # 例如 250.2 / 25 = 10.008MB
+        return int(math.ceil(file_size / (num_chunks - 1)))
+    else:
+        return base_chunk
 
 CHAR_MAPPING = {
     '\\': '＼',
