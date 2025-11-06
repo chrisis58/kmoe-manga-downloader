@@ -189,7 +189,7 @@ async def download_file_multipart(
             current_url = await fetch_url(url)
             total_size = await _fetch_content_length(session, current_url, headers=headers)
 
-        chunk_size = chunk_size_mb * 1024 * 1024
+        chunk_size = determin_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
 
         tasks = []
@@ -381,6 +381,49 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
             os.remove(final_path)
         raise e
 
+
+def determin_chunk_size(
+        file_size: int, 
+        base_chunk_mb: int = 10,
+        max_chunks_limit: int = 100,
+        min_chunk_threshold_factor: float = 0.2
+) -> int:
+    """
+
+    :param file_size: 文件总大小（字节）
+    :param base_chunk_mb: 基础分片大小 (MB)
+    :param max_chunks_limit: 限制的最大分片数
+    :param min_chunk_threshold_factor: 最小分片的体积因子
+    :return: 最佳的每个分片的大小（字节）
+    """
+    base_chunk = int(base_chunk_mb * 1024 * 1024)
+
+    if not isinstance(file_size, int) or file_size <= 0:
+        # 如果文件大小不正常，返回基础分片大小
+        return base_chunk
+
+    if file_size <= base_chunk * (1 + min_chunk_threshold_factor):
+        # 如果文件较小，直接使用单分片下载，避免无谓的分片开销 
+        # 例如 10.2MB 会被视为单分片下载
+        return file_size if file_size > 0 else 1
+
+    num_chunks = math.ceil(file_size / base_chunk)
+
+    if num_chunks > max_chunks_limit:
+        # 如果文件太大导致分片数量过多 (2GB -> 200 块)
+        # 增加分片大小，将分片数限制在 100
+        return int(math.ceil(file_size / max_chunks_limit))
+
+    # 计算最后一个分片的大小，如果过小则调整分片大小
+    # 例如 250.2MB - (10MB * (26 - 1)) = 0.2MB
+    last_chunk_size = file_size - (base_chunk * (num_chunks - 1))
+
+    if last_chunk_size < base_chunk * min_chunk_threshold_factor:
+        # 如果最后一个分片过小，则均摊到前面的分片中
+        # 例如 250.2 / 25 = 10.008MB
+        return int(math.ceil(file_size / (num_chunks - 1)))
+    else:
+        return base_chunk
 
 CHAR_MAPPING = {
     '\\': '＼',
