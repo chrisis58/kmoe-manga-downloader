@@ -1,5 +1,5 @@
 import functools
-from typing import Optional, Callable, TypeVar, Hashable, Generic
+from typing import Optional, Callable, TypeVar, Hashable, Generic, Mapping, Any
 import asyncio
 from asyncio.proactor_events import _ProactorBasePipeTransport
 
@@ -147,3 +147,17 @@ def _silence_event_loop_closed(func):
     return wrapper
 
 _ProactorBasePipeTransport.__del__ = _silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
+
+
+
+SENSITIVE_KEYS = {'cookie', 'authorization', 'proxy-authorization', 'set-cookie'}
+"""定义需要脱敏的字段（全部小写以便不区分大小写匹配）"""
+
+def sanitize_headers(headers: Mapping[str, Any]) -> dict:
+    """
+    清洗 HTTP 头信息，隐藏敏感字段（如 Cookie, Authorization）。
+    """
+    return {
+        k: '******' if k.lower() in SENSITIVE_KEYS else v
+        for k, v in headers.items()
+    }

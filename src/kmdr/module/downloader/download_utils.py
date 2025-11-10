@@ -15,7 +15,7 @@ from aiohttp.client_exceptions import ClientPayloadError
 
 from kmdr.core.console import info, log, debug
 from kmdr.core.error import ResponseError
-from kmdr.core.utils import async_retry
+from kmdr.core.utils import async_retry, sanitize_headers
 
 from .misc import STATUS, StateManager
 
@@ -319,6 +319,9 @@ async def _download_part(
                 debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
+                    debug("分片", os.path.basename(part_path), "状态码:", response.status)
+                    debug("分片", os.path.basename(part_path), "请求头:", sanitize_headers(response.request_info.headers))
+                    debug("分片", os.path.basename(part_path), "响应头:", sanitize_headers(response.headers))
 
                     await state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
 
