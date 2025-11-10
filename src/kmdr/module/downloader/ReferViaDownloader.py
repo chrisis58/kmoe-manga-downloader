@@ -10,18 +10,32 @@ from kmdr.core.error import ResponseError
 from kmdr.core.utils import async_retry
 from kmdr.core.console import debug
 
-from .download_utils import download_file_multipart, readable_safe_filename
+from .download_utils import download_file, download_file_multipart, readable_safe_filename
 
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, *args, **kwargs):
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
         self._use_vip = vip
+        self._disable_multi_part = disable_multi_part
 
     async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
+
+        if self._disable_multi_part:
+            await download_file(
+                self._session,
+                self._semaphore,
+                self._progress,
+                partial(self.fetch_download_url, book.id, volume.id),
+                download_path,
+                readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
+                self._retry,
+                callback=lambda: self._callback(book, volume) if self._callback else None
+            )
+            return
 
         await download_file_multipart(
             self._session,

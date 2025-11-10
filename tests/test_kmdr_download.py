@@ -3,6 +3,7 @@ import os
 import time
 import unittest
 from argparse import Namespace
+import warnings
 
 from kmdr.main import main_sync as kmdr_main
 from kmdr.core.constants import BASE_URL
@@ -248,6 +249,55 @@ class TestKmdrDownload(unittest.TestCase):
                 num_workers=1
             )
         )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
+    
+    def test_download_volume_with_refer_via_downloader_disable_multi_part(self):
+        dest = f'{BASE_DIR}/{self.test_download_volume_with_refer_via_downloader_disable_multi_part.__name__}'
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning, message="本函数可能不会积极维护")
+            kmdr_main(
+                Namespace(
+                    command='download',
+                    dest=dest,
+                    book_url=f'{DEFAULT_BASE_URL}/c/51043.htm',
+                    vol_type='extra',
+                    volume='all',
+                    max_size=0.4,
+                    limit=1,
+                    retry=3,
+                    num_workers=1,
+                    disable_multi_part=True
+                )
+            )
+
+        assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
+        assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
+        assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
+
+    def test_download_volume_with_direct_downloader_disable_multi_part(self):
+        dest = f'{BASE_DIR}/{self.test_download_volume_with_direct_downloader_disable_multi_part.__name__}'
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning, message="本函数可能不会积极维护")
+            kmdr_main(
+                Namespace(
+                    command='download',
+                    dest=dest,
+                    book_url=f'{DEFAULT_BASE_URL}/c/51043.htm',
+                    vol_type='extra',
+                    volume='all',
+                    max_size=0.4,
+                    method=2, # use direct download method
+                    limit=1,
+                    retry=3,
+                    num_workers=1,
+                    disable_multi_part=True
+                )
+            )
 
         assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
         assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
