@@ -21,9 +21,7 @@ from .structure import Config
 from .constants import BASE_URL
 from .console import _update_verbose_setting
 
-HEADERS = {
-    'User-Agent': 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
-}
+TRUE_UA = 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 
 
 progress_definition = (

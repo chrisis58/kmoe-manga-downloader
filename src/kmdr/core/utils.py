@@ -2,6 +2,7 @@ import functools
 from typing import Optional, Callable, TypeVar, Hashable, Generic, Mapping, Any
 import asyncio
 from asyncio.proactor_events import _ProactorBasePipeTransport
+import random
 
 import aiohttp
 
@@ -161,3 +162,16 @@ def sanitize_headers(headers: Mapping[str, Any]) -> dict:
         k: '******' if k.lower() in SENSITIVE_KEYS else v
         for k, v in headers.items()
     }
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+]
+
+def get_random_ua() -> str:
+    """
+    从池中随机选择一个 UA
+    """
+    return random.choice(USER_AGENTS)
