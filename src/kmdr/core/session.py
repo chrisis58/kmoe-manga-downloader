@@ -7,9 +7,9 @@ import asyncio
 from aiohttp import ClientSession
 
 from .constants import BASE_URL, API_ROUTE
-from .utils import async_retry, PrioritySorter
+from .utils import async_retry, PrioritySorter, get_random_ua
 from .bases import SESSION_MANAGER, SessionManager
-from .defaults import HEADERS
+from .defaults import TRUE_UA
 from .error import InitializationError, RedirectError
 from .protocol import Supplier
 from .console import *
@@ -25,9 +25,12 @@ class KmdrSessionManager(SessionManager):
     Kmdr 的 HTTP 会话管理类，支持从参数中初始化 ClientSession 的实例。
     """
 
-    def __init__(self, proxy: Optional[str] = None, book_url: Optional[str] = None, *args, **kwargs):
+    def __init__(self, proxy: Optional[str] = None, book_url: Optional[str] = None, fake_ua: bool = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._proxy = proxy
+        self._headers = {
+            'User-Agent': get_random_ua() if fake_ua else TRUE_UA
+        }
 
         self._sorter = PrioritySorter[str]()
         [self._sorter.set(alt) for alt in BASE_URL.alternatives()]
@@ -63,7 +66,7 @@ class KmdrSessionManager(SessionManager):
                 base_url=self._base_url,
                 proxy=self._proxy,
                 trust_env=True,
-                headers=HEADERS,
+                headers=self._headers,
             )
 
             return SessionCtxManager(self._session)
@@ -108,7 +111,7 @@ class KmdrSessionManager(SessionManager):
             nonlocal ret_base_url
             ret_base_url = value
 
-        async with ClientSession(proxy=self._proxy, trust_env=True, headers=HEADERS) as probe_session:
+        async with ClientSession(proxy=self._proxy, trust_env=True, headers=self._headers) as probe_session:
             # TODO: 请求远程仓库中的镜像列表，并添加到 sorter 中
 
             for bu in self._sorter.sort():

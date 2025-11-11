@@ -2,7 +2,7 @@ import asyncio
 import os
 import re
 import math
-from typing import Callable, Optional, Union, Awaitable
+from typing import Callable, Optional, Union, Awaitable, Tuple
 import shutil
 
 from typing_extensions import deprecated
@@ -14,10 +14,13 @@ from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
 from kmdr.core.console import info, log, debug
-from kmdr.core.error import ResponseError
+from kmdr.core.error import RangeNotSupportedError
 from kmdr.core.utils import async_retry, sanitize_headers
 
 from .misc import STATUS, StateManager
+
+CONTENT_RANGE_PATTERN = re.compile(r'bytes\s+(\d+)-(\d+)/(\d+|\*)', re.IGNORECASE)
+"""用于解析 Content-Range 头的正则表达式模式。"""
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
@@ -35,7 +38,6 @@ def _get_head_request_semaphore() -> asyncio.Semaphore:
     return _HEAD_SEMAPHORE
 
 
-@deprecated("本函数可能不会积极维护，请改用 'download_file_multipart'")
 async def download_file(
         session: aiohttp.ClientSession,
         semaphore: asyncio.Semaphore,
@@ -46,6 +48,8 @@ async def download_file(
         retry_times: int = 3,
         headers: Optional[dict] = None,
         callback: Optional[Callable] = None,
+        task_id = None,
+        resumable: bool = True,
 ):
     """
     下载文件
@@ -77,66 +81,70 @@ async def download_file(
 
     block_size = 8192
     attempts_left = retry_times + 1
-    task_id = None
 
-    try:
-        while attempts_left > 0:
-            attempts_left -= 1
-            
-            resume_from = (await aio_os.stat(filename_downloading)).st_size if await aio_os.path.exists(filename_downloading) else 0
-            
-            if resume_from:
-                headers['Range'] = f'bytes={resume_from}-'
-
-            try:
-                async with semaphore:
-                    current_url = await fetch_url(url)
-                    async with session.get(url=current_url, headers=headers) as r:
-                        r.raise_for_status()
-
-                        total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
-
-                        if task_id is None:
-                            task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
-                        else:
-                            progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value, refresh=True)
-                        
-                        async with aiofiles.open(filename_downloading, 'ab') as f:
-                            async for chunk in r.content.iter_chunked(block_size):
-                                if chunk:
-                                    await f.write(chunk)
-                                    progress.update(task_id, advance=len(chunk))
-                        
-                        break 
-            
-            except Exception as e:
-                if attempts_left > 0:
-                    if task_id is not None:
-                        progress.update(task_id, status=STATUS.RETRYING.value, refresh=True)
-                    if isinstance(e, ClientPayloadError):
-                        new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
-                        if new_block_size < block_size:
-                            block_size = new_block_size
-                    await asyncio.sleep(3)
-                else:
-                    raise e
+    while attempts_left > 0:
+        attempts_left -= 1
         
-        else: 
-            raise IOError(f"Failed to download {filename} after {retry_times} retries.")
+        resume_from = (await aio_os.stat(filename_downloading)).st_size \
+            if resumable and await aio_os.path.exists(filename_downloading) \
+            else 0
 
-        await aio_os.rename(filename_downloading, file_path)
-    
-    except Exception as e:
-        if task_id is not None:
-            progress.update(task_id, status=STATUS.FAILED.value, visible=False)
+        if resumable and resume_from > 0:
+            headers = headers.copy()
+            headers['Range'] = f'bytes={resume_from}-'
 
-    finally:
-        if await aio_os.path.exists(file_path):
+        try:
+            async with semaphore:
+                current_url = await fetch_url(url)
+                async with session.get(url=current_url, headers=headers) as r:
+                    r.raise_for_status()
+
+                    total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
+
+                    if task_id is None:
+                        task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
+                    else:
+                        progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
+                    
+                    mode = 'ab' if resumable and resume_from > 0 else 'wb'
+                    async with aiofiles.open(filename_downloading, mode) as f:
+                        async for chunk in r.content.iter_chunked(block_size):
+                            if chunk:
+                                await f.write(chunk)
+                                progress.update(task_id, advance=len(chunk))
+                    
+            await aio_os.rename(filename_downloading, file_path)
+            break
+
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            # 如果任务被取消，更新状态为已取消
             if task_id is not None:
-                progress.update(task_id, status=STATUS.COMPLETED.value, visible=False)
+                progress.update(task_id, status=STATUS.CANCELLED.value)
+            raise
+        
+        except Exception as e:
+            if attempts_left > 0:
+                log("正在重试... 剩余重试次数:", attempts_left)
+                debug("下载出错:", e, "，正在重试... 剩余重试次数:", attempts_left)
+                if task_id is not None:
+                    progress.update(task_id, status=STATUS.RETRYING.value)
+                if isinstance(e, ClientPayloadError):
+                    new_block_size = max(int(block_size * BLOCK_SIZE_REDUCTION_FACTOR), MIN_BLOCK_SIZE)
+                    if new_block_size < block_size:
+                        block_size = new_block_size
+                await asyncio.sleep(3)
+            else:
+                if task_id is not None:
+                    progress.update(task_id, status=STATUS.FAILED.value)
+                raise e
 
-            if callback:
-                callback()
+        finally:
+            if await aio_os.path.exists(file_path):
+                if task_id is not None:
+                    progress.update(task_id, status=STATUS.COMPLETED.value)
+
+                if callback:
+                    callback()
 
 async def download_file_multipart(
         session: aiohttp.ClientSession,
@@ -235,6 +243,35 @@ async def download_file_multipart(
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
+    
+    except RangeNotSupportedError:
+
+        # 尝试清理临时文件
+        state_manager = None
+        cleanup_tasks = []
+        for part_path in part_paths:
+            if await aio_os.path.exists(part_path):
+                cleanup_tasks.append(aio_os.remove(part_path))
+        if await aio_os.path.exists(filename_downloading):
+            cleanup_tasks.append(aio_os.remove(filename_downloading))
+
+        if cleanup_tasks:
+            await asyncio.gather(*cleanup_tasks)
+
+        debug("服务器不支持分片下载，使用普通下载方式")
+        await download_file(
+            session=session,
+            semaphore=semaphore,
+            progress=progress,
+            url=url,
+            dest_path=dest_path,
+            filename=filename,
+            retry_times=retry_times,
+            headers=headers,
+            callback=callback,
+            task_id=task_id,
+            resumable=False
+        )
 
     finally:
         if await aio_os.path.exists(file_path):
@@ -270,20 +307,33 @@ async def _fetch_content_length(
     """
     if headers is None:
         headers = {}
+    
+    probe_headers = headers.copy()
+    probe_headers['Range'] = 'bytes=0-0'
 
-    async with session.head(url, headers=headers, allow_redirects=True) as response:
-        response.raise_for_status()
-        if 'Content-Length' in response.headers:
-            return int(response.headers['Content-Length'])
-
-    async with session.get(url, headers=headers, allow_redirects=True) as response:
+    async with session.get(url, headers=probe_headers, allow_redirects=True) as response:
         # 普通下载链接可能不支持 HEAD 请求，尝试使用 GET 请求获取文件大小
         # see: https://github.com/chrisis58/kmoe-manga-downloader/issues/25
-        debug("HEAD 请求未返回 Content-Length，尝试使用 GET 请求获取文件大小")
         response.raise_for_status()
-        if 'Content-Length' not in response.headers:
-            raise ResponseError("无法从服务器获取文件大小，请检查网络连接或稍后重试。", status_code=response.status)
-        return int(response.headers['Content-Length'])
+
+        debug("请求响应状态码:", response.status)
+        debug("请求头:", sanitize_headers(response.request_info.headers))
+        debug("响应头:", sanitize_headers(response.headers))
+        
+        if 'Content-Range' not in response.headers:
+            raise RangeNotSupportedError("响应头中缺少 Content-Range。")
+
+        cr = response.headers['Content-Range']
+        start, end, total_size = resolve_content_range(cr)
+        debug("解析 Content-Range:", cr, "得到 start:", start, "end:", end, "total_size:", total_size)
+
+        if total_size is None:
+            raise RangeNotSupportedError("服务器未提供完整的文件大小信息。", content_range=cr)
+
+        if start != 0 or end != 0:
+            raise RangeNotSupportedError("服务器不支持范围请求，无法进行分片下载。", content_range=cr)
+
+        return total_size
 
 async def _download_part(
         session: aiohttp.ClientSession,
@@ -319,10 +369,6 @@ async def _download_part(
                 debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
                 async with session.get(url, headers=local_headers) as response:
                     response.raise_for_status()
-                    debug("分片", os.path.basename(part_path), "状态码:", response.status)
-                    debug("分片", os.path.basename(part_path), "请求头:", sanitize_headers(response.request_info.headers))
-                    debug("分片", os.path.basename(part_path), "响应头:", sanitize_headers(response.headers))
-
                     await state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
 
                     async with aiofiles.open(part_path, 'ab') as f:
@@ -333,6 +379,9 @@ async def _download_part(
                 await state_manager.pop_part(part_id=start)
                 log("分片", os.path.basename(part_path), "下载完成。")
             return
+        
+        except RangeNotSupportedError:
+            raise
     
         except asyncio.CancelledError:
             # 如果任务被取消，更新状态为已取消
@@ -485,3 +534,26 @@ async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[st
     elif isinstance(url, str):
         # 如果 url 只是个字符串，直接返回
         return url
+
+def resolve_content_range(
+        content_range_header: Optional[str],
+) -> Tuple[int, int, Optional[int]]:
+    """
+    解析 Content-Range 头以获取文件的起始字节、结束字节和总大小。
+
+    :param content_range_header: Content-Range 头
+    :return: (start, end, total)
+    :raises RangeNotSupportedError: 如果无法解析 Content-Range 头
+    """
+    if not content_range_header:
+        raise RangeNotSupportedError("缺少 Content-Range 头", content_range="N/A")
+
+    match = CONTENT_RANGE_PATTERN.search(content_range_header)
+    if not match:
+        raise RangeNotSupportedError("无法解析 Content-Range 头", content_range=content_range_header)
+
+    start_str, end_str, total_size_str = match.group(1), match.group(2), match.group(3)
+
+    total_size = int(total_size_str) if total_size_str != '*' else None
+    
+    return int(start_str), int(end_str), total_size

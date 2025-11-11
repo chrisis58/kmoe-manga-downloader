@@ -58,3 +58,11 @@ class ResponseError(KmdrError):
 
     def __str__(self):
         return f"{self.message} (状态码: {self.status_code})"
+
+class RangeNotSupportedError(KmdrError):
+    def __init__(self, message, content_range: Optional[str] = None):
+        super().__init__(message)
+        self.content_range = content_range
+
+    def __str__(self):
+        return f"不支持分片下载：{self.message} (Content-Range: {self.content_range})" if self.content_range is not None else f"不支持分片下载：{self.message}"
