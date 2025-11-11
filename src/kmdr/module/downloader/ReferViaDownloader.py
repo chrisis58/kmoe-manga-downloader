@@ -12,6 +12,9 @@ from kmdr.core.console import debug
 
 from .download_utils import download_file, download_file_multipart, readable_safe_filename
 
+DOWNLOAD_HEAD = {
+    "X-Km-From": "kb_http_down",
+}
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
@@ -33,6 +36,7 @@ class ReferViaDownloader(Downloader):
                 download_path,
                 readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
                 self._retry,
+                headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None
             )
             return
@@ -45,9 +49,7 @@ class ReferViaDownloader(Downloader):
             download_path,
             readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
-            headers={
-                "X-Km-From": "kb_http_down"
-            },
+            headers=DOWNLOAD_HEAD,
             callback=lambda: self._callback(book, volume) if self._callback else None
         )
 
