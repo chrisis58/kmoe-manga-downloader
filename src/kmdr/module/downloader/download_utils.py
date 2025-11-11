@@ -116,7 +116,7 @@ async def download_file(
             await aio_os.rename(filename_downloading, file_path)
             break
 
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, KeyboardInterrupt):
             # 如果任务被取消，更新状态为已取消
             if task_id is not None:
                 progress.update(task_id, status=STATUS.CANCELLED.value)
@@ -134,6 +134,8 @@ async def download_file(
                         block_size = new_block_size
                 await asyncio.sleep(3)
             else:
+                if task_id is not None:
+                    progress.update(task_id, status=STATUS.FAILED.value)
                 raise e
 
         finally:
@@ -143,10 +145,6 @@ async def download_file(
 
                 if callback:
                     callback()
-            else:
-                if task_id is not None:
-                    progress.update(task_id, status=STATUS.FAILED.value)
-
 
 async def download_file_multipart(
         session: aiohttp.ClientSession,
