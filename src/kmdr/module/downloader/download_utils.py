@@ -150,7 +150,7 @@ async def download_file_multipart(
         dest_path: str,
         filename: str,
         retry_times: int = 3,
-        chunk_size_mb: float = 0.1,
+        chunk_size_mb: int = 10,
         headers: Optional[dict] = None,
         callback: Optional[Callable] = None,
 ):
@@ -432,7 +432,7 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
 
 def determine_chunk_size(
         file_size: int, 
-        base_chunk_mb: float = 0.1,
+        base_chunk_mb: int = 10,
         max_chunks_limit: int = 100,
         min_chunk_threshold_factor: float = 0.2
 ) -> int:
