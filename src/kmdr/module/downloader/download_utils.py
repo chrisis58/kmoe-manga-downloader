@@ -115,6 +115,12 @@ async def download_file(
                     
             await aio_os.rename(filename_downloading, file_path)
             break
+
+        except asyncio.CancelledError:
+            # 如果任务被取消，更新状态为已取消
+            if task_id is not None:
+                progress.update(task_id, status=STATUS.CANCELLED.value)
+            raise
         
         except Exception as e:
             if attempts_left > 0:
