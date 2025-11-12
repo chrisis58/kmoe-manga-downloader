@@ -63,6 +63,8 @@ async def download_file(
     :param retry_times: 重试次数
     :param headers: 请求头
     :param callback: 下载完成后的回调函数
+    :param task_id: 进度条任务 ID，如果已经存在则更新该任务
+    :param resumable: 是否启用断点续传
     """
     if headers is None:
         headers = {}
@@ -107,6 +109,7 @@ async def download_file(
                         progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
                     
                     mode = 'ab' if resumable and resume_from > 0 else 'wb'
+                    debug("下载文件:", filename, "使用模式:", mode, "，起始位置:", resume_from)
                     async with aiofiles.open(filename_downloading, mode) as f:
                         async for chunk in r.content.iter_chunked(block_size):
                             if chunk:
@@ -175,7 +178,7 @@ async def download_file_multipart(
         headers = {}
         
     file_path = os.path.join(dest_path, filename)
-    filename_downloading = f'{file_path}.downloading'
+    filename_downloading = f'{file_path}.mp.downloading'
     
     if not await aio_os.path.exists(dest_path):
         await aio_os.makedirs(dest_path, exist_ok=True)
@@ -204,7 +207,7 @@ async def download_file_multipart(
         
         resumed_size = 0
         for i in range(num_chunks):
-            part_path = os.path.join(dest_path, f"{filename}.{i + 1:03d}.downloading")
+            part_path = os.path.join(dest_path, f"{filename}.mp.{i + 1:03d}.downloading")
             part_paths.append(part_path)
             if await aio_os.path.exists(part_path):
                 resumed_size += (await aio_os.stat(part_path)).st_size

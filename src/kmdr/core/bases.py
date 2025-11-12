@@ -42,9 +42,9 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
         with self._console.status("认证中..."):
             try:
                 assert await async_retry()(self._authenticate)()
-            except LoginError as e:
-                info(f"[yellow]详细信息：{e}[/yellow]")
+            except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
+                raise
 
     @abstractmethod
     async def _authenticate(self) -> bool: ...

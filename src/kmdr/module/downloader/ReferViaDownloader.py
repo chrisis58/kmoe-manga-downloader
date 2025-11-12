@@ -18,18 +18,19 @@ DOWNLOAD_HEAD = {
 
 @DOWNLOADER.register(order=10)
 class ReferViaDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
+    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, try_multi_part=False, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
+        self._try_multi_part = try_multi_part
 
     async def _download(self, book: BookInfo, volume: VolInfo):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        if self._disable_multi_part or self._profile.is_vip == 0:
+        if self._disable_multi_part or (self._profile.is_vip == 0 and not self._try_multi_part):
             # 2025/11: 服务器对于普通用户似乎不支持分片下载
-            # 所以这里对普通用户强制使用完整下载
+            # 所以这里对普通用户默认使用完整下载，如果想要尝试分片下载，可以使用 --try-multi-part 参数
             # 参考 issue: https://github.com/chrisis58/kmoe-manga-downloader/issues/28
             await download_file(
                 self._session,
