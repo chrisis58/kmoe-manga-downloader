@@ -1,0 +1,62 @@
+name: Validate Mirrors
+
+on:
+  schedule:
+    # GMT+8 03:00 every 3 days, 3 a.m. for avoiding peak hours
+    - cron: '0 19 */2 * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/validate_mirrors.sh'
+      - '.github/workflows/validate-mirrors.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write 
+
+jobs:
+  check-connectivity:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # - name: Install dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y jq curl
+
+      - name: Run Mirror Validation Script
+        run: |
+          chmod +x scripts/validate_mirrors.sh
+          ./scripts/validate_mirrors.sh
+
+      - name: Create Issue on Failure
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: 'Asia/Shanghai'
+        run: |
+          REPORT_FILE="failed_report.md"
+          TITLE="🚨 镜像检查自动报告"
+          if [ -s "$REPORT_FILE" ]; then
+
+            EXISTING_ISSUE=$(gh issue list --state open --search "$TITLE" --json url --jq '.[0].url')
+
+            if [ -n "$EXISTING_ISSUE" ]; then
+              echo "已存在相关 Issue: $EXISTING_ISSUE，本次跳过创建，仅追加评论。"
+              gh issue comment "$EXISTING_ISSUE" --body-file ${REPORT_FILE}
+            else
+              echo "创建新 Issue..."
+              gh issue create \
+                --title "$TITLE ($(date +'%Y-%m-%d'))" \
+                --body-file ${REPORT_FILE} \
+                --label "broken-link"
+            fi
+
+          else
+            echo "所有镜像检查通过。"
+          fi
