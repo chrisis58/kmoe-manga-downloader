@@ -10,6 +10,8 @@ import io
 from rich.console import Console
 from rich.traceback import Traceback
 
+from .patch import apply_status_patch
+
 _console_config = dict[str, Any](
     log_time_format="[%Y-%m-%d %H:%M:%S]",
 )
@@ -21,6 +23,7 @@ except io.UnsupportedOperation:
     pass
 
 _console = Console(**_console_config)
+apply_status_patch(_console) # Monkey patch
 
 _is_verbose = False
 

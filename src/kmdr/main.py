@@ -29,9 +29,10 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     elif args.command == 'download':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            t_auth = AUTHENTICATOR.get(args).authenticate()
+            t_list = LISTERS.get(args).list()
 
-            book, volumes = await LISTERS.get(args).list()
+            _, (book, volumes) = await asyncio.gather(t_auth, t_list)
             debug("获取到书籍《", book.name, "》及其", len(volumes), "个章节信息。")
 
             volumes = PICKERS.get(args).pick(volumes)
