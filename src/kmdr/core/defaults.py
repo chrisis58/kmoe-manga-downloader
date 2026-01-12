@@ -72,6 +72,7 @@ def argument_parser():
     download_parser.add_argument('--disable-multi-part', action='store_true', help='禁用分片下载，优先级高于尝试启用分片下载选项')
     download_parser.add_argument('--try-multi-part', action='store_true', help='尝试启用分片下载')
     download_parser.add_argument('--fake-ua', action='store_true', help='使用随机的 User-Agent 进行请求')
+    download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
@@ -86,6 +87,23 @@ def argument_parser():
     config_parser.add_argument('-b', '--base-url', type=str, help='设置镜像站点的基础 URL, 例如: `https://kxx.moe`')
     config_parser.add_argument('-c', '--clear', type=str, help='清除指定配置，可选值为 `all`, `cookie`, `option`')
     config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='删除特定的配置选项')
+
+    pool_parser = subparsers.add_parser('pool', help='管理凭证池')
+    
+    pool_subparsers = pool_parser.add_subparsers(title='凭证池操作', dest='pool_command')
+
+    pool_add = pool_subparsers.add_parser('add', help='向池中添加账号')
+    pool_add.add_argument('-u', '--username', type=str, required=True, help='用户名')
+    pool_add.add_argument('-p', '--password', type=str, required=True, help='密码')
+    pool_add.add_argument('--note', type=str, help='备注信息')
+
+    pool_remove = pool_subparsers.add_parser('remove', help='从池中移除账号')
+    pool_remove.add_argument('username', type=str, help='要移除的用户名')
+
+    pool_list = pool_subparsers.add_parser('list', help='列出池中所有账号')
+
+    pool_use = pool_subparsers.add_parser('use', help='将池中指定账号应用为当前默认账号')
+    pool_use.add_argument('username', type=str, help='要切换使用的用户名')
 
     return parser
 
