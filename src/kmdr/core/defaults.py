@@ -1,14 +1,10 @@
-import io
-import sys
 import os
 import json
 from typing import Optional, Any
 import argparse
 from contextvars import ContextVar
 
-from rich.console import Console
 from rich.progress import (
-    Progress,
     BarColumn,
     DownloadColumn,
     TextColumn,
