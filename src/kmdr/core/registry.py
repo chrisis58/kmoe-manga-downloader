@@ -125,6 +125,9 @@ class Predication:
     def __hash__(self) -> int:
         return hash((self.cls, self.hasattrs, frozenset(self.hasvalues.items()), self.predicate, self.order))
     
-    def __eq__(self, other: 'Predication') -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Predication):
+            return False
+
         return (self.cls, self.hasattrs, frozenset(self.hasvalues.items()), self.predicate, self.order) == \
                (other.cls, other.hasattrs, frozenset(other.hasvalues.items()), other.predicate, other.order)
