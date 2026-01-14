@@ -1,8 +1,7 @@
 from typing import Optional
 
-from yarl import URL
-
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
+from kmdr.core.structure import Credential
 
 from .utils import check_status
 
@@ -16,17 +15,18 @@ class CookieAuthenticator(Authenticator):
         else:
             self._show_quota = False
 
-    async def _authenticate(self) -> bool:
+    async def _authenticate(self) -> Credential:
         cookie = self._configurer.cookie
         
         if not cookie:
             raise LoginError("无法找到 Cookie，请先完成登录。", ['kmdr login -u <username>'])
 
-        self._session.cookie_jar.update_cookies(cookie, response_url=URL(self._base_url))
-        return await check_status(
+        cred: Credential = await check_status(
             self._session,
             self._console,
+            username='__FROM_COOKIE__',
+            cookies=cookie,
             show_quota=self._show_quota,
-            is_vip_setter=lambda value: setattr(self._profile, 'is_vip', value),
-            level_setter=lambda value: setattr(self._profile, 'user_level', value),
         )
+        self._credential = cred
+        return cred

@@ -7,11 +7,11 @@ from aiohttp import ClientSession
 from .console import *
 from .error import LoginError
 from .registry import Registry
-from .structure import VolInfo, BookInfo
+from .structure import VolInfo, BookInfo, Credential
 from .utils import construct_callback, async_retry
 from .protocol import AsyncCtxManager
 
-from .context import TerminalContext, SessionContext, UserProfileContext, ConfigContext
+from .context import TerminalContext, SessionContext, ConfigContext
 
 class Configurer(ConfigContext, TerminalContext):
 
@@ -29,7 +29,7 @@ class SessionManager(SessionContext, ConfigContext, TerminalContext):
     @abstractmethod
     async def session(self) -> AsyncCtxManager[ClientSession]: ...
 
-class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalContext):
+class Authenticator(SessionContext, ConfigContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,16 +38,19 @@ class Authenticator(SessionContext, ConfigContext, UserProfileContext, TerminalC
     # 主站正常情况下不使用代理也能登录成功。但是不排除特殊的网络环境下需要代理。
     # 所以暂时保留代理登录的功能，如果后续确认是代理的问题，可以考虑启用 @no_proxy 装饰器。
     # @no_proxy
-    async def authenticate(self) -> None:
+    async def authenticate(self) -> Credential:
         with self._console.status("认证中..."):
             try:
-                assert await async_retry()(self._authenticate)()
+                cred = await async_retry()(self._authenticate)()
+                assert cred is not None
+                self._credential = cred
+                return cred
             except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
                 raise
 
     @abstractmethod
-    async def _authenticate(self) -> bool: ...
+    async def _authenticate(self) -> Credential: ...
 
 class Lister(SessionContext, TerminalContext):
 
@@ -65,7 +68,7 @@ class Picker(TerminalContext):
     @abstractmethod
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
-class Downloader(SessionContext, UserProfileContext, TerminalContext):
+class Downloader(SessionContext, TerminalContext):
 
     def __init__(self,
                  dest: str = '.',
@@ -81,14 +84,14 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
         self._retry: int = retry
         self._semaphore = asyncio.Semaphore(num_workers)
 
-    async def download(self, book: BookInfo, volumes: list[VolInfo]):
+    async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
             info("没有可下载的卷。", style="blue")
             return
 
         try:
             with self._progress:
-                tasks = [self._download(book, volume) for volume in volumes]
+                tasks = [self._download(cred, book, volume) for volume in volumes]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
             exceptions = [res for res in results if isinstance(res, Exception)]
@@ -103,7 +106,7 @@ class Downloader(SessionContext, UserProfileContext, TerminalContext):
             raise
 
     @abstractmethod
-    async def _download(self, book: BookInfo, volume: VolInfo): ...
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo): ...
 
 SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')

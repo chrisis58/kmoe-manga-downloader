@@ -7,6 +7,7 @@ from async_lru import alru_cache
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import ResponseError
+from kmdr.core.structure import Credential
 from kmdr.core.utils import async_retry
 from kmdr.core.console import debug
 
@@ -24,11 +25,11 @@ class ReferViaDownloader(Downloader):
         self._disable_multi_part = disable_multi_part
         self._try_multi_part = try_multi_part
 
-    async def _download(self, book: BookInfo, volume: VolInfo):
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        if self._disable_multi_part or (self._profile.is_vip == 0 and not self._try_multi_part):
+        if self._disable_multi_part or (cred.is_vip == 0 and not self._try_multi_part):
             # 2025/11: 服务器对于普通用户似乎不支持分片下载
             # 所以这里对普通用户默认使用完整下载，如果想要尝试分片下载，可以使用 --try-multi-part 参数
             # 参考 issue: https://github.com/chrisis58/kmoe-manga-downloader/issues/28
@@ -36,13 +37,13 @@ class ReferViaDownloader(Downloader):
                 self._session,
                 self._semaphore,
                 self._progress,
-                partial(self.fetch_download_url, book.id, volume.id),
+                partial(self.fetch_download_url, cred.is_vip, tuple(cred.cookies.items()), book.id, volume.id),
                 download_path,
                 readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
                 self._retry,
                 headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
-                resumable=self._profile.is_vip == 1, # 仅 VIP 用户支持断点续传
+                resumable=cred.is_vip == 1, # 仅 VIP 用户支持断点续传
             )
             return
 
@@ -50,7 +51,7 @@ class ReferViaDownloader(Downloader):
             self._session,
             self._semaphore,
             self._progress,
-            partial(self.fetch_download_url, book.id, volume.id),
+            partial(self.fetch_download_url, cred.is_vip, tuple(cred.cookies.items()), book.id, volume.id),
             download_path,
             readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
@@ -64,14 +65,17 @@ class ReferViaDownloader(Downloader):
         backoff=1.5,
         retry_on_status={500, 502, 503, 504, 429, 408, 403} # 这里加入 403 重试
     )
-    async def fetch_download_url(self, book_id: str, volume_id: str) -> str:
+    async def fetch_download_url(self, is_vip: bool, cookies_tuple: tuple, book_id: str, volume_id: str) -> str:
+
+        cookies = dict(cookies_tuple)
 
         async with self._session.get(
             API_ROUTE.GETDOWNURL.format(
                 book_id=book_id,
                 volume_id=volume_id,
-                is_vip=self._profile.is_vip if self._use_vip else 0
-            )
+                is_vip=is_vip if self._use_vip else 0
+            ),
+            cookies=cookies,
         ) as response:
             response.raise_for_status()
             data = await response.text()

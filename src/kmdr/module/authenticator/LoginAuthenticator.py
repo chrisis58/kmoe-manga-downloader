@@ -1,11 +1,12 @@
 from typing import Optional
 import re
-from yarl import URL
 
 from rich.prompt import Prompt
 
 from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 from kmdr.core.constants import API_ROUTE, LoginResponse
+from kmdr.core.structure import Credential
+from kmdr.core.utils import extract_cookies
 
 from .utils import check_status
 
@@ -47,11 +48,16 @@ class LoginAuthenticator(Authenticator):
             login_response = LoginResponse.from_code(code)
             if not LoginResponse.ok(login_response):
                 raise LoginError(f"认证失败，错误代码：{login_response.name} {login_response.value}" )
-
-            if await check_status(self._session, self._console, show_quota=self._show_quota):
-                cookie = self._session.cookie_jar.filter_cookies(URL(self._base_url))
-                self._configurer.cookie = {key: morsel.value for key, morsel in cookie.items()}
-
-                return True
             
-            return False
+            cookies = extract_cookies(response)
+
+            cred: Credential = await check_status(
+                self._session,
+                self._console,
+                self._username,
+                cookies=cookies,
+                show_quota=self._show_quota
+            )
+            self._credential = cred
+            self._configurer.cookie = cred.cookies
+            return True

@@ -88,6 +88,18 @@ def async_retry(
         return wrapper
     return decorator
 
+def extract_cookies(response: aiohttp.ClientResponse) -> dict[str, str]:
+    extracted_cookies: dict[str, str] = {}
+
+    for history_resp in response.history:
+        for key, morsel in history_resp.cookies.items():
+            extracted_cookies[key] = morsel.value
+
+    for key, morsel in response.cookies.items():
+        extracted_cookies[key] = morsel.value
+
+    return extracted_cookies
+
 
 H = TypeVar('H', bound=Hashable)
 class PrioritySorter(Generic[H]):

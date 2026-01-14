@@ -90,7 +90,8 @@ def argument_parser():
 
     pool_add = pool_subparsers.add_parser('add', help='向池中添加账号')
     pool_add.add_argument('-u', '--username', type=str, required=True, help='用户名')
-    pool_add.add_argument('-p', '--password', type=str, required=True, help='密码')
+    pool_add.add_argument('-p', '--password', type=str, help='密码')
+    pool_add.add_argument('--order', type=int, default=0, help='账号优先级，数值越小优先级越高')
     pool_add.add_argument('--note', type=str, help='备注信息')
 
     pool_remove = pool_subparsers.add_parser('remove', help='从池中移除账号')
@@ -115,29 +116,6 @@ def parse_args():
         parser.print_help()
 
     return args
-
-@singleton
-class UserProfile:
-
-    def __init__(self):
-        self._is_vip: Optional[int] = None
-        self._user_level: Optional[int] = None
-
-    @property
-    def is_vip(self) -> Optional[int]:
-        return self._is_vip
-
-    @property
-    def user_level(self) -> Optional[int]:
-        return self._user_level
-    
-    @is_vip.setter
-    def is_vip(self, value: Optional[int]):
-        self._is_vip = value
-
-    @user_level.setter
-    def user_level(self, value: Optional[int]):
-        self._user_level = value
 
 @singleton
 class Configurer:

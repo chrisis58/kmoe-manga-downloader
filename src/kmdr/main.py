@@ -32,13 +32,14 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
             t_auth = AUTHENTICATOR.get(args).authenticate()
             t_list = LISTERS.get(args).list()
 
-            _, (book, volumes) = await asyncio.gather(t_auth, t_list)
+            cred, (book, volumes) = await asyncio.gather(t_auth, t_list)
+            debug("认证成功，凭证信息: ", cred)
             debug("获取到书籍《", book.name, "》及其", len(volumes), "个章节信息。")
 
             volumes = PICKERS.get(args).pick(volumes)
             debug("选择了", len(volumes), "个章节进行下载:", ', '.join(volume.name for volume in volumes))
 
-            await DOWNLOADER.get(args).download(book, volumes)
+            await DOWNLOADER.get(args).download(cred, book, volumes)
 
     else:
         fallback()

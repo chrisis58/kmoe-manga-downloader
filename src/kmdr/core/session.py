@@ -4,7 +4,7 @@ from typing import Type
 from types import TracebackType
 
 import asyncio
-from aiohttp import ClientSession
+from aiohttp import ClientSession, DummyCookieJar
 
 from .constants import BASE_URL, API_ROUTE
 from .utils import async_retry, PrioritySorter, get_random_ua
@@ -67,6 +67,7 @@ class KmdrSessionManager(SessionManager):
                 proxy=self._proxy,
                 trust_env=True,
                 headers=self._headers,
+                cookie_jar=DummyCookieJar(),
             )
 
             return SessionCtxManager(self._session)
