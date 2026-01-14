@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 import asyncio
 from aiohttp import ClientSession
+from rich.prompt import Confirm
 
 from .console import *
 from .error import LoginError
@@ -88,6 +89,20 @@ class Downloader(SessionContext, TerminalContext):
         if not volumes:
             info("没有可下载的卷。", style="blue")
             return
+        
+        total_size = sum(v.size or 0 for v in volumes)
+        if total_size > cred.quota_remaining:
+            if self._console.is_interactive:
+                should_continue = Confirm.ask(
+                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
+                    default=False
+                )
+                
+                if not should_continue:
+                    info("用户取消下载。")
+                    return
+            else:
+                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。[/red]")
 
         try:
             with self._progress:
