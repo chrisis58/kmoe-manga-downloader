@@ -25,7 +25,7 @@ class LoginAuthenticator(Authenticator):
 
         self._password = password
 
-    async def _authenticate(self) -> bool:
+    async def _authenticate(self) -> Credential:
 
         async with self._session.post(
             url = API_ROUTE.LOGIN_DO,
@@ -60,4 +60,4 @@ class LoginAuthenticator(Authenticator):
             )
             self._credential = cred
             self._configurer.cookie = cred.cookies
-            return True
+            return cred
