@@ -84,7 +84,7 @@ def argument_parser():
     config_parser.add_argument('-c', '--clear', type=str, help='清除指定配置，可选值为 `all`, `cookie`, `option`')
     config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='删除特定的配置选项')
 
-    pool_parser = subparsers.add_parser('pool', help='管理凭证池')
+    pool_parser = subparsers.add_parser('pool', aliases=['profile'], help='管理凭证池')
     
     pool_subparsers = pool_parser.add_subparsers(title='凭证池操作', dest='pool_command')
 
