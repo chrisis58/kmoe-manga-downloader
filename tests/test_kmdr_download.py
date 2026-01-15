@@ -12,6 +12,8 @@ BASE_DIR = os.environ.get('KMDR_TEST_DIR', './tests')
 KMOE_USERNAME = os.environ.get('KMOE_USERNAME')
 KMOE_PASSWORD = os.environ.get('KMOE_PASSWORD')
 
+TEST_DOWNLOAD_GAP_SECONDS = int(os.environ.get('KMDR_TEST_DOWNLOAD_GAP_SECONDS', 3))
+
 DEFAULT_BASE_URL = BASE_URL.DEFAULT.value
 ALTERNATIVE_BASE_URL = BASE_URL.MOX.value
 
@@ -47,7 +49,7 @@ class TestKmdrDownload(unittest.TestCase):
     def tearDown(self):
         # avoiding rate limit
         print("Waiting", end='')
-        for i in range(3):
+        for i in range(TEST_DOWNLOAD_GAP_SECONDS):
             print('.', end='', flush=True)
             time.sleep(1)
         print()
