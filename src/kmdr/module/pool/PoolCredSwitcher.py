@@ -18,5 +18,9 @@ class PoolCredSwitcher(PoolManager):
             info(f"凭证池中不存在用户 '{self._username}' 。")
             return
 
-        self._configurer.cookie = cred.cookies
+        try:
+            self._configurer.cookie = cred.cookies
+        except Exception as e:
+            info(f"[red]设置默认账号失败: {e}[/red]")
+            return
         info(f"已将用户 '{self._username}' 应用为当前默认账号。")
