@@ -36,7 +36,7 @@ class PoolLister(PoolManager):
 
         if not self.__refresh:
             self._console.print(self._generate_table())
-            info("剩余可用额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
+            info("剩余可用总额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
             return
 
         # 耗时操作，刷新所有凭证状态
@@ -58,7 +58,7 @@ class PoolLister(PoolManager):
                     self._updating_users.remove(updated_cred.username)
                     live.update(self._generate_table())
 
-        info("剩余可用额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
+        info("剩余可用总额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
         try:
             self._configurer.update()
             debug("[green]已更新", len(credentials), "个凭证。[/green]")
@@ -94,13 +94,13 @@ class PoolLister(PoolManager):
             expand=True
         )
 
-        table.add_column("Order", justify="right", style="dim", width=6)
-        table.add_column("用户名", style="magenta")
-        table.add_column("昵称", style="green")
-        table.add_column("剩余额度", justify="right")
+        table.add_column("Order", justify="center", style="dim", width=6)
+        table.add_column("用户名", justify="center", style="magenta")
+        table.add_column("昵称", justify="center", style="green")
+        table.add_column("剩余额度", justify="center")
         table.add_column("状态", justify="center")
-        table.add_column("最后更新", style="dim", width=22) 
-        table.add_column("备注", style="dim italic")
+        table.add_column("最后更新", justify="center", style="dim", width=22) 
+        table.add_column("备注", justify="center", style="dim italic")
 
         if not credentials:
             return table
