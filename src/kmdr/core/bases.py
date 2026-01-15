@@ -54,7 +54,6 @@ class Authenticator(SessionContext, ConfigContext, TerminalContext):
             try:
                 cred = await async_retry()(self._authenticate)()
                 assert cred is not None
-                self._credential = cred
                 return cred
             except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
