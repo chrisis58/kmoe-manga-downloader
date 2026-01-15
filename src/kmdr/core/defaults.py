@@ -15,7 +15,7 @@ from rich.progress import (
 )
 
 from .utils import singleton
-from .structure import Config, Credential, CredentialStatus, Credential, QuotaInfo
+from .structure import Config, Credential, CredentialStatus, QuotaInfo
 from .constants import BASE_URL
 from .console import _update_verbose_setting
 
