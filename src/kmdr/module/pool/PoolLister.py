@@ -160,4 +160,5 @@ class PoolLister(PoolManager):
             except Exception as e:
                 cred.status = CredentialStatus.INVALID
                 info(f"[red]更新用户 {cred.username} 失败[/red]")
+                debug(f"更新用户 {cred.username} 失败: {e}")
                 return cred
