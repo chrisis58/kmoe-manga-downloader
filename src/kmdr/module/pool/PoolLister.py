@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+import random
 from typing import Set
 
 from rich.live import Live
@@ -133,6 +134,9 @@ class PoolLister(PoolManager):
 
     async def _check_and_update_single(self, session, cred: Credential, semaphore: asyncio.Semaphore):
         async with semaphore:
+            # 防止瞬时并发过高
+            await asyncio.sleep(random.uniform(0, 0.3))
+
             try:
                 new_cred = await check_status(
                     session=session,
