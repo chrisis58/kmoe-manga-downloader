@@ -149,8 +149,6 @@ class PoolLister(PoolManager):
                 cred.nickname = new_cred.nickname
                 cred.cookies = new_cred.cookies
 
-                await asyncio.sleep(10)
-
                 return cred
 
             except Exception as e:
