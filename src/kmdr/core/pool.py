@@ -20,6 +20,12 @@ class CredentialPool:
             self._cycle_iterator = itertools.cycle(active)
         else:
             self._cycle_iterator = None
+    
+    def find(self, username: str) -> Optional[Credential]:
+        for cred in self.pool:
+            if cred.username == username:
+                return cred
+        return None
 
     def add(self, cred: Credential) -> None:
         if self._config.config.cred_pool is None:
