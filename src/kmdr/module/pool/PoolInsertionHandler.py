@@ -12,10 +12,12 @@ from kmdr.module.authenticator.LoginAuthenticator import LoginAuthenticator
 )
 class PoolInsertionHandler(PoolManager):
 
-    def __init__(self, username: str, password: Optional[str] = None, *args, **kwargs):
+    def __init__(self, username: str, password: Optional[str] = None, order: Optional[int] = None, note: Optional[str] = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._username = username
         self._password = password
+        self._order = order
+        self._note = note
 
     async def operate(self) -> None:
 
@@ -30,6 +32,12 @@ class PoolInsertionHandler(PoolManager):
                 show_quota=False,
             )
             cred = await authenticator.authenticate()
+
+            if self._order is not None:
+                cred.order = self._order
+            if self._note is not None:
+                cred.note = self._note
+
             self._pool.add(cred)
 
             info(f"已将用户 '{self._username}' 添加到凭证池中。")
