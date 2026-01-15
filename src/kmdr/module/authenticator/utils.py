@@ -41,7 +41,7 @@ async def check_status(
                 and URL(response.url).path == API_ROUTE.LOGIN:
             raise LoginError("凭证已失效，请重新登录。", ['kmdr config -c cookie', 'kmdr login -u <username>'])
         
-        cookies = extract_cookies(response)
+        cookies = {**cookies, **extract_cookies(response)}
 
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         soup = BeautifulSoup(await response.text(), 'html.parser')
