@@ -4,6 +4,7 @@ import asyncio
 
 from kmdr import __version__
 from kmdr.core import *
+from kmdr.core.bases import POOL_MANAGER
 from kmdr.module import *
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
@@ -40,6 +41,9 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
             debug("选择了", len(volumes), "个章节进行下载:", ', '.join(volume.name for volume in volumes))
 
             await DOWNLOADER.get(args).download(cred, book, volumes)
+    
+    elif args.command == 'pool':
+        await POOL_MANAGER.get(args).operate()
 
     else:
         fallback()

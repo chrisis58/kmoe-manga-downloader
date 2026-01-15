@@ -1,3 +1,5 @@
+import dataclasses
+from enum import Enum
 import os
 import json
 from typing import Optional, Any
@@ -13,7 +15,7 @@ from rich.progress import (
 )
 
 from .utils import singleton
-from .structure import Config
+from .structure import Config, Credential, CredentialStatus, Credential, QuotaInfo
 from .constants import BASE_URL
 from .console import _update_verbose_setting
 
@@ -117,6 +119,17 @@ def parse_args():
 
     return args
 
+
+class KmdrJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o) and not isinstance(o, type):
+            return dataclasses.asdict(o)
+        
+        if isinstance(o, Enum):
+            return o.value
+            
+        return super().default(o)
+
 @singleton
 class Configurer:
 
@@ -140,6 +153,34 @@ class Configurer:
             base_url = config.get('base_url', None)
             if base_url is not None and isinstance(base_url, str):
                 self._config.base_url = base_url
+            cred_pool = config.get('cred_pool', None)
+            if cred_pool is not None and isinstance(cred_pool, list):
+                self._config.cred_pool = [self._parse_credential(c) for c in cred_pool]
+    
+    def _parse_credential(self, data: dict) -> Credential:
+        user_quota = QuotaInfo(**data['user_quota'])
+
+        vip_quota = None
+        if data.get('vip_quota'):
+            vip_quota = QuotaInfo(**data['vip_quota'])
+
+        status_str = data.get('status', 'active')
+        try:
+            status = CredentialStatus(status_str)
+        except ValueError:
+            status = CredentialStatus.INVALID
+
+        return Credential(
+            username=data['username'],
+            cookies=data['cookies'],
+            user_quota=user_quota,
+            level=data.get('level', 0),
+            nickname=data.get('nickname'),
+            vip_quota=vip_quota,
+            order=data.get('order', 0),
+            status=status,
+            note=data.get('note')
+        )
 
     @property
     def config(self) -> 'Config':
@@ -188,7 +229,7 @@ class Configurer:
     
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
-            json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)
+            json.dump(self._config.__dict__, f, cls=KmdrJSONEncoder, indent=4, ensure_ascii=False)
     
     def clear(self, key: str):
         if key == 'all':

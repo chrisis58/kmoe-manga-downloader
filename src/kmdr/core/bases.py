@@ -11,6 +11,7 @@ from .registry import Registry
 from .structure import VolInfo, BookInfo, Credential
 from .utils import construct_callback, async_retry
 from .protocol import AsyncCtxManager
+from .pool import CredentialPool
 
 from .context import TerminalContext, SessionContext, ConfigContext
 
@@ -21,6 +22,15 @@ class Configurer(ConfigContext, TerminalContext):
     
     @abstractmethod
     def operate(self) -> None: ...
+
+class PoolManager(ConfigContext, TerminalContext):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._pool = CredentialPool(self._configurer)
+
+    @abstractmethod
+    async def operate(self) -> None: ...
 
 class SessionManager(SessionContext, ConfigContext, TerminalContext):
 
@@ -129,3 +139,4 @@ LISTERS = Registry[Lister]('Lister')
 PICKERS = Registry[Picker]('Picker')
 DOWNLOADER = Registry[Downloader]('Downloader', True)
 CONFIGURER = Registry[Configurer]('Configurer')
+POOL_MANAGER = Registry[PoolManager]('PoolManager')
