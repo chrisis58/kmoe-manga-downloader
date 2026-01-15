@@ -93,18 +93,23 @@ def argument_parser():
     pool_add = pool_subparsers.add_parser('add', help='向池中添加账号')
     pool_add.add_argument('-u', '--username', type=str, required=True, help='用户名')
     pool_add.add_argument('-p', '--password', type=str, help='密码')
-    pool_add.add_argument('--order', type=int, default=0, help='账号优先级，数值越小优先级越高')
-    pool_add.add_argument('--note', type=str, help='备注信息')
+    pool_add.add_argument('-o', '--order', type=int, default=0, help='账号优先级，数值越小优先级越高')
+    pool_add.add_argument('-n', '--note', type=str, help='备注信息')
 
     pool_remove = pool_subparsers.add_parser('remove', help='从池中移除账号')
     pool_remove.add_argument('username', type=str, help='要移除的用户名')
 
     pool_list = pool_subparsers.add_parser('list', help='列出池中所有账号')
-    pool_list.add_argument('--refresh', '-r', action='store_true', help='刷新所有账号的状态和配额信息')
+    pool_list.add_argument('-r', '--refresh', action='store_true', help='刷新所有账号的状态和配额信息')
     pool_list.add_argument('--num-workers', type=int, default=3, help='刷新时使用的并发任务数，默认为 3')
 
     pool_use = pool_subparsers.add_parser('use', help='将池中指定账号应用为当前默认账号')
     pool_use.add_argument('username', type=str, help='要切换使用的用户名')
+
+    pool_update = pool_subparsers.add_parser('update', help='更新池中指定账号的信息')
+    pool_update.add_argument('username', type=str, help='要更新的用户名')
+    pool_update.add_argument('-n', '--note', type=str, help='更新备注信息')
+    pool_update.add_argument('-o', '--order', type=int, help='更新账号优先级，数值越小优先级越高')
 
     return parser
 
