@@ -2,6 +2,7 @@ from typing import Optional
 
 from kmdr.core.bases import PoolManager, POOL_MANAGER
 from kmdr.core.session import KmdrSessionManager
+from kmdr.core.console import info
 
 from kmdr.module.authenticator.LoginAuthenticator import LoginAuthenticator
 
@@ -26,3 +27,5 @@ class PoolInsertionHandler(PoolManager):
             )
             cred = await authenticator.authenticate()
             self._pool.add(cred)
+
+            info(f"已将用户 '{self._username}' 添加到凭证池中。")
