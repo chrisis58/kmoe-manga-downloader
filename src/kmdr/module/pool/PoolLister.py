@@ -146,6 +146,8 @@ class PoolLister(PoolManager):
                     show_quota=False 
                 )
 
+                # rich.Live 有可能会读到部分更新的数据
+                # 但是不会影响最终结果，所以这里不加锁
                 cred.user_quota = new_cred.user_quota
                 cred.vip_quota = new_cred.vip_quota
                 cred.status = new_cred.status
