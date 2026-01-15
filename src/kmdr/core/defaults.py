@@ -100,6 +100,8 @@ def argument_parser():
     pool_remove.add_argument('username', type=str, help='要移除的用户名')
 
     pool_list = pool_subparsers.add_parser('list', help='列出池中所有账号')
+    pool_list.add_argument('--refresh', action='store_true', help='刷新所有账号的状态和配额信息')
+    pool_list.add_argument('--num-workers', type=int, default=3, help='刷新时使用的并发任务数，默认为 3')
 
     pool_use = pool_subparsers.add_parser('use', help='将池中指定账号应用为当前默认账号')
     pool_use.add_argument('username', type=str, help='要切换使用的用户名')
