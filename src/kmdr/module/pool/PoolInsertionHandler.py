@@ -22,7 +22,7 @@ class PoolInsertionHandler(PoolManager):
     async def operate(self) -> None:
 
         if self._pool.check_duplicate(self._username):
-            info(f"用户 '{self._username}' 已存在于凭证池中，添加操作已取消。")
+            info(f"用户 '{self._username}' 已存在于凭证池中。")
             return
         
         async with (await KmdrSessionManager().session()):
