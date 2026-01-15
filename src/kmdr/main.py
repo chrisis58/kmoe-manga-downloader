@@ -4,6 +4,7 @@ import asyncio
 
 from kmdr import __version__
 from kmdr.core import *
+from kmdr.core.bases import POOL_MANAGER
 from kmdr.module import *
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NOT IMPLEMENTED!')) -> None:
@@ -21,23 +22,30 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     elif args.command == 'login':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            cred = await AUTHENTICATOR.get(args).authenticate()
+            debug("认证成功，凭证信息: ", cred)
 
     elif args.command == 'status':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            cred = await AUTHENTICATOR.get(args).authenticate()
+            debug("认证成功，凭证信息: ", cred)
 
     elif args.command == 'download':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            t_auth = AUTHENTICATOR.get(args).authenticate()
+            t_list = LISTERS.get(args).list()
 
-            book, volumes = await LISTERS.get(args).list()
+            cred, (book, volumes) = await asyncio.gather(t_auth, t_list)
+            debug("认证成功，凭证信息: ", cred)
             debug("获取到书籍《", book.name, "》及其", len(volumes), "个章节信息。")
 
             volumes = PICKERS.get(args).pick(volumes)
             debug("选择了", len(volumes), "个章节进行下载:", ', '.join(volume.name for volume in volumes))
 
-            await DOWNLOADER.get(args).download(book, volumes)
+            await DOWNLOADER.get(args).download(cred, book, volumes)
+    
+    elif args.command == 'pool':
+        await POOL_MANAGER.get(args).operate()
 
     else:
         fallback()

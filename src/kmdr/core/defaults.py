@@ -1,14 +1,12 @@
-import io
-import sys
+import dataclasses
+from enum import Enum
 import os
 import json
 from typing import Optional, Any
 import argparse
 from contextvars import ContextVar
 
-from rich.console import Console
 from rich.progress import (
-    Progress,
     BarColumn,
     DownloadColumn,
     TextColumn,
@@ -17,7 +15,7 @@ from rich.progress import (
 )
 
 from .utils import singleton
-from .structure import Config
+from .structure import Config, Credential, CredentialStatus, QuotaInfo
 from .constants import BASE_URL
 from .console import _update_verbose_setting
 
@@ -72,6 +70,7 @@ def argument_parser():
     download_parser.add_argument('--disable-multi-part', action='store_true', help='禁用分片下载，优先级高于尝试启用分片下载选项')
     download_parser.add_argument('--try-multi-part', action='store_true', help='尝试启用分片下载')
     download_parser.add_argument('--fake-ua', action='store_true', help='使用随机的 User-Agent 进行请求')
+    # download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
@@ -86,6 +85,31 @@ def argument_parser():
     config_parser.add_argument('-b', '--base-url', type=str, help='设置镜像站点的基础 URL, 例如: `https://kxx.moe`')
     config_parser.add_argument('-c', '--clear', type=str, help='清除指定配置，可选值为 `all`, `cookie`, `option`')
     config_parser.add_argument('-d', '--delete', '--unset', dest='unset', type=str, help='删除特定的配置选项')
+
+    pool_parser = subparsers.add_parser('pool', aliases=['profile'], help='管理凭证池')
+    
+    pool_subparsers = pool_parser.add_subparsers(title='凭证池操作', dest='pool_command')
+
+    pool_add = pool_subparsers.add_parser('add', help='向池中添加账号')
+    pool_add.add_argument('-u', '--username', type=str, required=True, help='用户名')
+    pool_add.add_argument('-p', '--password', type=str, help='密码')
+    pool_add.add_argument('-o', '--order', type=int, default=0, help='账号优先级，数值越小优先级越高')
+    pool_add.add_argument('-n', '--note', type=str, help='备注信息')
+
+    pool_remove = pool_subparsers.add_parser('remove', help='从池中移除账号')
+    pool_remove.add_argument('username', type=str, help='要移除的用户名')
+
+    pool_list = pool_subparsers.add_parser('list', help='列出池中所有账号')
+    pool_list.add_argument('-r', '--refresh', action='store_true', help='刷新所有账号的状态和配额信息')
+    pool_list.add_argument('--num-workers', type=int, default=3, help='刷新时使用的并发任务数，默认为 3')
+
+    pool_use = pool_subparsers.add_parser('use', help='将池中指定账号应用为当前默认账号')
+    pool_use.add_argument('username', type=str, help='要切换使用的用户名')
+
+    pool_update = pool_subparsers.add_parser('update', help='更新池中指定账号的信息')
+    pool_update.add_argument('username', type=str, help='要更新的用户名')
+    pool_update.add_argument('-n', '--note', type=str, help='更新备注信息')
+    pool_update.add_argument('-o', '--order', type=int, help='更新账号优先级，数值越小优先级越高')
 
     return parser
 
@@ -102,28 +126,16 @@ def parse_args():
 
     return args
 
-@singleton
-class UserProfile:
 
-    def __init__(self):
-        self._is_vip: Optional[int] = None
-        self._user_level: Optional[int] = None
-
-    @property
-    def is_vip(self) -> Optional[int]:
-        return self._is_vip
-
-    @property
-    def user_level(self) -> Optional[int]:
-        return self._user_level
-    
-    @is_vip.setter
-    def is_vip(self, value: Optional[int]):
-        self._is_vip = value
-
-    @user_level.setter
-    def user_level(self, value: Optional[int]):
-        self._user_level = value
+class KmdrJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o) and not isinstance(o, type):
+            return dataclasses.asdict(o)
+        
+        if isinstance(o, Enum):
+            return o.value
+            
+        return super().default(o)
 
 @singleton
 class Configurer:
@@ -148,6 +160,34 @@ class Configurer:
             base_url = config.get('base_url', None)
             if base_url is not None and isinstance(base_url, str):
                 self._config.base_url = base_url
+            cred_pool = config.get('cred_pool', None)
+            if cred_pool is not None and isinstance(cred_pool, list):
+                self._config.cred_pool = [self._parse_credential(c) for c in cred_pool]
+    
+    def _parse_credential(self, data: dict) -> Credential:
+        user_quota = QuotaInfo(**data['user_quota'])
+
+        vip_quota = None
+        if data.get('vip_quota'):
+            vip_quota = QuotaInfo(**data['vip_quota'])
+
+        status_str = data.get('status', 'active')
+        try:
+            status = CredentialStatus(status_str)
+        except ValueError:
+            status = CredentialStatus.INVALID
+
+        return Credential(
+            username=data['username'],
+            cookies=data['cookies'],
+            user_quota=user_quota,
+            level=data.get('level', 0),
+            nickname=data.get('nickname'),
+            vip_quota=vip_quota,
+            order=data.get('order', 0),
+            status=status,
+            note=data.get('note')
+        )
 
     @property
     def config(self) -> 'Config':
@@ -196,7 +236,7 @@ class Configurer:
     
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
-            json.dump(self._config.__dict__, f, indent=4, ensure_ascii=False)
+            json.dump(self._config.__dict__, f, cls=KmdrJSONEncoder, indent=4, ensure_ascii=False)
     
     def clear(self, key: str):
         if key == 'all':

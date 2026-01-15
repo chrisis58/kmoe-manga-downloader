@@ -6,7 +6,7 @@ from yarl import URL
 from aiohttp import ClientSession as Session
 
 from kmdr.core import BookInfo, VolInfo, VolumeType
-from kmdr.core.utils import async_retry
+from kmdr.core.utils import async_retry, extract_cookies
 from kmdr.core.console import debug
 from kmdr.core.error import KmdrError
 
@@ -34,8 +34,10 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         book_page = BeautifulSoup(await response.text(), 'html.parser')
 
+        cookies = extract_cookies(response)
+
         book_info = __extract_book_info(url, book_page, book_info)
-        volumes = await __extract_volumes(session, book_page)
+        volumes = await __extract_volumes(session, book_page, cookies)
 
         return book_info, volumes
 
@@ -60,13 +62,13 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
     )
     
 
-async def __extract_volumes(session: Session, book_page: BeautifulSoup) -> list[VolInfo]:
+async def __extract_volumes(session: Session, book_page: BeautifulSoup, cookies: dict[str, str]) -> list[VolInfo]:
     script = book_page.find_all('script', language="javascript")[-1].text
 
     pattern = re.compile(r'/book_data.php\?h=\w+')
     book_data_url = pattern.search(script).group(0)
     
-    async with session.get(url = book_data_url) as response:
+    async with session.get(url = book_data_url, cookies=cookies) as response:
         response.raise_for_status()
 
         book_data = (await response.text()).split('\n')

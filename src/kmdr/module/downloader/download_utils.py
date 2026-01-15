@@ -46,6 +46,7 @@ async def download_file(
         dest_path: str,
         filename: str,
         retry_times: int = 3,
+        cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
         callback: Optional[Callable] = None,
         task_id = None,
@@ -98,7 +99,7 @@ async def download_file(
         try:
             async with semaphore:
                 current_url = await fetch_url(url)
-                async with session.get(url=current_url, headers=headers) as r:
+                async with session.get(url=current_url, headers=headers, cookies=cookies) as r:
                     r.raise_for_status()
 
                     total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
@@ -158,6 +159,7 @@ async def download_file_multipart(
         filename: str,
         retry_times: int = 3,
         chunk_size_mb: int = 10,
+        cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
         callback: Optional[Callable] = None,
 ):
@@ -172,6 +174,7 @@ async def download_file_multipart(
     :param filename: 文件名
     :param retry_times: 重试次数
     :param headers: 请求头
+    :param cookies: 请求的 cookies
     :param callback: 下载完成后的回调函数
     """
     if headers is None:
@@ -198,7 +201,7 @@ async def download_file_multipart(
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
             current_url = await fetch_url(url)
-            total_size = await _fetch_content_length(session, current_url, headers=headers)
+            total_size = await _fetch_content_length(session, current_url, headers=headers, cookies=cookies)
 
         chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
@@ -227,6 +230,7 @@ async def download_file_multipart(
                 end=end,
                 part_path=part_paths[i],
                 state_manager=state_manager,
+                cookies=cookies,
                 headers=headers,
                 retry_times=retry_times
             )
@@ -294,6 +298,7 @@ async def download_file_multipart(
 async def _fetch_content_length(
         session: aiohttp.ClientSession,
         url: str,
+        cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
 ) -> int:
     """
@@ -314,7 +319,7 @@ async def _fetch_content_length(
     probe_headers = headers.copy()
     probe_headers['Range'] = 'bytes=0-0'
 
-    async with session.get(url, headers=probe_headers, allow_redirects=True) as response:
+    async with session.get(url, cookies=cookies, headers=probe_headers, allow_redirects=True) as response:
         # 普通下载链接可能不支持 HEAD 请求，尝试使用 GET 请求获取文件大小
         # see: https://github.com/chrisis58/kmoe-manga-downloader/issues/25
         response.raise_for_status()
@@ -346,6 +351,7 @@ async def _download_part(
         end: int,
         part_path: str,
         state_manager: StateManager,
+        cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
         retry_times: int = 3
 ):
@@ -370,7 +376,7 @@ async def _download_part(
             
             async with semaphore:
                 debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
-                async with session.get(url, headers=local_headers) as response:
+                async with session.get(url, cookies=cookies, headers=local_headers) as response:
                     response.raise_for_status()
                     await state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
 
