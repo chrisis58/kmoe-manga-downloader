@@ -22,11 +22,13 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print('NO
 
     elif args.command == 'login':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            cred = await AUTHENTICATOR.get(args).authenticate()
+            debug("认证成功，凭证信息: ", cred)
 
     elif args.command == 'status':
         async with (await SESSION_MANAGER.get(args).session()):
-            await AUTHENTICATOR.get(args).authenticate()
+            cred = await AUTHENTICATOR.get(args).authenticate()
+            debug("认证成功，凭证信息: ", cred)
 
     elif args.command == 'download':
         async with (await SESSION_MANAGER.get(args).session()):
