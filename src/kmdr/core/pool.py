@@ -12,6 +12,7 @@ class CredentialPool:
 
     @property
     def pool(self) -> list[Credential]:
+        """返回当前的凭证池列表"""
         return self._config.config.cred_pool or []
 
     def _refresh_iterator(self):
@@ -22,12 +23,14 @@ class CredentialPool:
             self._cycle_iterator = None
     
     def find(self, username: str) -> Optional[Credential]:
+        """根据用户名查找对应的凭证"""
         for cred in self.pool:
             if cred.username == username:
                 return cred
         return None
 
     def add(self, cred: Credential) -> None:
+        """向凭证池中添加新的凭证"""
         if self._config.config.cred_pool is None:
             self._config.config.cred_pool = []
         
@@ -36,12 +39,14 @@ class CredentialPool:
         self._refresh_iterator()
 
     def check_duplicate(self, username: str) -> bool:
+        """检查凭证池中是否已存在指定用户名的凭证"""
         for cred in self.pool:
             if cred.username == username:
                 return True
         return False
 
     def remove(self, username: str) -> bool:
+        """从凭证池中移除指定用户名的凭证"""
         if self._config.config.cred_pool is None:
             return False
         
@@ -54,6 +59,7 @@ class CredentialPool:
         return False
 
     def update(self, username: str, cred: Credential) -> bool:
+        """更新指定用户名的凭证信息"""
         if self._config.config.cred_pool is None:
             return False
         
@@ -66,6 +72,7 @@ class CredentialPool:
         return False
 
     def update_status(self, username: str, status: CredentialStatus) -> bool:
+        """更新指定用户名的凭证状态"""
         if self._config.config.cred_pool is None:
             return False
         
@@ -79,12 +86,14 @@ class CredentialPool:
         return False
 
     def clear(self) -> None:
+        """清空凭证池中的所有凭证"""
         self._config.config.cred_pool = []
         self._config.update()
         self._refresh_iterator()
 
     @property
     def active_creds(self) -> list[Credential]:
+        """返回所有状态为 ACTIVE 的凭证，按优先级排序"""
         creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
         return sorted(creds, key=lambda x: x.order)
 
