@@ -9,6 +9,7 @@ class CredentialPool:
     def __init__(self, config: Configurer):
         self._config = config
         self._cycle_iterator: Optional[Iterator[Credential]] = None
+        self._active_count: int = 0
 
     @property
     def pool(self) -> list[Credential]:
@@ -17,6 +18,7 @@ class CredentialPool:
 
     def _refresh_iterator(self):
         active = self.active_creds
+        self._active_count = len(active)
         if active:
             self._cycle_iterator = itertools.cycle(active)
         else:
@@ -107,16 +109,12 @@ class CredentialPool:
         if self._cycle_iterator is None:
             return None
 
-        max_attempts = len(self.active_creds) 
+        max_attempts = self._active_count
         
         for _ in range(max_attempts):
-            try:
-                cred = next(self._cycle_iterator)
-                if cred.status == CredentialStatus.ACTIVE:
-                    return cred
-            except StopIteration:
-                self._refresh_iterator()
-                return None
+            cred = next(self._cycle_iterator)
+            if cred.status == CredentialStatus.ACTIVE:
+                return cred
         
         self._refresh_iterator()
         return self.get_next(max_recursion_depth - 1)
