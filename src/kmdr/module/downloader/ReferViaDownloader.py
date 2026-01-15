@@ -29,7 +29,7 @@ class ReferViaDownloader(Downloader):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
-        if self._disable_multi_part or (cred.is_vip == 0 and not self._try_multi_part):
+        if self._disable_multi_part or (not cred.is_vip and not self._try_multi_part):
             # 2025/11: 服务器对于普通用户似乎不支持分片下载
             # 所以这里对普通用户默认使用完整下载，如果想要尝试分片下载，可以使用 --try-multi-part 参数
             # 参考 issue: https://github.com/chrisis58/kmoe-manga-downloader/issues/28
@@ -43,7 +43,7 @@ class ReferViaDownloader(Downloader):
                 self._retry,
                 headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
-                resumable=cred.is_vip == 1, # 仅 VIP 用户支持断点续传
+                resumable=cred.is_vip, # 仅 VIP 用户支持断点续传
             )
             return
 
