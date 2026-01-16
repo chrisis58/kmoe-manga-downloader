@@ -8,7 +8,7 @@ from kmdr.core import Lister, LISTERS, BookInfo, VolInfo
 from kmdr.core.utils import async_retry
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.console import info
-from kmdr.core.error import EmptyResultError
+from kmdr.core.error import EmptyResultError, NotInteractableError
 
 from .utils import extract_book_info_and_volumes
 
@@ -19,6 +19,9 @@ class FollowedBookLister(Lister):
         super().__init__(*args, **kwargs)
 
     async def list(self) -> tuple[BookInfo, list[VolInfo]]:
+        if not self._console.is_interactive:
+            raise NotInteractableError("无法选择关注的书籍。")
+
         books = []
         
         with self._console.status("正在获取关注列表..."):

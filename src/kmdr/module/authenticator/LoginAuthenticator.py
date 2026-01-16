@@ -7,6 +7,7 @@ from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 from kmdr.core.constants import API_ROUTE, LoginResponse
 from kmdr.core.structure import Credential
 from kmdr.core.utils import extract_cookies
+from kmdr.core.error import NotInteractableError
 
 from .utils import check_status
 
@@ -21,6 +22,8 @@ class LoginAuthenticator(Authenticator):
         self._show_quota = show_quota
 
         if password is None:
+            if not self._console.is_interactive:
+                raise NotInteractableError("无法获取密码，请通过命令行参数提供密码。")
             password = Prompt.ask("请输入密码", password=True, console=self._console)
 
         self._password = password
