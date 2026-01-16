@@ -15,6 +15,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Setup Warp
+      uses: fscarmen/warp-on-actions@v1.3
+      with:
+        stack: ipv4
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -30,5 +35,6 @@ jobs:
       env:
         KMOE_USERNAME: ${{ secrets.KMOE_USERNAME }}
         KMOE_PASSWORD: ${{ secrets.KMOE_PASSWORD }}
+        KMDR_TEST_DOWNLOAD_GAP_SECONDS: ${{ vars.KMDR_TEST_DOWNLOAD_GAP_SECONDS }}
       run: |
         pytest
