@@ -20,6 +20,7 @@ jobs:
       uses: fscarmen/warp-on-actions@v1.3
       with:
         stack: ipv4
+        mode: client
 
     - name: Set up Python
       uses: actions/setup-python@v5
