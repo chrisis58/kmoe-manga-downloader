@@ -6,7 +6,7 @@ from async_lru import alru_cache
 
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
-from kmdr.core.error import ResponseError
+from kmdr.core.error import QuotaExceededError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import async_retry
 from kmdr.core.console import debug
@@ -60,11 +60,7 @@ class ReferViaDownloader(Downloader):
         )
 
     @alru_cache(maxsize=128)
-    @async_retry(
-        delay=3,
-        backoff=1.5,
-        retry_on_status={500, 502, 503, 504, 429, 408, 403} # 这里加入 403 重试
-    )
+    @async_retry(delay=3, backoff=1.5)
     async def fetch_download_url(self, is_vip: bool, cookies_tuple: tuple, book_id: str, volume_id: str) -> str:
 
         cookies = dict(cookies_tuple)
@@ -83,14 +79,17 @@ class ReferViaDownloader(Downloader):
             debug("获取下载链接响应数据:", data)
             if (code := data.get('code')) != 200:
 
-                if code in {401, 403, 404}:
-                    raise ResponseError("无法获取下载链接" + data.get('msg', 'Unknown error'), code)
+                msg = data.get('msg', '__未知错误__')
+                debug(f"获取下载链接失败，错误码 {code}，信息: {msg}")
+
+                if "達到下載額度限制" in msg:
+                    raise QuotaExceededError(msg)
 
                 raise aiohttp.ClientResponseError(
                     response.request_info,
                     history=response.history,
                     status=code,
-                    message=data.get('msg', 'Unknown error')
+                    message=msg
                 )
 
             return data['url']

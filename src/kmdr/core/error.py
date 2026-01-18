@@ -73,3 +73,10 @@ class NotInteractableError(KmdrError):
 
     def __str__(self):
         return f"当前环境不支持交互式输入：{self.message}"
+
+class QuotaExceededError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"配额用尽：{self.message}"
