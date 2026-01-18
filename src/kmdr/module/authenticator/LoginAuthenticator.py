@@ -62,5 +62,9 @@ class LoginAuthenticator(Authenticator):
                 show_quota=self._show_quota
             )
             self._credential = cred
-            self._configurer.cookie = cred.cookies
+
+            # 这里不调用 setter, 在两个字段都更新后手动更新
+            self._configurer.config.cookie = cred.cookies
+            self._configurer.config.username = cred.username
+            self._configurer.update()
             return cred

@@ -24,7 +24,7 @@ class CookieAuthenticator(Authenticator):
         cred: Credential = await check_status(
             self._session,
             self._console,
-            username='__FROM_COOKIE__',
+            username=self._configurer.config.username or '__FROM_COOKIE__',
             cookies=cookie,
             show_quota=self._show_quota,
         )
