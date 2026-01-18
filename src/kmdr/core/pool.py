@@ -137,9 +137,10 @@ class PooledCredential:
         return self._cred.user_quota
 
     def update_from_server(self, server_cred: Credential):
-        if server_cred.username != self._cred.username:
+        if self._cred.username != '__FROM_COOKIE__' and server_cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
+        self._cred.username = server_cred.username
         self._cred.level = server_cred.level
         self._cred.nickname = server_cred.nickname
         self._cred.cookies = server_cred.cookies
