@@ -2,14 +2,22 @@ import time
 from typing import Iterator, Optional
 import itertools
 
+import asyncio
+
 from .defaults import Configurer
 from .structure import Credential, CredentialStatus, QuotaInfo
 
 class CredentialPool:
-    def __init__(self, config: Configurer):
+    def __init__(self, 
+            config: Configurer,
+            max_workers_per_cred: int = 99999, # 默认不限制，这里取一个很大的数
+    ):
         self._config = config
         self._cycle_iterator: Optional[Iterator[Credential]] = None
         self._active_count: int = 0
+
+        self._pooled_map: dict[str, PooledCredential] = {}
+        self._max_workers_per_cred = max_workers_per_cred
 
     @property
     def pool(self) -> list[Credential]:
@@ -99,8 +107,8 @@ class CredentialPool:
         creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
         return sorted(creds, key=lambda x: x.order)
 
-    def get_next(self, max_recursion_depth: int = 3) -> Optional[Credential]:
-        if (max_recursion_depth <= 0):
+    def get_next(self, max_recursion_depth: int = 3) -> Optional['PooledCredential']:
+        if max_recursion_depth <= 0:
             return None
 
         if self._cycle_iterator is None:
@@ -109,61 +117,84 @@ class CredentialPool:
         if self._cycle_iterator is None:
             return None
 
-        max_attempts = self._active_count
+        max_attempts = max(1, self._active_count)
         
         for _ in range(max_attempts):
-            cred = next(self._cycle_iterator)
-            if cred.status == CredentialStatus.ACTIVE:
-                return cred
+            raw_cred = next(self._cycle_iterator)
+            
+            if raw_cred.status != CredentialStatus.ACTIVE:
+                continue
+
+            return self.get_pooled(raw_cred)
         
         self._refresh_iterator()
         return self.get_next(max_recursion_depth - 1)
 
+    def get_pooled(self, cred: Credential) -> 'PooledCredential':
+        key = cred.username
+        
+        if key not in self._pooled_map:
+            self._pooled_map[key] = PooledCredential(cred, self._max_workers_per_cred)
+            
+        elif self._pooled_map[key].inner is not cred:
+            self._pooled_map[key].update_cred(cred)
+
+        return self._pooled_map[key]
+
 class PooledCredential:
-    def __init__(self, credential: Credential):
+    def __init__(self, credential: Credential, max_workers: int = 99999):
         self._cred = credential
         
         self._cred.user_quota.reserved = 0.0
         if self._cred.vip_quota:
             self._cred.vip_quota.reserved = 0.0
 
+        self.update_lock = asyncio.Lock()
+        self.download_semaphore: asyncio.Semaphore = asyncio.Semaphore(max_workers)
+
     @property
     def inner(self) -> Credential:
         return self._cred
+    
+    @inner.setter
+    def inner(self, cred: Credential):
+        self._cred = cred
 
     def _get_target(self, is_vip: bool) -> Optional[QuotaInfo]:
         if is_vip and self._cred.vip_quota:
             return self._cred.vip_quota
         return self._cred.user_quota
 
-    def update_from_server(self, server_cred: Credential):
-        if self._cred.username != '__FROM_COOKIE__' and server_cred.username != self._cred.username:
+    def update_cred(self, cred: Credential, force: bool = False):
+        """
+        更新内部的 Credential 信息
+        
+        :param cred: 新的 Credential 信息
+        :param force: 是否强制更新所有信息，默认根据更新时间决定是否覆盖
+        """
+        if self._cred.username != '__FROM_COOKIE__' and cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
-        self._cred.username = server_cred.username
-        self._cred.level = server_cred.level
-        self._cred.nickname = server_cred.nickname
-        self._cred.cookies = server_cred.cookies
-
-        self._overwrite_quota(self._cred.user_quota, server_cred.user_quota)
+        self.__update_quota(cred.user_quota, self._cred.user_quota, force=force)
         
-        if server_cred.vip_quota:
-            if self._cred.vip_quota:
-                self._overwrite_quota(self._cred.vip_quota, server_cred.vip_quota)
-            else:
-                self._cred.vip_quota = server_cred.vip_quota
-        else:
-            self._cred.vip_quota = None
-
-    def _overwrite_quota(self, local: QuotaInfo, remote: QuotaInfo):
-        local.total = remote.total
-        local.used = remote.used
-        local.reset_day = remote.reset_day
-        local.update_at = time.time()
+        if cred.vip_quota and self._cred.vip_quota:
+            self.__update_quota(cred.vip_quota, self._cred.vip_quota, force=force)
         
-        local.unsynced_usage = 0.0
-        
+        self._cred = cred
 
+    def __update_quota(self, target: QuotaInfo, source: QuotaInfo, force: bool = False):
+        target.reserved = source.reserved
+
+        target.unsynced_usage = 0.0 if force else source.unsynced_usage
+
+        if force or target.update_at >= source.update_at:
+            return
+
+        target.total = source.total
+        target.used = source.used
+        target.reset_day = source.reset_day
+        target.update_at = source.update_at
+        
     def reserve(self, size_mb: float, is_vip: bool = True) -> bool:
         target = self._get_target(is_vip)
         if target and target.remaining >= size_mb:
@@ -184,3 +215,10 @@ class PooledCredential:
         target = self._get_target(is_vip)
         if target:
             target.reserved = max(0.0, target.reserved - size_mb)
+
+    def is_recently_synced(self, is_vip: bool = True, cooldown: float = 30.0) -> bool:
+        """检查是否最近刚刚同步过"""
+        target = self._get_target(is_vip)
+        if target:
+            return (time.time() - target.update_at) < cooldown
+        return False

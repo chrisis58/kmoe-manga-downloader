@@ -91,17 +91,17 @@ class TestCredentialPool(unittest.TestCase):
         # 第一次获取，应该是 A (order 1)
         n1 = self.pool_mgr.get_next()
         assert n1 is not None
-        self.assertEqual(n1.username, "A")
+        self.assertEqual(n1.inner.username, "A")
 
         # 第二次获取，应该是 B (order 2)
         n2 = self.pool_mgr.get_next()
         assert n2 is not None
-        self.assertEqual(n2.username, "B")
+        self.assertEqual(n2.inner.username, "B")
 
         # 第三次获取，应该回到 A (Cycle)
         n3 = self.pool_mgr.get_next()
         assert n3 is not None
-        self.assertEqual(n3.username, "A")
+        self.assertEqual(n3.inner.username, "A")
 
     def test_get_next_skips_invalid(self):
         """get_next 应自动跳过状态变成非 ACTIVE 的凭证"""
@@ -112,7 +112,7 @@ class TestCredentialPool(unittest.TestCase):
         # 初始化迭代器
         cred = self.pool_mgr.get_next()
         assert cred is not None
-        self.assertEqual(cred.username, "A")
+        self.assertEqual(cred.inner.username, "A")
 
         # 把 B 禁用
         c2.status = CredentialStatus.DISABLED
@@ -120,7 +120,7 @@ class TestCredentialPool(unittest.TestCase):
         # 下一次获取应该跳过 B，直接再次返回 A
         n = self.pool_mgr.get_next()
         assert n is not None
-        self.assertEqual(n.username, "A")
+        self.assertEqual(n.inner.username, "A")
 
     def test_get_next_returns_none_if_empty(self):
         self.mock_config.cred_pool = []
@@ -185,8 +185,11 @@ class TestPooledCredential(unittest.TestCase):
         server_cred.user_quota.total = 200.0
         server_cred.user_quota.used = 59.0
         
-        self.pooled.update_from_server(server_cred)
+        self.pooled.update_cred(server_cred, force=True)
         
-        self.assertEqual(self.base_cred.user_quota.total, 200.0)
-        self.assertEqual(self.base_cred.user_quota.unsynced_usage, 0.0)
-        self.assertEqual(self.base_cred.user_quota.used, 59.0)
+        self.assertEqual(self.pooled.inner.user_quota.total, 200.0)
+        self.assertEqual(self.pooled.inner.user_quota.unsynced_usage, 0.0)
+        self.assertEqual(self.pooled.inner.user_quota.used, 59.0)
+
+if __name__ == "__main__":
+    unittest.main()
