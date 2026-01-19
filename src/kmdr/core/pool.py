@@ -131,9 +131,7 @@ class CredentialPool:
         candidates = []
         now_ts = time.time()
 
-        for pooled_cred in self._pooled_map.values():
-            cred = pooled_cred.inner
-
+        for cred in self.pool:
             unsynced = cred.user_quota.unsynced_usage + (cred.vip_quota.unsynced_usage if cred.vip_quota else 0.0)
 
             if unsynced > 50.0:
