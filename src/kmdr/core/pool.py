@@ -7,10 +7,13 @@ import asyncio
 from .defaults import Configurer
 from .structure import Credential, CredentialStatus, QuotaInfo
 
+UNLIMITED_WORKERS = 99999
+"""不限制并发下载数的标记值"""
+
 class CredentialPool:
     def __init__(self, 
             config: Configurer,
-            max_workers_per_cred: int = 99999, # 默认不限制，这里取一个很大的数
+            max_workers_per_cred: int = UNLIMITED_WORKERS,
     ):
         self._config = config
         self._cycle_iterator: Optional[Iterator[Credential]] = None
@@ -68,13 +71,13 @@ class CredentialPool:
                 return True
         return False
 
-    def update(self, username: str, cred: Credential) -> bool:
+    def update(self, cred: Credential) -> bool:
         """更新指定用户名的凭证信息"""
         if self._config.config.cred_pool is None:
             return False
         
         for idx, cre in enumerate(self._config.config.cred_pool):
-            if cre.username == username:
+            if cre.username == cred.username:
                 self._config.config.cred_pool[idx] = cred
                 self._config.update()
                 self._refresh_iterator()
@@ -142,7 +145,7 @@ class CredentialPool:
         return self._pooled_map[key]
 
 class PooledCredential:
-    def __init__(self, credential: Credential, max_workers: int = 99999):
+    def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
         self._cred = credential
         
         self._cred.user_quota.reserved = 0.0
