@@ -80,3 +80,10 @@ class QuotaExceededError(KmdrError):
 
     def __str__(self):
         return f"配额用尽：{self.message}"
+
+class NoCandidateCredentialError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"没有可用的凭证：{self.message}"
