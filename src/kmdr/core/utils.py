@@ -3,11 +3,14 @@ from typing import Optional, Callable, TypeVar, Hashable, Generic, Mapping, Any
 import asyncio
 from asyncio.proactor_events import _ProactorBasePipeTransport
 import random
+from datetime import datetime
+from calendar import monthrange
 
 import aiohttp
 
 import subprocess
 
+from .constants import TIMEZONE
 from .structure import BookInfo, VolInfo
 from .error import RedirectError
 from .protocol import Consumer
@@ -187,3 +190,26 @@ def get_random_ua() -> str:
     从池中随机选择一个 UA
     """
     return random.choice(USER_AGENTS)
+
+
+def calc_reset_time(reset_day: int, update_at: float) -> float:
+    """
+    计算下一个重置时间的时间戳
+    """
+    now = datetime.fromtimestamp(update_at, tz=TIMEZONE)
+    year = now.year
+    month = now.month
+
+    if now.day >= reset_day:
+        # 如果今天已经过了重置日，计算下个月的重置时间
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+    # 获取当月的天数，确保重置日不超过当月最大天数
+    days_in_month = monthrange(year, month)[1]
+    reset_day = min(reset_day, days_in_month)
+
+    reset_time = datetime(year, month, reset_day, 0, 0, 0, tzinfo=TIMEZONE)
+    return reset_time.timestamp()

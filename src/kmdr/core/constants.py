@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union
+from datetime import timedelta, timezone
 
 from typing_extensions import deprecated
 
@@ -72,3 +73,6 @@ class LoginResponse(Enum):
 
 API_ROUTE = _ApiRoute()
 """API 路由常量实例"""
+
+TIMEZONE = timezone(offset=timedelta(hours=8), name='Asia/Shanghai')
+"""东八区为默认时区"""

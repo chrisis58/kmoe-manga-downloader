@@ -7,6 +7,7 @@ import asyncio
 from .defaults import Configurer
 from .structure import Credential, CredentialStatus, QuotaInfo
 from .console import debug
+from .utils import calc_reset_time
 
 UNLIMITED_WORKERS = 99999
 """不限制并发下载数的标记值"""
@@ -116,6 +117,47 @@ class CredentialPool:
         creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
         return sorted(creds, key=lambda x: x.order)
 
+    def pooled_refresh_candidates(self, max_workers: int = UNLIMITED_WORKERS) -> list['PooledCredential']:
+        return [self.get_pooled(candidate, max_workers) for candidate in self.refresh_candidates]        
+    
+    @property
+    def refresh_candidates(self) -> list[Credential]:
+        """
+        返回所有需要更新额度信息的凭证列表。
+        判定标准：
+        1. 累计未同步流量超过 50MB
+        2. 状态为配额耗尽(QUOTA_EXCEEDED) 且 上次更新时间早于最近一次重置日
+        """
+        candidates = []
+        now_ts = time.time()
+
+        for pooled_cred in self._pooled_map.values():
+            cred = pooled_cred.inner
+
+            unsynced = cred.user_quota.unsynced_usage + (cred.vip_quota.unsynced_usage if cred.vip_quota else 0.0)
+
+            if unsynced > 50.0:
+                candidates.append(cred)
+                continue
+
+            if cred.status == CredentialStatus.QUOTA_EXCEEDED:
+                if self.__should_refresh_quota(now_ts, cred.user_quota) \
+                    or self.__should_refresh_quota(now_ts, cred.vip_quota):
+                    # 如果有任何一项配额在上次更新时间后经过了重置日，则加入更新列表
+                    candidates.append(cred)
+                    continue
+
+        return candidates
+    
+    def __should_refresh_quota(self, now_ts: float, quota: Optional[QuotaInfo]) -> bool:
+        """判断指定的配额信息是否需要刷新"""
+        if quota is None:
+            return False
+        if not quota.update_at:
+            return True
+        reset_timestamp = calc_reset_time(quota.reset_day, quota.update_at)
+        return now_ts >= reset_timestamp
+
     def get_next(self, max_workers: int = UNLIMITED_WORKERS, max_recursion_depth: int = 3) -> Optional['PooledCredential']:
         """
         获取下一个可用的 PooledCredential 实例。
@@ -167,7 +209,10 @@ class PooledCredential:
             self._cred.vip_quota.reserved = 0.0
 
         self.update_lock = asyncio.Lock()
+        """用于更新凭证信息的异步锁,避免多个协程重复更新"""
+
         self.download_semaphore: asyncio.Semaphore = asyncio.Semaphore(max_workers)
+        """用于限制当前凭证的并发下载数的信号量"""
 
     @property
     def inner(self) -> Credential:
