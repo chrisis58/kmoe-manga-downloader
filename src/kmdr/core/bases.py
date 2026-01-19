@@ -52,7 +52,7 @@ class Authenticator(SessionContext, ConfigContext, TerminalContext):
 
                 # 保存凭证信息
                 if self._auto_save:
-                    self._configurer.save_credential(cred)
+                    self._configurer.save_credential(cred, as_primary=True)
                 return cred
             except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
