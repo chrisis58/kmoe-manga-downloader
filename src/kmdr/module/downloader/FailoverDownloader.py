@@ -84,15 +84,15 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             raise NoCandidateCredentialError("凭证池中没有可用的凭证。")
 
         while attempts < max_attempts:
+            if attempts > 0:
+                # 重试时才切换凭证
+                pooled_cred = self._pool.get_next(max_workers=self._num_workers_per_cred)
+                if not pooled_cred:
+                    raise NoCandidateCredentialError("凭证池已耗尽，无法继续下载。")
+                debug("尝试使用账号", pooled_cred.inner.username, "进行卷", volume.name, "的下载...")
+
             async with pooled_cred.download_semaphore:
                 attempts += 1
-
-                if attempts > 1:
-                    # 重试时才切换凭证
-                    pooled_cred = self._pool.get_next(max_workers=self._num_workers_per_cred)
-                    if not pooled_cred:
-                        raise NoCandidateCredentialError("凭证池已耗尽，无法继续下载。")
-                    debug("尝试使用账号", pooled_cred.inner.username, "进行卷", volume.name, "的下载...")
 
                 if pooled_cred.inner.quota_remaining < required_size:
                     # 如果当前凭证余额不足以支付下载，跳过
@@ -139,7 +139,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     info(f"下载卷 {volume.name} 时，账号 {pooled_cred.inner.username} 遇到无法处理的异常。")
                     raise
 
-            raise NoCandidateCredentialError(f"尝试了 {attempts} 次，无可用的凭证进行下载。")
+        raise NoCandidateCredentialError(f"尝试了 {attempts} 次，无可用的凭证进行下载。")
 
 
     async def __refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
