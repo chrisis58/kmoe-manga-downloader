@@ -14,14 +14,12 @@ UNLIMITED_WORKERS = 99999
 class CredentialPool:
     def __init__(self, 
             config: Configurer,
-            max_workers_per_cred: int = UNLIMITED_WORKERS,
     ):
         self._config = config
         self._cycle_iterator: Optional[Iterator[Credential]] = None
         self._active_count: int = 0
 
         self._pooled_map: dict[str, PooledCredential] = {}
-        self._max_workers_per_cred = max_workers_per_cred
 
     @property
     def pool(self) -> list[Credential]:
@@ -118,7 +116,15 @@ class CredentialPool:
         creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
         return sorted(creds, key=lambda x: x.order)
 
-    def get_next(self, max_recursion_depth: int = 3) -> Optional['PooledCredential']:
+    def get_next(self, max_workers: int = UNLIMITED_WORKERS, max_recursion_depth: int = 3) -> Optional['PooledCredential']:
+        """
+        获取下一个可用的 PooledCredential 实例。
+        
+        :param max_workers: 每个凭证允许的最大并发下载数
+        :param max_recursion_depth: 最大递归深度，防止无限递归，不建议修改
+        :return: 下一个可用的 PooledCredential 实例，若无可用则返回 None
+        """
+
         if max_recursion_depth <= 0:
             return None
 
@@ -136,16 +142,16 @@ class CredentialPool:
             if raw_cred.status != CredentialStatus.ACTIVE:
                 continue
 
-            return self.get_pooled(raw_cred)
+            return self.get_pooled(raw_cred, max_workers)
         
         self._refresh_iterator()
-        return self.get_next(max_recursion_depth - 1)
+        return self.get_next(max_workers, max_recursion_depth - 1)
 
-    def get_pooled(self, cred: Credential) -> 'PooledCredential':
+    def get_pooled(self, cred: Credential, max_workers: int) -> 'PooledCredential':
         key = cred.username
         
         if key not in self._pooled_map:
-            self._pooled_map[key] = PooledCredential(cred, self._max_workers_per_cred)
+            self._pooled_map[key] = PooledCredential(cred, max_workers)
             
         elif self._pooled_map[key].inner is not cred:
             self._pooled_map[key].update_cred(cred)

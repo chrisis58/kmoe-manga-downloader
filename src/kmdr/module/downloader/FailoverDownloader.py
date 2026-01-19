@@ -47,7 +47,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         max_attempts = max(1, self._pool.active_count * 2)
         attempts = 0
 
-        pooled_cred = self._pool.get_pooled(cred)
+        pooled_cred = self._pool.get_pooled(cred, self._num_workers_per_cred)
 
         while attempts < max_attempts:
             async with pooled_cred.download_semaphore:
@@ -55,7 +55,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
                 if attempts > 1:
                     # 重试时才切换凭证
-                    pooled_cred = self._pool.get_next()
+                    pooled_cred = self._pool.get_next(max_workers=self._num_workers_per_cred)
                     if not pooled_cred:
                         raise RuntimeError("凭证池已耗尽，无法继续下载。")
                     debug("尝试使用账号", pooled_cred.inner.username, "进行卷", volume.name, "的下载...")
