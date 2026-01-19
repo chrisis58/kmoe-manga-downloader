@@ -1,4 +1,4 @@
-from kmdr.core.context import ConfigContext
+from kmdr.core.context import CredentialPoolContext
 from kmdr.core.bases import DOWNLOADER, Downloader
 from kmdr.core.error import LoginError
 from kmdr.core.structure import BookInfo, Credential, VolInfo, CredentialStatus
@@ -13,12 +13,11 @@ from kmdr.module.authenticator.utils import check_status
     hasvalues={'use_pool': True},
     order=-99, # 确保优先匹配
 )
-class FailoverDownloader(Downloader, ConfigContext):
+class FailoverDownloader(Downloader, CredentialPoolContext):
     """实现了故障转移的下载器，根据用户选择的下载方法，委托给具体的下载器实现。"""
 
     def __init__(self, method: int, num_workers: int = 8, per_cred_ratio: float = 1.0, *args, **kwargs):
         super().__init__(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
-        self._pool = CredentialPool(self._configurer)
 
         self._num_workers_per_cred = max(1, int(num_workers * per_cred_ratio))
 

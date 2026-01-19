@@ -151,6 +151,7 @@ class Configurer:
                 config = json.load(f)
 
             self._config = Config()
+            self._config.username = config.get('username', None)
             option = config.get('option', None)
             if option is not None and isinstance(option, dict):
                 self._config.option = option
@@ -262,6 +263,30 @@ class Configurer:
             return
         
         del self._config.option[key]
+        self.update()
+
+    def save_credential(self, cred: Credential, as_primary: bool = False) -> None:
+        """
+        保存凭证到配置文件中的凭证池中。
+        
+        :param cred: 要保存的凭证对象
+        :param as_primary: 是否将该凭证设置为主凭证
+        """
+
+        if as_primary:
+            self._config.cookie = cred.cookies
+            self._config.username = cred.username
+
+        if self._config.cred_pool is None:
+            self._config.cred_pool = []
+
+        for idx, c in enumerate(self._config.cred_pool):
+            if c.username == cred.username:
+                self._config.cred_pool[idx] = cred
+                self.update()
+                return
+
+        self._config.cred_pool.append(cred)
         self.update()
 
 def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace:

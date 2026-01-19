@@ -16,8 +16,8 @@ from .utils import check_status
     hasvalues = {'command': 'login'}
 )
 class LoginAuthenticator(Authenticator):
-    def __init__(self, username: str, proxy: Optional[str] = None, password: Optional[str] = None, show_quota = True, *args, **kwargs):
-        super().__init__(proxy, *args, **kwargs)
+    def __init__(self, username: str, password: Optional[str] = None, show_quota = True, auto_save: bool = True, *args, **kwargs):
+        super().__init__(auto_save=auto_save, *args, **kwargs)
         self._username = username
         self._show_quota = show_quota
 
@@ -61,10 +61,5 @@ class LoginAuthenticator(Authenticator):
                 cookies=cookies,
                 show_quota=self._show_quota
             )
-            self._credential = cred
 
-            # 这里不调用 setter, 在两个字段都更新后手动更新
-            self._configurer.config.cookie = cred.cookies
-            self._configurer.config.username = cred.username
-            self._configurer.update()
             return cred
