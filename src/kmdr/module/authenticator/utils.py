@@ -10,7 +10,7 @@ from kmdr.core.error import LoginError
 from kmdr.core.utils import async_retry, extract_cookies
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.console import *
-from kmdr.core.structure import Credential, QuotaInfo
+from kmdr.core.structure import Credential, QuotaInfo, CredentialStatus
 
 NICKNAME_ID = 'div_nickname_display'
 
@@ -70,6 +70,9 @@ async def check_status(
                 info(f"当前登录为 {nickname}")
 
         user_quota, vip_quota = extract_quota(soup)
+
+        total_remaining = user_quota.total - user_quota.used + (vip_quota.total - vip_quota.used if vip_quota else 0.0)
+        debug(f"用户 {username} 当前剩余额度: {total_remaining:.2f} MB")
         
         return Credential(
             username=username,
@@ -78,6 +81,7 @@ async def check_status(
             user_quota=user_quota,
             vip_quota=vip_quota,
             level=user_level or 0,
+            status=CredentialStatus.ACTIVE if total_remaining > 0.1 else CredentialStatus.QUOTA_EXCEEDED,
         )
 
 def extract_var_define(script_text) -> dict[str, str]:
