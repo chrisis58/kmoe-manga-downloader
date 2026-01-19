@@ -70,7 +70,7 @@ def argument_parser():
     download_parser.add_argument('--disable-multi-part', action='store_true', help='禁用分片下载，优先级高于尝试启用分片下载选项')
     download_parser.add_argument('--try-multi-part', action='store_true', help='尝试启用分片下载')
     download_parser.add_argument('--fake-ua', action='store_true', help='使用随机的 User-Agent 进行请求')
-    # download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
+    download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
