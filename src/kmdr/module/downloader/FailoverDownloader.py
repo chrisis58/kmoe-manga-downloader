@@ -44,7 +44,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         required_size = volume.size or 0.0
 
         # 给予足够的重试次数 (池子大小 * 2)，确保能轮询所有账号
-        max_attempts = max(1, self._pool._active_count * 2)
+        max_attempts = max(1, self._pool.active_count * 2)
         attempts = 0
 
         pooled_cred = self._pool.get_pooled(cred)
@@ -58,6 +58,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     pooled_cred = self._pool.get_next()
                     if not pooled_cred:
                         raise RuntimeError("凭证池已耗尽，无法继续下载。")
+                    debug("尝试使用账号", pooled_cred.inner.username, "进行卷", volume.name, "的下载...")
 
                 if pooled_cred.inner.quota_remaining < required_size:
                     # 如果当前凭证余额不足以支付下载，跳过
@@ -101,6 +102,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
                 except Exception:
                     pooled_cred.rollback(required_size)
+                    info(f"下载卷 {volume.name} 时，账号 {pooled_cred.inner.username} 遇到无法处理的异常。")
                     raise
 
             raise RuntimeError(f"尝试了 {attempts} 次，无可用的凭证下载卷: {volume.name}")

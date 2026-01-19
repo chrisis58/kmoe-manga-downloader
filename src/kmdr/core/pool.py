@@ -6,6 +6,7 @@ import asyncio
 
 from .defaults import Configurer
 from .structure import Credential, CredentialStatus, QuotaInfo
+from .console import debug
 
 UNLIMITED_WORKERS = 99999
 """不限制并发下载数的标记值"""
@@ -29,11 +30,18 @@ class CredentialPool:
 
     def _refresh_iterator(self):
         active = self.active_creds
+        debug("凭证池活跃账号数：", len(active))
         self._active_count = len(active)
         if active:
             self._cycle_iterator = itertools.cycle(active)
         else:
             self._cycle_iterator = None
+
+    @property
+    def active_count(self) -> int:
+        if self._cycle_iterator is None:
+            self._refresh_iterator()
+        return self._active_count
     
     def find(self, username: str) -> Optional[Credential]:
         """根据用户名查找对应的凭证"""
