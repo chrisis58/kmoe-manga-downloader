@@ -33,14 +33,8 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             self._delegate = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
 
 
-    async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
-        await super().download(cred, book, volumes)
-
-
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
-        """
-        单卷下载逻辑 (封装了 Failover)。
-        """
+        """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
         required_size = volume.size or 0.0
 
         # 给予足够的重试次数 (池子大小 * 2)，确保能轮询所有账号
