@@ -2,7 +2,7 @@ from kmdr.core.context import CredentialPoolContext
 from kmdr.core.bases import DOWNLOADER, Downloader
 from kmdr.core.error import LoginError
 from kmdr.core.structure import BookInfo, Credential, VolInfo, CredentialStatus
-from kmdr.core.pool import CredentialPool, PooledCredential
+from kmdr.core.pool import PooledCredential
 from kmdr.core.console import debug, info
 from kmdr.core.error import QuotaExceededError
 
@@ -26,12 +26,18 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
         if method == 2:
             from .DirectDownloader import DirectDownloader
-            self._delegate = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+            self._delegate: Downloader = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
         else:
             # 默认使用 ReferViaDownloader
             from .ReferViaDownloader import ReferViaDownloader
-            self._delegate = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
-
+            self._delegate: Downloader = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+    
+    async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
+        try:
+            await super().download(cred, book, volumes)
+        finally:
+            # 持久化更新后的凭证池状态
+            self._configurer.update()
 
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
@@ -41,7 +47,13 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         max_attempts = max(1, self._pool.active_count * 2)
         attempts = 0
 
-        pooled_cred = self._pool.get_pooled(cred, self._num_workers_per_cred)
+        # 如果默认的凭证可用，优先使用它
+        pooled_cred = self._pool.get_pooled(cred, self._num_workers_per_cred) \
+            if cred.status == CredentialStatus.ACTIVE \
+            else self._pool.get_next(max_workers=self._num_workers_per_cred)
+        
+        if not pooled_cred:
+            raise RuntimeError("没有可用的凭证进行下载。")
 
         while attempts < max_attempts:
             async with pooled_cred.download_semaphore:
