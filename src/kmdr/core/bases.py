@@ -99,10 +99,11 @@ class Downloader(SessionContext, TerminalContext):
             return
         
         total_size = sum(v.size or 0 for v in volumes)
-        if total_size > cred.quota_remaining:
+        avai = self._avai_quota(cred)
+        if avai < total_size:
             if self._console.is_interactive:
                 should_continue = Confirm.ask(
-                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
+                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
                     default=False
                 )
                 
@@ -110,7 +111,7 @@ class Downloader(SessionContext, TerminalContext):
                     info("用户取消下载。")
                     return
             else:
-                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。[/red]")
+                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。[/red]")
 
         try:
             with self._progress:
@@ -128,8 +129,13 @@ class Downloader(SessionContext, TerminalContext):
             await asyncio.sleep(0.01)
             raise
 
+    def _avai_quota(self, cred: Credential) -> float:
+        """计算并返回指定 Credential 的可用额度（单位：MB）"""
+        return cred.quota_remaining
+
     @abstractmethod
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo): ...
+
 
 SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')

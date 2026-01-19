@@ -38,6 +38,13 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         finally:
             # 持久化更新后的凭证池状态
             self._configurer.update()
+    
+    def _avai_quota(self, cred: Credential) -> float:
+        """
+        计算并返回指定 Credential 在凭证池中的可用额度（单位：MB）
+        """
+        pooled_avai = sum([pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username])
+        return cred.quota_remaining + pooled_avai
 
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
