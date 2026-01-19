@@ -206,11 +206,23 @@ class PooledCredential:
         if self._cred.vip_quota:
             self._cred.vip_quota.reserved = 0.0
 
-        self.update_lock = asyncio.Lock()
-        """用于更新凭证信息的异步锁,避免多个协程重复更新"""
+        self._max_workers = max_workers
+        self._update_lock = None
+        self._download_semaphore = None
 
-        self.download_semaphore: asyncio.Semaphore = asyncio.Semaphore(max_workers)
+    @property
+    def update_lock(self) -> asyncio.Lock:
+        """用于更新凭证信息的异步锁,避免多个协程重复更新"""
+        if self._update_lock is None:
+            self._update_lock = asyncio.Lock()
+        return self._update_lock
+    
+    @property
+    def download_semaphore(self) -> asyncio.Semaphore:
         """用于限制当前凭证的并发下载数的信号量"""
+        if self._download_semaphore is None:
+            self._download_semaphore = asyncio.Semaphore(self._max_workers)
+        return self._download_semaphore
 
     @property
     def inner(self) -> Credential:
