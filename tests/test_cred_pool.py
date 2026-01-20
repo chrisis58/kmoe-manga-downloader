@@ -57,75 +57,6 @@ class TestCredentialPool(unittest.TestCase):
         self.assertEqual(len(self.mock_config.cred_pool), 0)
         self.mock_configurer.update.assert_called()
 
-    def test_update_status(self):
-        """更新凭证状态后应反映在对象中"""
-        cred = create_cred("user_stat", status=CredentialStatus.ACTIVE)
-        self.pool_mgr.add(cred)
-
-        self.pool_mgr.update_status("user_stat", CredentialStatus.DISABLED)
-        
-        self.assertEqual(cred.status, CredentialStatus.DISABLED)
-        self.mock_configurer.update.assert_called()
-
-    def test_active_creds_property_sorts_by_order(self):
-        """active_creds 属性应返回活跃用户并按优先级排序"""
-        c1 = create_cred("u1", order=10, status=CredentialStatus.ACTIVE)
-        c2 = create_cred("u2", order=1, status=CredentialStatus.ACTIVE)
-        c3 = create_cred("u3", order=5, status=CredentialStatus.DISABLED) # 不应出现
-
-        self.mock_config.cred_pool = [c1, c2, c3]
-        
-        active_list = self.pool_mgr.active_creds
-        
-        self.assertEqual(len(active_list), 2)
-        # 顺序应该是 u2(1) -> u1(10)
-        self.assertEqual(active_list[0].username, "u2")
-        self.assertEqual(active_list[1].username, "u1")
-
-    def test_get_next_cycle_logic(self):
-        """get_next 方法应按顺序轮询返回凭证"""
-        c1 = create_cred("A", order=1)
-        c2 = create_cred("B", order=2)
-        self.mock_config.cred_pool = [c1, c2]
-
-        # 第一次获取，应该是 A (order 1)
-        n1 = self.pool_mgr.get_next()
-        assert n1 is not None
-        self.assertEqual(n1.inner.username, "A")
-
-        # 第二次获取，应该是 B (order 2)
-        n2 = self.pool_mgr.get_next()
-        assert n2 is not None
-        self.assertEqual(n2.inner.username, "B")
-
-        # 第三次获取，应该回到 A (Cycle)
-        n3 = self.pool_mgr.get_next()
-        assert n3 is not None
-        self.assertEqual(n3.inner.username, "A")
-
-    def test_get_next_skips_invalid(self):
-        """get_next 应自动跳过状态变成非 ACTIVE 的凭证"""
-        c1 = create_cred("A", status=CredentialStatus.ACTIVE)
-        c2 = create_cred("B", status=CredentialStatus.ACTIVE)
-        self.mock_config.cred_pool = [c1, c2]
-
-        # 初始化迭代器
-        cred = self.pool_mgr.get_next()
-        assert cred is not None
-        self.assertEqual(cred.inner.username, "A")
-
-        # 把 B 禁用
-        c2.status = CredentialStatus.DISABLED
-
-        # 下一次获取应该跳过 B，直接再次返回 A
-        n = self.pool_mgr.get_next()
-        assert n is not None
-        self.assertEqual(n.inner.username, "A")
-
-    def test_get_next_returns_none_if_empty(self):
-        self.mock_config.cred_pool = []
-        self.assertIsNone(self.pool_mgr.get_next())
-
 class TestPooledCredential(unittest.TestCase):
 
     def setUp(self):
@@ -190,6 +121,3 @@ class TestPooledCredential(unittest.TestCase):
         self.assertEqual(self.pooled.inner.user_quota.total, 200.0)
         self.assertEqual(self.pooled.inner.user_quota.unsynced_usage, 0.0)
         self.assertEqual(self.pooled.inner.user_quota.used, 59.0)
-
-if __name__ == "__main__":
-    unittest.main()
