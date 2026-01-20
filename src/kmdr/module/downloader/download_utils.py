@@ -393,9 +393,9 @@ async def _download_part(
                 log("分片", os.path.basename(part_path), "下载完成。")
             return
         
-        except RangeNotSupportedError:
+        except (RangeNotSupportedError, QuotaExceededError):
             raise
-    
+
         except asyncio.CancelledError:
             # 如果任务被取消，更新状态为已取消
             await state_manager.request_status_update(part_id=start, status=STATUS.CANCELLED)
