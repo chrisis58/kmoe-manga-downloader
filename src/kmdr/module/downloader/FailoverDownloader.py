@@ -71,33 +71,17 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
         required_size = volume.size or 0.0
 
-        # 给予足够的重试次数 (池子大小 * 2)，确保能轮询所有账号
-        max_attempts = max(1, self._pool.active_count * 2)
         attempts = 0
-
-        # 如果默认的凭证可用，优先使用它
-        pooled_cred = self._pool.get_pooled(cred, self._num_workers_per_cred) \
-            if cred.status == CredentialStatus.ACTIVE \
-            else self._pool.get_next(max_workers=self._num_workers_per_cred)
-        
-        if not pooled_cred:
-            raise NoCandidateCredentialError("凭证池中没有可用的凭证。")
-
-        while attempts < max_attempts:
-            if attempts > 0:
-                # 重试时才切换凭证
-                pooled_cred = self._pool.get_next(max_workers=self._num_workers_per_cred)
-                if not pooled_cred:
-                    raise NoCandidateCredentialError("凭证池已耗尽，无法继续下载。")
-                debug("尝试使用账号", pooled_cred.inner.username, "进行卷", volume.name, "的下载...")
-
+        for pooled_cred in self._pool.get_tiered_candidates(preferred_cred=cred, max_workers=self._num_workers_per_cred):
             async with pooled_cred.download_semaphore:
                 attempts += 1
 
                 if pooled_cred.inner.quota_remaining < required_size:
+                    await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
                     # 如果当前凭证余额不足以支付下载，跳过
-                    debug(f"账号", pooled_cred.inner.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.inner.quota_remaining, "MB")
-                    continue
+                    if pooled_cred.inner.quota_remaining < required_size:
+                        debug(f"账号", pooled_cred.inner.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.inner.quota_remaining, "MB")
+                        continue
 
                 if pooled_cred.inner.status == CredentialStatus.INVALID:
                     continue
@@ -122,7 +106,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                         continue
 
                     if pooled_cred.inner.quota_remaining < 0.1:
-                        self._pool.update_status(pooled_cred.inner.username, CredentialStatus.QUOTA_EXCEEDED)
+                        pooled_cred.inner.status = CredentialStatus.QUOTA_EXCEEDED
                     else:
                         info(f"账号 {pooled_cred.inner.username} 更新后余额 {pooled_cred.inner.quota_remaining:.2f}MB，仍不足以支付 ({required_size:.2f}MB)")
 
@@ -131,7 +115,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                 except LoginError:
                     pooled_cred.rollback(required_size)
                     info(f"账号 {pooled_cred.inner.username} 登录失效。")
-                    self._pool.update_status(pooled_cred.inner.username, CredentialStatus.INVALID)
+                    pooled_cred.inner.status = CredentialStatus.INVALID
                     continue
 
                 except Exception:
@@ -170,4 +154,4 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         except Exception as e:
             info(f"同步账号 {pooled_cred.inner.username} 失败")
             debug("错误信息:", e)
-            self._pool.update_status(pooled_cred.inner.username, CredentialStatus.INVALID)
+            pooled_cred.inner.status = CredentialStatus.INVALID

@@ -1,6 +1,6 @@
+from collections import defaultdict
 import time
 from typing import Iterator, Optional
-import itertools
 
 import asyncio
 
@@ -21,26 +21,17 @@ class CredentialPool:
         self._active_count: int = 0
 
         self._pooled_map: dict[str, PooledCredential] = {}
+        self._rr_counters: Optional[defaultdict[int, int]] = None
+        self._tiered_groups: Optional[defaultdict[int, list[Credential]]] = None
 
     @property
     def pool(self) -> list[Credential]:
         """返回当前的凭证池列表"""
         return self._config.config.cred_pool or []
 
-    def _refresh_iterator(self):
-        active = self.active_creds
-        debug("凭证池活跃账号数：", len(active))
-        self._active_count = len(active)
-        if active:
-            self._cycle_iterator = itertools.cycle(active)
-        else:
-            self._cycle_iterator = None
-
     @property
     def active_count(self) -> int:
-        if self._cycle_iterator is None:
-            self._refresh_iterator()
-        return self._active_count
+        return len(self.active_creds)
     
     def find(self, username: str) -> Optional[Credential]:
         """根据用户名查找对应的凭证"""
@@ -56,7 +47,7 @@ class CredentialPool:
         
         self._config.config.cred_pool.append(cred)
         self._config.update()
-        self._refresh_iterator()
+        self.evict_iterator_cache()
 
     def check_duplicate(self, username: str) -> bool:
         """检查凭证池中是否已存在指定用户名的凭证"""
@@ -74,34 +65,7 @@ class CredentialPool:
             if cred.username == username:
                 self._config.config.cred_pool.remove(cred)
                 self._config.update()
-                self._refresh_iterator()
-                return True
-        return False
-
-    def update(self, cred: Credential) -> bool:
-        """更新指定用户名的凭证信息"""
-        if self._config.config.cred_pool is None:
-            return False
-        
-        for idx, cre in enumerate(self._config.config.cred_pool):
-            if cre.username == cred.username:
-                self._config.config.cred_pool[idx] = cred
-                self._config.update()
-                self._refresh_iterator()
-                return True
-        return False
-
-    def update_status(self, username: str, status: CredentialStatus) -> bool:
-        """更新指定用户名的凭证状态"""
-        if self._config.config.cred_pool is None:
-            return False
-        
-        for cred in self._config.config.cred_pool:
-            if cred.username == username:
-                if cred.status != status:
-                    cred.status = status
-                    self._config.update()
-                    self._refresh_iterator()
+                self.evict_iterator_cache(cred.username)
                 return True
         return False
 
@@ -109,29 +73,36 @@ class CredentialPool:
         """清空凭证池中的所有凭证"""
         self._config.config.cred_pool = []
         self._config.update()
-        self._refresh_iterator()
+        self.evict_iterator_cache()
 
     @property
     def active_creds(self) -> list[Credential]:
-        """返回所有状态为 ACTIVE 的凭证，按优先级排序"""
-        creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
-        return sorted(creds, key=lambda x: x.order)
+        """返回所有状态为 ACTIVE 的凭证"""
+        return [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
 
     def pooled_refresh_candidates(self, max_workers: int = UNLIMITED_WORKERS) -> list['PooledCredential']:
         return [self.get_pooled(candidate, max_workers) for candidate in self.refresh_candidates]        
-    
+
     @property
     def refresh_candidates(self) -> list[Credential]:
         """
         返回所有需要更新额度信息的凭证列表。
         判定标准：
-        1. 累计未同步流量超过 50MB
-        2. 状态为配额耗尽(QUOTA_EXCEEDED) 且 上次更新时间早于最近一次重置日
+        1. 超过 3 天未同步
+        2. 累计未同步流量超过 50MB
+        3. 状态为配额耗尽(QUOTA_EXCEEDED) 且 上次更新时间早于最近一次重置日
         """
         candidates = []
         now_ts = time.time()
 
         for cred in self.pool:
+            if cred.status == CredentialStatus.DISABLED:
+                continue
+
+            if cred.user_quota.update_at < time.time() - 3 * 3600 * 24:
+                candidates.append(cred)
+                continue
+
             unsynced = cred.user_quota.unsynced_usage + (cred.vip_quota.unsynced_usage if cred.vip_quota else 0.0)
 
             if unsynced > 50.0:
@@ -156,47 +127,71 @@ class CredentialPool:
         reset_timestamp = calc_reset_time(quota.reset_day, quota.update_at)
         return now_ts >= reset_timestamp
 
-    def get_next(self, max_workers: int = UNLIMITED_WORKERS, max_recursion_depth: int = 3) -> Optional['PooledCredential']:
-        """
-        获取下一个可用的 PooledCredential 实例。
-        
-        :param max_workers: 每个凭证允许的最大并发下载数
-        :param max_recursion_depth: 最大递归深度，防止无限递归，不建议修改
-        :return: 下一个可用的 PooledCredential 实例，若无可用则返回 None
-        """
-
-        if max_recursion_depth <= 0:
-            return None
-
-        if self._cycle_iterator is None:
-            self._refresh_iterator()
-
-        if self._cycle_iterator is None:
-            return None
-
-        max_attempts = max(1, self._active_count)
-        
-        for _ in range(max_attempts):
-            raw_cred = next(self._cycle_iterator)
-            
-            if raw_cred.status != CredentialStatus.ACTIVE:
-                continue
-
-            return self.get_pooled(raw_cred, max_workers)
-        
-        self._refresh_iterator()
-        return self.get_next(max_workers, max_recursion_depth - 1)
-
     def get_pooled(self, cred: Credential, max_workers: int) -> 'PooledCredential':
         key = cred.username
-        
+
         if key not in self._pooled_map:
             self._pooled_map[key] = PooledCredential(cred, max_workers)
-            
+
         elif self._pooled_map[key].inner is not cred:
             self._pooled_map[key].update_cred(cred)
 
         return self._pooled_map[key]
+    
+    def evict_iterator_cache(self, username: Optional[str] = None) -> None:
+        """清除轮询迭代器的缓存，强制在下一次获取时刷新"""
+        self._tiered_groups = None
+        self._rr_counters = None
+        if username:
+            self._pooled_map.pop(username, None)
+    
+    def get_tiered_candidates(self, preferred_cred: Optional[Credential] = None, max_workers: int = UNLIMITED_WORKERS) -> Iterator['PooledCredential']:
+        """
+        生成一个分层级的候选凭证迭代器。
+        逻辑：
+        1. 优先返回指定的 preferred_cred (粘滞会话)。
+        2. 然后按 Order 从小到大遍历。
+        3. 同一个 Order 内，使用 Round-Robin (轮转) 顺序返回。
+        """
+
+        if self._rr_counters is None:
+            # lazy init
+            self._rr_counters = defaultdict(int)
+
+        active_creds = [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
+
+        if not active_creds:
+            return
+
+        # 按 Order 分组
+        if self._tiered_groups is None:
+            self._tiered_groups = defaultdict(list)
+            for p_cred in active_creds:
+                self._tiered_groups[p_cred.order].append(p_cred)
+        tiered_groups = self._tiered_groups
+        sorted_orders = sorted(tiered_groups.keys())
+
+        # 粘滞优先
+        skipped_username = None
+        if preferred_cred:
+            pooled_cred = self.get_pooled(preferred_cred, max_workers)
+            if pooled_cred.inner.status == CredentialStatus.ACTIVE:
+                yield pooled_cred
+                skipped_username = preferred_cred.username
+
+        # 分层轮询
+        for order in sorted_orders:
+            group = tiered_groups[order]
+            
+            start_index = self._rr_counters[order] % len(group)
+            self._rr_counters[order] += 1
+
+            for i in range(len(group)):
+                # left rotate
+                index = (i + start_index) % len(group)
+                if skipped_username and group[index].username == skipped_username:
+                    continue
+                yield self.get_pooled(group[index], max_workers)
 
 class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
