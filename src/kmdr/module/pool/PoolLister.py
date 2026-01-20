@@ -74,13 +74,13 @@ class PoolLister(PoolManager):
 
     def _format_status(self, status: CredentialStatus) -> str:
         if status == CredentialStatus.ACTIVE:
-            return "[bold green]ACTIVE[/bold green]"
+            return "[bold green]正常[/bold green]"
         elif status == CredentialStatus.INVALID:
-            return "[bold red]INVALID[/bold red]"
+            return "[bold red]失效[/bold red]"
         elif status == CredentialStatus.QUOTA_EXCEEDED:
-            return "[yellow]EXCEEDED[/yellow]"
+            return "[yellow]配额耗尽[/yellow]"
         elif status == CredentialStatus.DISABLED:
-            return "[dim white]DISABLED[/dim white]"
+            return "[dim white]禁用[/dim white]"
         else:
             return f"[cyan]{status.name}[/cyan]"
 
