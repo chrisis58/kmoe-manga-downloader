@@ -222,10 +222,26 @@ class PooledCredential:
     @property
     def inner(self) -> Credential:
         return self._cred
+
+    @property
+    def username(self) -> str:
+        return self._cred.username
+
+    @property
+    def quota_remaining(self) -> float:
+        return self._cred.quota_remaining
     
-    @inner.setter
-    def inner(self, cred: Credential):
-        self._cred = cred
+    @property
+    def cookies(self) -> dict[str, str]:
+        return self._cred.cookies
+
+    @property
+    def status(self) -> CredentialStatus:
+        return self._cred.status
+    
+    @status.setter
+    def status(self, value: CredentialStatus):
+        self._cred.status = value
 
     def _get_target(self, is_vip: bool) -> Optional[QuotaInfo]:
         if is_vip and self._cred.vip_quota:

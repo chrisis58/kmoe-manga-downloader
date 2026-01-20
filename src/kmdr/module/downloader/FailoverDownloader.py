@@ -73,17 +73,18 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
         attempts = 0
         for pooled_cred in self._pool.get_tiered_candidates(preferred_cred=cred, max_workers=self._num_workers_per_cred):
+            debug("尝试使用账号", pooled_cred.username, "下载卷", volume.name)
             async with pooled_cred.download_semaphore:
                 attempts += 1
 
-                if pooled_cred.inner.quota_remaining < required_size:
+                if pooled_cred.quota_remaining < required_size:
                     await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
                     # 如果当前凭证余额不足以支付下载，跳过
-                    if pooled_cred.inner.quota_remaining < required_size:
-                        debug(f"账号", pooled_cred.inner.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.inner.quota_remaining, "MB")
+                    if pooled_cred.quota_remaining < required_size:
+                        debug("账号", pooled_cred.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.quota_remaining, "MB")
                         continue
 
-                if pooled_cred.inner.status == CredentialStatus.INVALID:
+                if pooled_cred.status == CredentialStatus.INVALID:
                     continue
 
                 try:
@@ -96,31 +97,31 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
                 except QuotaExceededError:
                     pooled_cred.rollback(required_size)
-                    info(f"[yellow]账号 {pooled_cred.inner.username} 提示额度不足，正在同步状态...[/yellow]")
+                    info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
                     # 在判断是否额度全部用尽前，先尝试同步状态                    
                     await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
 
-                    if pooled_cred.inner.status != CredentialStatus.ACTIVE:
-                        info(f"账号 {pooled_cred.inner.username} 状态已变更为 {pooled_cred.inner.status}，跳过。")
+                    if pooled_cred.status != CredentialStatus.ACTIVE:
+                        info(f"账号 {pooled_cred.username} 状态已变更为 {pooled_cred.status}，跳过。")
                         continue
 
-                    if pooled_cred.inner.quota_remaining < 0.1:
-                        pooled_cred.inner.status = CredentialStatus.QUOTA_EXCEEDED
+                    if pooled_cred.quota_remaining < 0.1:
+                        pooled_cred.status = CredentialStatus.QUOTA_EXCEEDED
                     else:
-                        info(f"账号 {pooled_cred.inner.username} 更新后余额 {pooled_cred.inner.quota_remaining:.2f}MB，仍不足以支付 ({required_size:.2f}MB)")
+                        info(f"账号 {pooled_cred.username} 更新后余额 {pooled_cred.quota_remaining:.2f}MB，仍不足以支付 ({required_size:.2f}MB)")
 
                     continue
 
                 except LoginError:
                     pooled_cred.rollback(required_size)
-                    info(f"账号 {pooled_cred.inner.username} 登录失效。")
-                    pooled_cred.inner.status = CredentialStatus.INVALID
+                    info(f"账号 {pooled_cred.username} 登录失效。")
+                    pooled_cred.status = CredentialStatus.INVALID
                     continue
 
                 except Exception:
                     pooled_cred.rollback(required_size)
-                    info(f"下载卷 {volume.name} 时，账号 {pooled_cred.inner.username} 遇到无法处理的异常。")
+                    info(f"下载卷 {volume.name} 时，账号 {pooled_cred.username} 遇到无法处理的异常。")
                     raise
 
         raise NoCandidateCredentialError(f"尝试了 {attempts} 次，无可用的凭证进行下载。")
@@ -128,30 +129,30 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
     async def __refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
         if pooled_cred.is_recently_synced():
-            debug("账号", pooled_cred.inner.username, "最近已同步，使用缓存数据。")
+            debug("账号", pooled_cred.username, "最近已同步，使用缓存数据。")
             return
 
         try:
             async with pooled_cred.update_lock:
                 # 双重检查
                 if pooled_cred.is_recently_synced():
-                    debug("账号", pooled_cred.inner.username, "已被同步，跳过请求。")
+                    debug("账号", pooled_cred.username, "已被同步，跳过请求。")
                     return
 
-                debug("正在从服务器同步账号", pooled_cred.inner.username, "的状态...")
+                debug("正在从服务器同步账号", pooled_cred.username, "的状态...")
 
                 async with semaphore:
                     new_info = await check_status(
                         session=self._session, 
                         console=self._console,
-                        username=pooled_cred.inner.username, 
-                        cookies=pooled_cred.inner.cookies
+                        username=pooled_cred.username, 
+                        cookies=pooled_cred.cookies
                     )
 
                 pooled_cred.update_cred(new_info, force=True)
-                debug("账号", pooled_cred.inner.username, "同步完成。剩余额度:", pooled_cred.inner.quota_remaining, "MB")
+                debug("账号", pooled_cred.username, "同步完成。剩余额度:", pooled_cred.quota_remaining, "MB")
                 return
         except Exception as e:
-            info(f"同步账号 {pooled_cred.inner.username} 失败")
+            info(f"同步账号 {pooled_cred.username} 失败")
             debug("错误信息:", e)
-            pooled_cred.inner.status = CredentialStatus.INVALID
+            pooled_cred.status = CredentialStatus.INVALID
