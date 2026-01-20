@@ -70,7 +70,7 @@ def argument_parser():
     download_parser.add_argument('--disable-multi-part', action='store_true', help='禁用分片下载，优先级高于尝试启用分片下载选项')
     download_parser.add_argument('--try-multi-part', action='store_true', help='尝试启用分片下载')
     download_parser.add_argument('--fake-ua', action='store_true', help='使用随机的 User-Agent 进行请求')
-    # download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
+    download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
@@ -151,6 +151,7 @@ class Configurer:
                 config = json.load(f)
 
             self._config = Config()
+            self._config.username = config.get('username', None)
             option = config.get('option', None)
             if option is not None and isinstance(option, dict):
                 self._config.option = option
@@ -262,6 +263,31 @@ class Configurer:
             return
         
         del self._config.option[key]
+        self.update()
+
+    def save_credential(self, cred: Credential, as_primary: bool = False) -> None:
+        """
+        保存凭证到配置文件中的凭证池中。<br/>
+        可能对凭证池不可见，如果要确保凭证池更新，应刷新凭证池实例。
+        
+        :param cred: 要保存的凭证对象
+        :param as_primary: 是否将该凭证设置为主凭证
+        """
+
+        if as_primary:
+            self._config.cookie = cred.cookies
+            self._config.username = cred.username
+
+        if self._config.cred_pool is None:
+            self._config.cred_pool = []
+
+        for idx, c in enumerate(self._config.cred_pool):
+            if c.username == cred.username:
+                self._config.cred_pool[idx] = cred
+                self.update()
+                return
+
+        self._config.cred_pool.append(cred)
         self.update()
 
 def __combine_args(dest: argparse.Namespace, option: dict) -> argparse.Namespace:

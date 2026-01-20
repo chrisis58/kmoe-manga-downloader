@@ -30,6 +30,7 @@ class PoolInsertionHandler(PoolManager):
                 username=self._username,
                 password=self._password,
                 show_quota=False,
+                auto_save=False,
             )
             cred = await authenticator.authenticate()
 

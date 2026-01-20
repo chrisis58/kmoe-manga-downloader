@@ -66,6 +66,8 @@ class Config:
     - num_workers: 下载时使用的线程数
     """
 
+    username: Optional[str] = None
+
     cookie: Optional[dict[str, str]] = None
 
     base_url: Optional[str] = None
@@ -136,7 +138,7 @@ class Credential:
 
     vip_quota: Optional[QuotaInfo] = None
 
-    order: int = 0
+    order: int = 1
 
     status: CredentialStatus = CredentialStatus.ACTIVE
 

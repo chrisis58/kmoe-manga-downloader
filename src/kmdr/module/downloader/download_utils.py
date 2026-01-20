@@ -14,7 +14,7 @@ from rich.progress import Progress
 from aiohttp.client_exceptions import ClientPayloadError
 
 from kmdr.core.console import info, log, debug
-from kmdr.core.error import RangeNotSupportedError
+from kmdr.core.error import RangeNotSupportedError, QuotaExceededError
 from kmdr.core.utils import async_retry, sanitize_headers
 
 from .misc import STATUS, StateManager
@@ -125,6 +125,10 @@ async def download_file(
             if task_id is not None:
                 progress.update(task_id, status=STATUS.CANCELLED.value)
             raise
+
+        except QuotaExceededError as e:
+            # 如果是配额用尽错误，直接抛出，不进行重试
+            raise e
         
         except Exception as e:
             if attempts_left > 0:
@@ -389,9 +393,9 @@ async def _download_part(
                 log("分片", os.path.basename(part_path), "下载完成。")
             return
         
-        except RangeNotSupportedError:
+        except (RangeNotSupportedError, QuotaExceededError):
             raise
-    
+
         except asyncio.CancelledError:
             # 如果任务被取消，更新状态为已取消
             await state_manager.request_status_update(part_id=start, status=STATUS.CANCELLED)

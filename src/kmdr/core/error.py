@@ -66,3 +66,24 @@ class RangeNotSupportedError(KmdrError):
 
     def __str__(self):
         return f"不支持分片下载：{self.message} (Content-Range: {self.content_range})" if self.content_range is not None else f"不支持分片下载：{self.message}"
+
+class NotInteractableError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"当前环境不支持交互式输入：{self.message}"
+
+class QuotaExceededError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"配额用尽：{self.message}"
+
+class NoCandidateCredentialError(KmdrError):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"没有可用的凭证：{self.message}"

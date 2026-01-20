@@ -19,7 +19,9 @@ class PoolCredSwitcher(PoolManager):
             return
 
         try:
-            self._configurer.cookie = cred.cookies
+            self._configurer.config.cookie = cred.cookies
+            self._configurer.config.username = cred.username
+            self._configurer.update()
         except Exception as e:
             info(f"[red]设置默认账号失败: {e}[/red]")
             return

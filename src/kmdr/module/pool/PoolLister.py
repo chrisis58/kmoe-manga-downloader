@@ -28,21 +28,21 @@ class PoolLister(PoolManager):
 
     
     async def operate(self) -> None:
-        credentials = self._pool.pool
-
-        if not credentials:
+        if not self._pool.pool:
             info("凭证池为空, 请先使用 'kmdr pool add' 命令添加凭证。")
             return
 
-        if not self.__refresh:
+        candidates = self._pool.pool if self.__refresh else self._pool.refresh_candidates
+        debug("需要刷新的凭证数：", len(candidates))
+        if not candidates:
             self._console.print(self._generate_table())
-            info("剩余可用总额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
+            info("剩余可用总额度: ", str(sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)), " MB")
             return
 
         # 耗时操作，刷新所有凭证状态
         async with (await KmdrSessionManager().session()) as session:
 
-            self._updating_users = {c.username for c in credentials}
+            self._updating_users = {c.username for c in candidates}
             
             semaphore = asyncio.Semaphore(self.__num_workers)
 
@@ -50,7 +50,7 @@ class PoolLister(PoolManager):
                 
                 tasks = [
                     self._check_and_update_single(session, cred, semaphore) 
-                    for cred in credentials
+                    for cred in candidates
                 ]
                 
                 for future in asyncio.as_completed(tasks):
@@ -58,10 +58,10 @@ class PoolLister(PoolManager):
                     self._updating_users.remove(updated_cred.username)
                     live.update(self._generate_table())
 
-        info("剩余可用总额度: ", str(sum(c.quota_remaining for c in credentials if c.status == CredentialStatus.ACTIVE)), " MB")
+        info("剩余可用总额度: ", str(sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)), " MB")
         try:
             self._configurer.update()
-            debug("[green]已更新", len(credentials), "个凭证。[/green]")
+            debug("[green]已更新", len(candidates), "个凭证。[/green]")
         except Exception as e:
             info(f"[red]保存配置文件失败: {e}[/red]")
 
@@ -74,13 +74,13 @@ class PoolLister(PoolManager):
 
     def _format_status(self, status: CredentialStatus) -> str:
         if status == CredentialStatus.ACTIVE:
-            return "[bold green]ACTIVE[/bold green]"
+            return "[bold green]正常[/bold green]"
         elif status == CredentialStatus.INVALID:
-            return "[bold red]INVALID[/bold red]"
+            return "[bold red]失效[/bold red]"
         elif status == CredentialStatus.QUOTA_EXCEEDED:
-            return "[yellow]EXCEEDED[/yellow]"
+            return "[yellow]配额耗尽[/yellow]"
         elif status == CredentialStatus.DISABLED:
-            return "[dim white]DISABLED[/dim white]"
+            return "[dim white]禁用[/dim white]"
         else:
             return f"[cyan]{status.name}[/cyan]"
 

@@ -11,9 +11,8 @@ from .registry import Registry
 from .structure import VolInfo, BookInfo, Credential
 from .utils import construct_callback, async_retry
 from .protocol import AsyncCtxManager
-from .pool import CredentialPool
 
-from .context import TerminalContext, SessionContext, ConfigContext
+from .context import TerminalContext, SessionContext, ConfigContext, CredentialPoolContext
 
 class Configurer(ConfigContext, TerminalContext):
 
@@ -23,11 +22,10 @@ class Configurer(ConfigContext, TerminalContext):
     @abstractmethod
     def operate(self) -> None: ...
 
-class PoolManager(ConfigContext, TerminalContext):
+class PoolManager(CredentialPoolContext, TerminalContext):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pool = CredentialPool(self._configurer)
 
     @abstractmethod
     async def operate(self) -> None: ...
@@ -42,18 +40,19 @@ class SessionManager(SessionContext, ConfigContext, TerminalContext):
 
 class Authenticator(SessionContext, ConfigContext, TerminalContext):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, auto_save: bool, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._auto_save = auto_save
 
-    # 在使用代理登录时，可能会出现问题，但是现在还不清楚是不是代理的问题。
-    # 主站正常情况下不使用代理也能登录成功。但是不排除特殊的网络环境下需要代理。
-    # 所以暂时保留代理登录的功能，如果后续确认是代理的问题，可以考虑启用 @no_proxy 装饰器。
-    # @no_proxy
     async def authenticate(self) -> Credential:
         with self._console.status("认证中..."):
             try:
                 cred = await async_retry()(self._authenticate)()
                 assert cred is not None
+
+                # 保存凭证信息
+                if self._auto_save:
+                    self._configurer.save_credential(cred, as_primary=True)
                 return cred
             except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
@@ -100,10 +99,11 @@ class Downloader(SessionContext, TerminalContext):
             return
         
         total_size = sum(v.size or 0 for v in volumes)
-        if total_size > cred.quota_remaining:
+        avai = self._avai_quota(cred)
+        if avai < total_size:
             if self._console.is_interactive:
                 should_continue = Confirm.ask(
-                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
+                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
                     default=False
                 )
                 
@@ -111,7 +111,7 @@ class Downloader(SessionContext, TerminalContext):
                     info("用户取消下载。")
                     return
             else:
-                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {cred.quota_remaining:.2f} MB，可能无法正常完成下载。[/red]")
+                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。[/red]")
 
         try:
             with self._progress:
@@ -129,8 +129,13 @@ class Downloader(SessionContext, TerminalContext):
             await asyncio.sleep(0.01)
             raise
 
+    def _avai_quota(self, cred: Credential) -> float:
+        """计算并返回指定 Credential 的可用额度（单位：MB）"""
+        return cred.quota_remaining
+
     @abstractmethod
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo): ...
+
 
 SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
 AUTHENTICATOR = Registry[Authenticator]('Authenticator')

@@ -7,6 +7,7 @@ from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
 from kmdr.core.constants import API_ROUTE, LoginResponse
 from kmdr.core.structure import Credential
 from kmdr.core.utils import extract_cookies
+from kmdr.core.error import NotInteractableError
 
 from .utils import check_status
 
@@ -15,12 +16,14 @@ from .utils import check_status
     hasvalues = {'command': 'login'}
 )
 class LoginAuthenticator(Authenticator):
-    def __init__(self, username: str, proxy: Optional[str] = None, password: Optional[str] = None, show_quota = True, *args, **kwargs):
-        super().__init__(proxy, *args, **kwargs)
+    def __init__(self, username: str, password: Optional[str] = None, show_quota = True, auto_save: bool = True, *args, **kwargs):
+        super().__init__(auto_save=auto_save, *args, **kwargs)
         self._username = username
         self._show_quota = show_quota
 
         if password is None:
+            if not self._console.is_interactive:
+                raise NotInteractableError("无法获取密码，请通过命令行参数提供密码。")
             password = Prompt.ask("请输入密码", password=True, console=self._console)
 
         self._password = password
@@ -58,6 +61,5 @@ class LoginAuthenticator(Authenticator):
                 cookies=cookies,
                 show_quota=self._show_quota
             )
-            self._credential = cred
-            self._configurer.cookie = cred.cookies
+
             return cred
