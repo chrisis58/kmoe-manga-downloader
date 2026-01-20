@@ -7,7 +7,6 @@ from kmdr.core.structure import BookInfo, Credential, VolInfo, CredentialStatus
 from kmdr.core.pool import PooledCredential
 from kmdr.core.console import debug, info
 from kmdr.core.error import QuotaExceededError, NoCandidateCredentialError
-from kmdr.core.utils import async_retry
 
 from kmdr.module.authenticator.utils import check_status
 
@@ -45,7 +44,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                 debug("发现", len(candidates), "个凭证需要同步。")
                 
                 tasks = [
-                    self._refresh_cred(p_cred, self._refresh_semaphore) 
+                    self.__refresh_cred(p_cred, self._refresh_semaphore) 
                     for p_cred in candidates
                 ]
                 
@@ -79,7 +78,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                 attempts += 1
 
                 if pooled_cred.quota_remaining < required_size:
-                    await self._refresh_cred(pooled_cred, self._refresh_semaphore)
+                    await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
                     # 如果当前凭证余额不足以支付下载，跳过
                     if pooled_cred.quota_remaining < required_size:
                         debug("账号", pooled_cred.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.quota_remaining, "MB")
@@ -101,7 +100,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
                     # 在判断是否额度全部用尽前，先尝试同步状态                    
-                    await self._refresh_cred(pooled_cred, self._refresh_semaphore)
+                    await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
 
                     if pooled_cred.status != CredentialStatus.ACTIVE:
                         info(f"账号 {pooled_cred.username} 状态已变更为 {pooled_cred.status}，跳过。")
@@ -127,13 +126,8 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
         raise NoCandidateCredentialError(f"尝试了 {attempts} 次，无可用的凭证进行下载。")
 
-    async def _refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
+    async def __refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
         """更新指定 PooledCredential 的状态信息"""
-        await async_retry(
-            on_failure=lambda e: setattr(pooled_cred, 'status', CredentialStatus.INVALID),
-        )(self.__unwrapped_refresh_cred)(pooled_cred, semaphore)
-
-    async def __unwrapped_refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
         if pooled_cred.is_recently_synced():
             debug("账号", pooled_cred.username, "最近已同步，使用缓存数据。")
             return
@@ -160,4 +154,5 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                 return
         except Exception as e:
             info(f"同步账号 {pooled_cred.username} 失败")
+            pooled_cred.status = CredentialStatus.INVALID
             raise e
