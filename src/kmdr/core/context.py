@@ -58,11 +58,13 @@ class CredentialPoolContext(ConfigContext):
     
     @property
     def _pool(self) -> CredentialPool:
+        """全局懒加载的凭证池实例。"""
         global _lazy_cred_pool
         if _lazy_cred_pool is None:
             _lazy_cred_pool = CredentialPool(self._configurer)
         return _lazy_cred_pool
-
-    def _reset_pool(self) -> None:
+    
+    def reset_pool(self) -> None:
+        """清除凭证池缓存，下次访问时会重新加载凭证池状态。"""
         global _lazy_cred_pool
-        _lazy_cred_pool = CredentialPool(self._configurer)
+        _lazy_cred_pool = None

@@ -267,7 +267,8 @@ class Configurer:
 
     def save_credential(self, cred: Credential, as_primary: bool = False) -> None:
         """
-        保存凭证到配置文件中的凭证池中。
+        保存凭证到配置文件中的凭证池中。<br/>
+        可能对凭证池不可见，如果要确保凭证池更新，应刷新凭证池实例。
         
         :param cred: 要保存的凭证对象
         :param as_primary: 是否将该凭证设置为主凭证
