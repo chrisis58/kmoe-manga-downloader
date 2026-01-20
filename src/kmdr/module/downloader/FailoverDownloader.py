@@ -64,7 +64,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         """
         计算并返回指定 Credential 在凭证池中的可用额度（单位：MB）
         """
-        pooled_avai = sum([pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username])
+        pooled_avai = sum(pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username)
         return cred.quota_remaining + pooled_avai
 
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
