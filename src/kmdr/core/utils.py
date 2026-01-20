@@ -58,36 +58,47 @@ def async_retry(
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             current_delay = delay
+            last_exception: Optional[Exception] = None
+
             for attempt in range(attempts):
                 try:
                     return await func(*args, **kwargs)
                 except aiohttp.ClientResponseError as e:
+                    debug("请求状态异常:", e.status)
                     if e.status in retry_on_status:
                         if attempt == attempts - 1:
-                            raise
+                            last_exception = e
+                            break
                     else:
-                        raise
+                        last_exception = e
+                        break
                 except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                     # 对于所有其他 aiohttp 客户端异常和超时，进行重试
                     if attempt == attempts - 1:
-                        raise
+                        last_exception = e
+                        break
                 except RedirectError as e:
                     if base_url_setter:
                         base_url_setter(e.new_base_url)
                         debug("检测到重定向，已自动更新 base url 为", e.new_base_url)
                         continue
                     else:
-                        raise
-                except Exception as e:
-                    if on_failure:
-                        on_failure(e)
+                        last_exception = e
                         break
-                    else:
-                        raise
+                except Exception as e:
+                    debug("遇到非重试异常:", e.__class__.__name__)
+                    last_exception = e
+                    break
                 
                 await asyncio.sleep(current_delay)
 
                 current_delay *= backoff
+            
+            if last_exception:
+                if on_failure:
+                    on_failure(last_exception)
+                raise last_exception
+
         return wrapper
     return decorator
 
