@@ -175,7 +175,7 @@ class CredentialPool:
         skipped_username = None
         if preferred_cred:
             pooled_cred = self.get_pooled(preferred_cred, max_workers)
-            if pooled_cred.inner.status == CredentialStatus.ACTIVE:
+            if pooled_cred.status == CredentialStatus.ACTIVE:
                 yield pooled_cred
                 skipped_username = preferred_cred.username
 
@@ -191,7 +191,9 @@ class CredentialPool:
                 index = (i + start_index) % len(group)
                 if skipped_username and group[index].username == skipped_username:
                     continue
-                yield self.get_pooled(group[index], max_workers)
+                pooled_cred = self.get_pooled(group[index], max_workers)
+                if pooled_cred.status == CredentialStatus.ACTIVE:
+                    yield pooled_cred
 
 class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
