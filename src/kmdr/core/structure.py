@@ -138,7 +138,7 @@ class Credential:
 
     vip_quota: Optional[QuotaInfo] = None
 
-    order: int = 0
+    order: int = 1
 
     status: CredentialStatus = CredentialStatus.ACTIVE
 
