@@ -21,7 +21,13 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
     def __init__(self, method: int, num_workers: int = 8, per_cred_ratio: float = 1.0, *args, **kwargs):
         super().__init__(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
 
+        if not (0.0 < per_cred_ratio <= 1.0):
+            info("每个凭证分配的任务比例 `per_cred_ratio` 必须在 (0.0, 1.0] 范围内，已自动调整为默认值 1.0")
+            per_cred_ratio = 1.0
+
         self._num_workers_per_cred = max(1, int(num_workers * per_cred_ratio))
+        debug("每个凭证的最大并发任务数:", self._num_workers_per_cred)
+
         self._refresh_semaphore = asyncio.Semaphore(max(1, self._num_workers_per_cred // 3))
 
         if method not in (1, 2):

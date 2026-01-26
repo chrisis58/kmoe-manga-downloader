@@ -70,7 +70,8 @@ def argument_parser():
     download_parser.add_argument('--disable-multi-part', action='store_true', help='禁用分片下载，优先级高于尝试启用分片下载选项')
     download_parser.add_argument('--try-multi-part', action='store_true', help='尝试启用分片下载')
     download_parser.add_argument('--fake-ua', action='store_true', help='使用随机的 User-Agent 进行请求')
-    download_parser.add_argument('--use-pool', action='store_true', help='启用凭证池进行下载')
+    download_parser.add_argument('-P', '--use-pool', action='store_true', help='启用凭证池进行下载')
+    download_parser.add_argument('--per-cred-ratio', type=float, help='启用凭证池时生效，设定每个凭证的最大并发比例，默认为 1.0。如 `num_workers` 设定为 8，`per_cred_ratio` 设定为 0.5，则每个凭证最多使用 4 个并发任务。', required=False, default=1.0)
 
     login_parser = subparsers.add_parser('login', help='登录到 Kmoe')
     login_parser.add_argument('-u', '--username', type=str, help='用户名', required=True)
