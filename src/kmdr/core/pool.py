@@ -32,6 +32,12 @@ class CredentialPool:
     @property
     def active_count(self) -> int:
         return len(self.active_creds)
+
+    def dump(self) -> None:
+        """保存当前凭证池到配置文件"""
+        self._config.update()
+
+
     
     def find(self, username: str) -> Optional[Credential]:
         """根据用户名查找对应的凭证"""
@@ -260,25 +266,24 @@ class PooledCredential:
         if self._cred.username != '__FROM_COOKIE__' and cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
-        self.__update_quota(cred.user_quota, self._cred.user_quota, force=force)
+        self.__merge_quota(self._cred.user_quota, cred.user_quota, force=force)
         
         if cred.vip_quota and self._cred.vip_quota:
-            self.__update_quota(cred.vip_quota, self._cred.vip_quota, force=force)
-        
-        self._cred = cred
+            self.__merge_quota(self._cred.vip_quota, cred.vip_quota, force=force)
 
-    def __update_quota(self, target: QuotaInfo, source: QuotaInfo, force: bool = False):
-        target.reserved = source.reserved
+        self._cred.cookies = cred.cookies
+        self._cred.status = cred.status
+        self._cred.level = cred.level
+        self._cred.nickname = cred.nickname
 
-        target.unsynced_usage = 0.0 if force else source.unsynced_usage
+    def __merge_quota(self, current: QuotaInfo, new_info: QuotaInfo, force: bool = False):
+        if force or new_info.update_at >= current.update_at:
+            current.total = new_info.total
+            current.used = new_info.used
+            current.reset_day = new_info.reset_day
+            current.update_at = new_info.update_at
+            current.unsynced_usage = new_info.unsynced_usage
 
-        if force or target.update_at >= source.update_at:
-            return
-
-        target.total = source.total
-        target.used = source.used
-        target.reset_day = source.reset_day
-        target.update_at = source.update_at
         
     def reserve(self, size_mb: float, is_vip: bool = True) -> bool:
         target = self._get_target(is_vip)
