@@ -61,9 +61,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             self._configurer.update()
     
     def _avai_quota(self, cred: Credential) -> float:
-        """
-        计算并返回指定 Credential 在凭证池中的可用额度（单位：MB）
-        """
+        """计算当前凭证池中，包含指定凭证在内的可用额度总和。"""
         pooled_avai = sum(pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username)
         return cred.quota_remaining + pooled_avai
 
