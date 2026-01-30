@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Callable, Optional
 
 from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 from kmdr.core.constants import API_ROUTE
@@ -17,7 +18,7 @@ class DirectDownloader(Downloader):
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
 
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 

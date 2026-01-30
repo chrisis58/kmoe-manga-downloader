@@ -1,6 +1,7 @@
 from collections import defaultdict
 import time
 from typing import Iterator, Optional
+import itertools
 
 import asyncio
 
@@ -201,11 +202,15 @@ class CredentialPool:
                 if pooled_cred.status == CredentialStatus.ACTIVE:
                     yield pooled_cred
 
+_handle_counter = itertools.count(1)
+"""全局的预留句柄生成器"""
+
 class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
         self._cred = credential
         
-        self._reserved = 0.0
+        self._reserved_map: dict[int, float] = {}
+        self._reserved: float = 0.0
 
         self._max_workers = max_workers
         self._update_lock = None
@@ -286,23 +291,36 @@ class PooledCredential:
             current.update_at = new_info.update_at
             current.unsynced_usage = new_info.unsynced_usage
 
-    def reserve(self, size_mb: float) -> bool:
-        if self.quota_remaining - self._reserved >= size_mb:
+    def reserve(self, size_mb: float) -> Optional[int]:
+        """预留指定大小的额度，成功返回句柄，失败返回 None"""
+        if self.quota_remaining >= size_mb:
+            handle = _handle_counter.__next__()
+            self._reserved_map[handle] = size_mb
             self._reserved += size_mb
-            return True
-        return False
+            return handle
+        return None
 
-    def commit(self, size_mb: float, is_vip: bool = True):
+    def commit(self, handle: Optional[int], is_vip: bool = True):
+        if handle is None:
+            return
+        reserved_amount = self._reserved_map.pop(handle, None)
+        
+        if reserved_amount is None:
+            return
+
         target = self._get_target(is_vip)
         if target:
-            self._reserved = max(0.0, self._reserved - size_mb)
-            
-            target.unsynced_usage += size_mb 
-            
+            self._reserved = max(0.0, self._reserved - reserved_amount)
+            target.unsynced_usage += reserved_amount
             target.update_at = time.time()
 
-    def rollback(self, size_mb: float):
-        self._reserved = max(0.0, self._reserved - size_mb)
+    def rollback(self, handle: Optional[int]):
+        if handle is None:
+            return
+        reserved_amount = self._reserved_map.pop(handle, None)
+
+        if reserved_amount is not None:
+            self._reserved = max(0.0, self._reserved - reserved_amount)
 
     def is_recently_synced(self, is_vip: bool = True, cooldown: float = 10.0) -> bool:
         """检查是否最近刚刚同步过"""

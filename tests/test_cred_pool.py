@@ -68,24 +68,24 @@ class TestPooledCredential(unittest.TestCase):
         """预留流量成功时应更新 reserved 字段"""
         # 剩余 90 (100-10)
         # 尝试预留 50 -> 成功
-        success = self.pooled.reserve(50.0)
-        self.assertTrue(success)
+        handle = self.pooled.reserve(50.0)
+        self.assertIsNotNone(handle)
         self.assertEqual(self.pooled.reserved, 50.0)
 
     def test_reserve_fail_insufficient(self):
         """预留流量失败时 reserved 字段不应改变"""
         # 剩余 600
         # 尝试预留 600 -> 失败
-        success = self.pooled.reserve(600.0)
-        self.assertFalse(success)
+        handle = self.pooled.reserve(600.0)
+        self.assertIsNone(handle)
         self.assertEqual(self.pooled.reserved, 0.0)
 
     def test_commit(self):
         """提交预留流量后应更新 unsynced_usage 和 reserved"""
         # 预留 20
-        self.pooled.reserve(20.0)
+        handle = self.pooled.reserve(20.0)
         # 提交 20
-        self.pooled.commit(20.0, is_vip=False)
+        self.pooled.commit(handle, is_vip=False)
 
         print(self.pooled.inner.user_quota)
 
@@ -96,9 +96,9 @@ class TestPooledCredential(unittest.TestCase):
     def test_rollback(self):
         """回滚预留流量后应更新 reserved 字段"""
         # 预留 20
-        self.pooled.reserve(20.0)
+        handle = self.pooled.reserve(20.0)
         # 回滚 20
-        self.pooled.rollback(20.0)
+        self.pooled.rollback(handle)
 
         self.assertEqual(self.pooled.reserved, 0.0)
         self.assertEqual(self.base_cred.user_quota.unsynced_usage, 0.0)
