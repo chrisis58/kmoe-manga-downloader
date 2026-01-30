@@ -9,7 +9,7 @@ class OptionSetter(Configurer):
         super().__init__(*args, **kwargs)
         self._set = set
 
-    def operate(self) -> None:
+    def _operate(self) -> None:
         for option in self._set:
             if '=' not in option:
                 info(f"[red]无效的选项格式: `{option}`。[/red] 应为 key=value 格式。")
@@ -25,9 +25,3 @@ class OptionSetter(Configurer):
 
             self._configurer.set_option(key, validated_value)
             info(f"[green]已设置配置: {key} = {validated_value}[/green]")
-
-
-
-
-
-

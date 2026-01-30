@@ -59,7 +59,7 @@ class Config:
     option: Optional[dict] = None
     """
     用来存储下载相关的配置选项
-    - retry_times: 重试次数
+    - retry: 重试次数
     - dest: 下载文件保存路径
     - callback: 下载完成后的回调函数
     - proxy: 下载时使用的代理
@@ -76,6 +76,16 @@ class Config:
     """
     凭证池，存储多个账号的凭证信息
     """
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Config':
+        filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
+        if 'cred_pool' in filtered_data and isinstance(filtered_data['cred_pool'], list):
+            filtered_data['cred_pool'] = [
+                Credential.from_dict(cred) if isinstance(cred, dict) else cred
+                for cred in filtered_data['cred_pool']
+            ]
+        return cls(**filtered_data)
 
 class CredentialStatus(Enum):
     ACTIVE = "active"
@@ -110,7 +120,7 @@ class QuotaInfo:
 
     @property
     def remaining(self) -> float:
-        real_remaining = self.total - self.used
+        real_remaining = self.total - self.used - self.unsynced_usage
         return max(0.0, real_remaining)
     
     @classmethod
@@ -150,6 +160,21 @@ class Credential:
         u_rem = self.user_quota.remaining
         v_rem = self.vip_quota.remaining if self.vip_quota else 0.0
         return u_rem + v_rem
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Credential':
+        filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
+
+        if 'user_quota' in filtered_data and isinstance(filtered_data['user_quota'], dict):
+            filtered_data['user_quota'] = QuotaInfo.from_dict(filtered_data['user_quota'])
+
+        if 'vip_quota' in filtered_data and isinstance(filtered_data['vip_quota'], dict):
+            filtered_data['vip_quota'] = QuotaInfo.from_dict(filtered_data['vip_quota'])
+
+        if 'status' in filtered_data and isinstance(filtered_data['status'], str):
+            filtered_data['status'] = CredentialStatus(filtered_data['status'])
+        
+        return cls(**filtered_data)
 
     def __rich_repr__(self):
         """对敏感字段进行脱敏"""

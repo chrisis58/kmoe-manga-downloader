@@ -7,7 +7,7 @@ class ConfigClearer(Configurer):
         super().__init__(*args, **kwargs)
         self._clear = clear
 
-    def operate(self) -> None:
+    def _operate(self) -> None:
         try:
             self._configurer.clear(self._clear)
         except KeyError as e:

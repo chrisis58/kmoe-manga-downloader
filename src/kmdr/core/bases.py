@@ -19,8 +19,14 @@ class Configurer(ConfigContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
+    def operate(self) -> None:
+        try:
+            self._operate()
+        finally:
+            self._configurer.update()
+
     @abstractmethod
-    def operate(self) -> None: ...
+    def _operate(self) -> None: ...
 
 class PoolManager(CredentialPoolContext, TerminalContext):
 

@@ -242,6 +242,10 @@ class PooledCredential:
         return self._cred.cookies
 
     @property
+    def reserved(self) -> float:
+        return self._reserved
+
+    @property
     def status(self) -> CredentialStatus:
         return self._cred.status
     
@@ -283,7 +287,7 @@ class PooledCredential:
             current.unsynced_usage = new_info.unsynced_usage
 
     def reserve(self, size_mb: float) -> bool:
-        if self._cred.quota_remaining - self._reserved >= size_mb:
+        if self.quota_remaining - self._reserved >= size_mb:
             self._reserved += size_mb
             return True
         return False

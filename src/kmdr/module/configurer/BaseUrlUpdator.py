@@ -7,7 +7,7 @@ class BaseUrlUpdator(Configurer):
         super().__init__(*args, **kwargs)
         self._base_url = base_url
 
-    def operate(self) -> None:
+    def _operate(self) -> None:
         try:
             self._configurer.set_base_url(self._base_url)
         except KeyError as e:

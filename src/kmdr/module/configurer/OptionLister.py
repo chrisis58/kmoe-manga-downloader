@@ -13,7 +13,7 @@ class OptionLister(Configurer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def operate(self) -> None:
+    def _operate(self) -> None:
         if self._configurer.option is None and self._configurer.base_url is None:
             info("[blue]当前没有任何配置项。[/blue]")
             return

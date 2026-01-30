@@ -15,9 +15,10 @@ from rich.progress import (
 )
 
 from .utils import singleton
-from .structure import Config, Credential, CredentialStatus, QuotaInfo
+from .structure import Config, Credential
 from .constants import BASE_URL
 from .console import _update_verbose_setting
+from .error import InitializationError
 
 TRUE_UA = 'kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)'
 
@@ -145,85 +146,34 @@ class Configurer:
         self.__filename = '.kmdr'
 
         if not os.path.exists(os.path.join(os.path.expanduser("~"), self.__filename)):
-            self._config = Config()
+            self._config: Config = Config()
             self.update()
         else:
             with open(os.path.join(os.path.expanduser("~"), self.__filename), 'r') as f:
-                config = json.load(f)
+                config_data = json.load(f)
+            self._config: Config = Config.from_dict(config_data)
 
-            self._config = Config()
-            self._config.username = config.get('username', None)
-            option = config.get('option', None)
-            if option is not None and isinstance(option, dict):
-                self._config.option = option
-            cookie = config.get('cookie', None)
-            if cookie is not None and isinstance(cookie, dict):
-                self._config.cookie = cookie
-            base_url = config.get('base_url', None)
-            if base_url is not None and isinstance(base_url, str):
-                self._config.base_url = base_url
-            cred_pool = config.get('cred_pool', None)
-            if cred_pool is not None and isinstance(cred_pool, list):
-                self._config.cred_pool = [self._parse_credential(c) for c in cred_pool]
-    
-    def _parse_credential(self, data: dict) -> Credential:
-        user_quota = QuotaInfo.from_dict(data['user_quota'])
-
-        vip_quota = None
-        if data.get('vip_quota'):
-            vip_quota = QuotaInfo.from_dict(data['vip_quota'])
-
-        status_str = data.get('status', 'active')
-        try:
-            status = CredentialStatus(status_str)
-        except ValueError:
-            status = CredentialStatus.INVALID
-
-        return Credential(
-            username=data['username'],
-            cookies=data['cookies'],
-            user_quota=user_quota,
-            level=data.get('level', 0),
-            nickname=data.get('nickname'),
-            vip_quota=vip_quota,
-            order=data.get('order', 0),
-            status=status,
-            note=data.get('note')
-        )
+        assert self._config is not None, InitializationError("无法加载配置文件。")
 
     @property
     def config(self) -> 'Config':
         return self._config
-    
+
     @property
     def cookie(self) -> Optional[dict]:
-        if self._config is None:
-            return None
         return self._config.cookie
-    
+
     @cookie.setter
     def cookie(self, value: Optional[dict[str, str]]):
-        if self._config is None:
-            self._config = Config()
         self._config.cookie = value
-        self.update()
-    
+
     @property
     def option(self) -> Optional[dict]:
-        if self._config is None:
-            return None
         return self._config.option
-    
-    @option.setter
-    def option(self, value: Optional[dict[str, Any]]):
-        if self._config is None:
-            self._config = Config()
-        self._config.option = value
-        self.update()
-    
+
     @property
     def base_url(self) -> str:
-        if self._config is None or self._config.base_url is None:
+        if self._config.base_url is None:
             return BASE_URL.DEFAULT.value
         return self._config.base_url
     
@@ -231,10 +181,6 @@ class Configurer:
         if self._config is None:
             self._config = Config()
         self._config.base_url = value
-        self.update()
-    
-    def get_base_url(self) -> Optional[str]:
-        return self._config.base_url
     
     def update(self):
         with open(os.path.join(os.path.expanduser("~"), self.__filename), 'w') as f:
@@ -249,22 +195,18 @@ class Configurer:
             self._config.option = None
         else:
             raise KeyError(f"[red]对应配置不存在: {key}。可用配置项：all, cookie, option[/red]")
-
-        self.update()
     
     def set_option(self, key: str, value: Any):
         if self._config.option is None:
             self._config.option = {}
 
         self._config.option[key] = value
-        self.update()
     
     def unset_option(self, key: str):
         if self._config.option is None or key not in self._config.option:
             return
         
         del self._config.option[key]
-        self.update()
 
     def save_credential(self, cred: Credential, as_primary: bool = False) -> None:
         """
