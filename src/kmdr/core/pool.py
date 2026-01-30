@@ -2,6 +2,7 @@ from collections import defaultdict
 import time
 from typing import Iterator, Optional
 import itertools
+from contextlib import contextmanager
 
 import asyncio
 
@@ -328,3 +329,40 @@ class PooledCredential:
         if target:
             return (time.time() - target.update_at) < cooldown
         return False
+
+    @contextmanager
+    def quota_transaction(self, size: float, is_vip: bool = True):
+        """
+        额度预留的上下文管理器。
+        Yields:
+            def finalize(success: bool): 用于在业务完成时手动提交或回滚的回调函数。
+            如果预留失败，yield None。
+        """
+        handle = self.reserve(size)
+        
+        if handle is None:
+            yield None
+            return
+
+        is_finalized = False
+
+        def finalize(success: bool):
+            nonlocal is_finalized
+            is_finalized = True
+            if success:
+                self.commit(handle, is_vip=is_vip)
+            else:
+                self.rollback(handle)
+
+        try:
+            yield finalize
+
+        except Exception:
+            if not is_finalized:
+                self.rollback(handle)
+                is_finalized = True
+            raise
+
+        finally:
+            if not is_finalized:
+                self.rollback(handle)

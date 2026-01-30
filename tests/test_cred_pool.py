@@ -118,3 +118,13 @@ class TestPooledCredential(unittest.TestCase):
         self.assertEqual(self.pooled.inner.user_quota.total, 200.0)
         self.assertEqual(self.pooled.inner.user_quota.unsynced_usage, 0.0)
         self.assertEqual(self.pooled.inner.user_quota.used, 59.0)
+    
+    def test_transaction_context_manager_commit(self):
+        """使用事务上下文管理器提交预留流量"""
+
+        with self.pooled.quota_transaction(30.0, is_vip=False) as finalize:
+            assert finalize is not None
+            finalize(True)
+        
+        self.assertEqual(self.pooled.reserved, 0.0)
+        self.assertEqual(self.base_cred.user_quota.unsynced_usage, 30.0)

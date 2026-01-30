@@ -77,7 +77,6 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         required_size = volume.size or 0.0
 
         attempts = 0
-        handle = None
 
         for pooled_cred in self._pool.get_tiered_candidates(preferred_cred=cred, max_workers=self._num_workers_per_cred):
             debug("尝试使用账号", pooled_cred.username, "下载卷", volume.name)
@@ -95,26 +94,22 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     continue
 
                 try:
-                    handle = pooled_cred.reserve(required_size)
+                    with pooled_cred.quota_transaction(required_size) as tx_finalize:
+                        if not tx_finalize:
+                            debug("账号", pooled_cred.username, "无法预留额度，跳过。")
+                            continue
 
-                    if handle is None:
-                        debug("账号", pooled_cred.username, "无法预留额度，跳过。")
-                        continue
+                        def deduct_callback(success: bool):
+                            if quota_deduct_callback:
+                                quota_deduct_callback(success)
+                            if tx_finalize:
+                                tx_finalize(success)
 
-                    def deduct_callback(success: bool):
-                        if quota_deduct_callback:
-                            quota_deduct_callback(success)
-                        if success:
-                            pooled_cred.commit(handle)
-                        else:
-                            pooled_cred.rollback(handle)
-
-                    # 委托具体的下载器实现下载
-                    await self._delegate._download(pooled_cred.inner, book, volume, quota_deduct_callback=deduct_callback)
-                    return
+                        # 委托具体的下载器实现下载
+                        await self._delegate._download(pooled_cred.inner, book, volume, quota_deduct_callback=deduct_callback)
+                        return
 
                 except QuotaExceededError:
-                    pooled_cred.rollback(handle)
                     info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
                     # 在判断是否额度全部用尽前，先尝试同步状态                    
@@ -132,13 +127,11 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     continue
 
                 except LoginError:
-                    pooled_cred.rollback(handle)
                     info(f"账号 {pooled_cred.username} 登录失效。")
                     pooled_cred.status = CredentialStatus.INVALID
                     continue
 
                 except Exception:
-                    pooled_cred.rollback(handle)
                     info(f"下载卷 {volume.name} 时，账号 {pooled_cred.username} 遇到无法处理的异常。")
                     raise
 
