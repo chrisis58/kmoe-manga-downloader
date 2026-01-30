@@ -205,9 +205,7 @@ class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
         self._cred = credential
         
-        self._cred.user_quota.reserved = 0.0
-        if self._cred.vip_quota:
-            self._cred.vip_quota.reserved = 0.0
+        self._reserved = 0.0
 
         self._max_workers = max_workers
         self._update_lock = None
@@ -237,7 +235,7 @@ class PooledCredential:
 
     @property
     def quota_remaining(self) -> float:
-        return self._cred.quota_remaining
+        return self._cred.quota_remaining - self._reserved
     
     @property
     def cookies(self) -> dict[str, str]:
@@ -284,29 +282,25 @@ class PooledCredential:
             current.update_at = new_info.update_at
             current.unsynced_usage = new_info.unsynced_usage
 
-        
-    def reserve(self, size_mb: float, is_vip: bool = True) -> bool:
-        target = self._get_target(is_vip)
-        if target and target.remaining >= size_mb:
-            target.reserved += size_mb
+    def reserve(self, size_mb: float) -> bool:
+        if self._cred.quota_remaining - self._reserved >= size_mb:
+            self._reserved += size_mb
             return True
         return False
 
     def commit(self, size_mb: float, is_vip: bool = True):
         target = self._get_target(is_vip)
         if target:
-            target.reserved = max(0.0, target.reserved - size_mb)
+            self._reserved = max(0.0, self._reserved - size_mb)
             
             target.unsynced_usage += size_mb 
             
             target.update_at = time.time()
 
-    def rollback(self, size_mb: float, is_vip: bool = True):
-        target = self._get_target(is_vip)
-        if target:
-            target.reserved = max(0.0, target.reserved - size_mb)
+    def rollback(self, size_mb: float):
+        self._reserved = max(0.0, self._reserved - size_mb)
 
-    def is_recently_synced(self, is_vip: bool = True, cooldown: float = 30.0) -> bool:
+    def is_recently_synced(self, is_vip: bool = True, cooldown: float = 10.0) -> bool:
         """检查是否最近刚刚同步过"""
         target = self._get_target(is_vip)
         if target:

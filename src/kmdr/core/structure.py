@@ -104,25 +104,22 @@ class QuotaInfo:
     total: float
     used: float
 
-    reserved: float = 0.0
     unsynced_usage: float = 0.0
 
     update_at: float = field(default_factory=time.time)
 
     @property
     def remaining(self) -> float:
-        real_remaining = self.total - self.used - self.reserved
+        real_remaining = self.total - self.used
         return max(0.0, real_remaining)
-
-    def reserve(self, amount: float) -> bool:
-        if self.remaining >= amount:
-            self.reserved += amount
-            return True
-        return False
+    
+    @classmethod
+    def from_dict(cls, data: dict):
+        filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
+        return cls(**filtered_data)
 
 @dataclass
 class Credential:
-
     username: str
     """
     账号用户名，用作唯一标识

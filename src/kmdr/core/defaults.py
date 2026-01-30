@@ -167,11 +167,11 @@ class Configurer:
                 self._config.cred_pool = [self._parse_credential(c) for c in cred_pool]
     
     def _parse_credential(self, data: dict) -> Credential:
-        user_quota = QuotaInfo(**data['user_quota'])
+        user_quota = QuotaInfo.from_dict(data['user_quota'])
 
         vip_quota = None
         if data.get('vip_quota'):
-            vip_quota = QuotaInfo(**data['vip_quota'])
+            vip_quota = QuotaInfo.from_dict(data['vip_quota'])
 
         status_str = data.get('status', 'active')
         try:
