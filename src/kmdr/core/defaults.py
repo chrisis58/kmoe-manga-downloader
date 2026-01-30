@@ -191,6 +191,7 @@ class Configurer:
             self._config = Config()
         elif key == 'cookie':
             self._config.cookie = None
+            self._config.username = None
         elif key == 'option':
             self._config.option = None
         else:
