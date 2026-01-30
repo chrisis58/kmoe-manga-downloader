@@ -274,23 +274,17 @@ class PooledCredential:
         if self._cred.username != '__FROM_COOKIE__' and cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
-        self.__merge_quota(self._cred.user_quota, cred.user_quota, force=force)
-        
-        if cred.vip_quota and self._cred.vip_quota:
-            self.__merge_quota(self._cred.vip_quota, cred.vip_quota, force=force)
-
         self._cred.cookies = cred.cookies
         self._cred.status = cred.status
         self._cred.level = cred.level
         self._cred.nickname = cred.nickname
 
-    def __merge_quota(self, current: QuotaInfo, new_info: QuotaInfo, force: bool = False):
-        if force or new_info.update_at >= current.update_at:
-            current.total = new_info.total
-            current.used = new_info.used
-            current.reset_day = new_info.reset_day
-            current.update_at = new_info.update_at
-            current.unsynced_usage = new_info.unsynced_usage
+        if force or cred.user_quota.update_at >= self._cred.user_quota.update_at:
+            self._cred.user_quota = cred.user_quota
+
+        if self._cred.vip_quota and cred.vip_quota:
+             if force or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
+                self._cred.vip_quota = cred.vip_quota
 
     def reserve(self, size_mb: float) -> Optional[int]:
         """预留指定大小的额度，成功返回句柄，失败返回 None"""
