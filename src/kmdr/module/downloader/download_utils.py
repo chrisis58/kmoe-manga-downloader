@@ -98,8 +98,8 @@ async def download_file(
 
         try:
             async with semaphore:
-                current_url = await fetch_url(url)
-                async with session.get(url=current_url, headers=headers, cookies=cookies) as r:
+                url = await fetch_url(url)
+                async with session.get(url=url, headers=headers, cookies=cookies) as r:
                     r.raise_for_status()
 
                     total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
@@ -204,8 +204,8 @@ async def download_file_multipart(
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
-            current_url = await fetch_url(url)
-            total_size = await _fetch_content_length(session, current_url, headers=headers, cookies=cookies)
+            url = await fetch_url(url)
+            total_size = await _fetch_content_length(session, url, headers=headers, cookies=cookies)
 
         chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
@@ -229,7 +229,7 @@ async def download_file_multipart(
             task = _download_part(
                 session=session,
                 semaphore=semaphore,
-                url=current_url,
+                url=url,
                 start=start,
                 end=end,
                 part_path=part_paths[i],
@@ -315,6 +315,7 @@ async def _fetch_content_length(
     :param session: aiohttp.ClientSession 对象
     :param url: 文件 URL
     :param headers: 请求头
+    :param cookies: 请求的 cookies
     :return: 文件大小（字节数）
     """
     if headers is None:
