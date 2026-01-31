@@ -283,7 +283,7 @@ class PooledCredential:
             self._cred.user_quota = cred.user_quota
 
         if self._cred.vip_quota and cred.vip_quota:
-             if force or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
+            if force or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
                 self._cred.vip_quota = cred.vip_quota
 
     def reserve(self, size_mb: float) -> Optional[int]:
