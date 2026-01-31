@@ -153,7 +153,8 @@ class Configurer:
                 config_data = json.load(f)
             self._config: Config = Config.from_dict(config_data)
 
-        assert self._config is not None, InitializationError("无法加载配置文件。")
+        if self._config is None:
+            raise InitializationError("无法加载配置文件。")
 
     @property
     def config(self) -> 'Config':
