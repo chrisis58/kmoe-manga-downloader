@@ -89,7 +89,7 @@ async def download_file(
 
     while attempts_left > 0:
         attempts_left -= 1
-        
+
         resume_from = (await aio_os.stat(filename_downloading)).st_size \
             if resumable and await aio_os.path.exists(filename_downloading) \
             else 0
@@ -100,7 +100,7 @@ async def download_file(
 
         try:
             async with semaphore:
-                url = await fetch_url(url)
+                url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
                 async with session.get(url=url, headers=headers, cookies=cookies) as r:
                     r.raise_for_status()
                     quota_deduct_callback(True) if quota_deduct_callback else None
@@ -209,7 +209,7 @@ async def download_file_multipart(
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
-            url = await fetch_url(url)
+            url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
             total_size = await _fetch_content_length(session, url, headers=headers, cookies=cookies, quota_deduct_callback=quota_deduct_callback)
 
         chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
