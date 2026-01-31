@@ -179,8 +179,6 @@ class Configurer:
         return self._config.base_url
     
     def set_base_url(self, value: str):
-        if self._config is None:
-            self._config = Config()
         self._config.base_url = value
     
     def update(self):
