@@ -32,7 +32,8 @@ class DirectDownloader(Downloader):
                 readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
                 self._retry,
                 cookies=cred.cookies,
-                callback=lambda: self._callback(book, volume) if self._callback else None
+                callback=lambda: self._callback(book, volume) if self._callback else None,
+                quota_deduct_callback=quota_deduct_callback
             )
             return
 
@@ -45,7 +46,8 @@ class DirectDownloader(Downloader):
             readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
             cookies=cred.cookies,
-            callback=lambda: self._callback(book, volume) if self._callback else None
+            callback=lambda: self._callback(book, volume) if self._callback else None,
+            quota_deduct_callback=quota_deduct_callback
         )
 
     def construct_download_url(self, cred: Credential, book: BookInfo, volume: VolInfo) -> str:
