@@ -16,7 +16,6 @@ from .console import *
 from .protocol import AsyncCtxManager
 
 
-
 # 通常只会有一个 SessionManager 的实现
 # 因此这里直接注册为默认实现
 @SESSION_MANAGER.register()
@@ -25,19 +24,24 @@ class KmdrSessionManager(SessionManager):
     Kmdr 的 HTTP 会话管理类，支持从参数中初始化 ClientSession 的实例。
     """
 
-    def __init__(self, proxy: Optional[str] = None, book_url: Optional[str] = None, fake_ua: bool = False, *args, **kwargs):
+    def __init__(
+        self,
+        proxy: Optional[str] = None,
+        book_url: Optional[str] = None,
+        fake_ua: bool = False,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self._proxy = proxy
-        self._headers = {
-            'User-Agent': get_random_ua() if fake_ua else TRUE_UA
-        }
+        self._headers = {"User-Agent": get_random_ua() if fake_ua else TRUE_UA}
 
         self._sorter = PrioritySorter[str]()
         [self._sorter.set(alt) for alt in BASE_URL.alternatives()]
         self._sorter.incr(BASE_URL.DEFAULT.value, 2)
         self._sorter.incr(self._base_url, 5)
 
-        if book_url is not None and book_url.strip() != "" :
+        if book_url is not None and book_url.strip() != "":
             splited = urlsplit(book_url)
             primary_base_url = f"{splited.scheme}://{splited.netloc}"
             debug("提升书籍链接所在镜像地址优先级:", primary_base_url)
@@ -55,7 +59,6 @@ class KmdrSessionManager(SessionManager):
             pass
 
         with self._console.status("初始化中..."):
-            
             self._base_url = await self._probing_base_url()
             # 持久化配置
             self._configurer.set_base_url(self._base_url)
@@ -71,7 +74,7 @@ class KmdrSessionManager(SessionManager):
             )
 
             return SessionCtxManager(self._session)
-    
+
     async def validate_url(self, session: ClientSession, url_supplier: Supplier[str]) -> bool:
         try:
             async with session.head(
@@ -80,11 +83,14 @@ class KmdrSessionManager(SessionManager):
                 # 另外是因为不同网站的登录页面通常是不同的，可以有效区分不同的网站
                 # 如果后续发现有更合适的探测方式，可以考虑替换
                 urljoin(url_supplier(), API_ROUTE.LOGIN),
-                allow_redirects=False
+                allow_redirects=False,
             ) as response:
-                if response.status in (301, 302, 307, 308) and 'Location' in response.headers:
-                    new_location = urlsplit(response.headers['Location'])
-                    raise RedirectError("检测到重定向", new_base_url=f"{new_location.scheme}://{new_location.netloc}")
+                if response.status in (301, 302, 307, 308) and "Location" in response.headers:
+                    new_location = urlsplit(response.headers["Location"])
+                    raise RedirectError(
+                        "检测到重定向",
+                        new_base_url=f"{new_location.scheme}://{new_location.netloc}",
+                    )
 
                 return response.status == 200
         except Exception as e:
@@ -103,11 +109,11 @@ class KmdrSessionManager(SessionManager):
         """
 
         ret_base_url: str
-    
+
         def get_base_url() -> str:
             nonlocal ret_base_url
             return ret_base_url
-        
+
         def set_base_url(value: str) -> None:
             nonlocal ret_base_url
             ret_base_url = value
@@ -124,7 +130,10 @@ class KmdrSessionManager(SessionManager):
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 
-            raise InitializationError(f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json")
+            raise InitializationError(
+                f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json"
+            )
+
 
 class SessionCtxManager:
     def __init__(self, session: ClientSession):
@@ -138,7 +147,7 @@ class SessionCtxManager:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType]
+        traceback: Optional[TracebackType],
     ):
         await self._session.__aexit__(exc_type, exc_value, traceback)
 

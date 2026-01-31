@@ -1,11 +1,9 @@
 from kmdr.core.bases import PoolManager, POOL_MANAGER
 from kmdr.core.console import info
 
-@POOL_MANAGER.register(
-    hasvalues={'pool_command': 'remove'}
-)
+
+@POOL_MANAGER.register(hasvalues={"pool_command": "remove"})
 class PoolCredRemover(PoolManager):
-    
     def __init__(self, username: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._username = username

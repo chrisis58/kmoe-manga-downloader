@@ -12,13 +12,18 @@ from .structure import VolInfo, BookInfo, Credential
 from .utils import construct_callback, async_retry
 from .protocol import AsyncCtxManager
 
-from .context import TerminalContext, SessionContext, ConfigContext, CredentialPoolContext
+from .context import (
+    TerminalContext,
+    SessionContext,
+    ConfigContext,
+    CredentialPoolContext,
+)
+
 
 class Configurer(ConfigContext, TerminalContext):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
     def operate(self) -> None:
         try:
             self._operate()
@@ -28,24 +33,24 @@ class Configurer(ConfigContext, TerminalContext):
     @abstractmethod
     def _operate(self) -> None: ...
 
-class PoolManager(CredentialPoolContext, TerminalContext):
 
+class PoolManager(CredentialPoolContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
     async def operate(self) -> None: ...
 
-class SessionManager(SessionContext, ConfigContext, TerminalContext):
 
+class SessionManager(SessionContext, ConfigContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
     async def session(self) -> AsyncCtxManager[ClientSession]: ...
 
-class Authenticator(SessionContext, ConfigContext, TerminalContext):
 
+class Authenticator(SessionContext, ConfigContext, TerminalContext):
     def __init__(self, auto_save: bool, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._auto_save = auto_save
@@ -67,31 +72,25 @@ class Authenticator(SessionContext, ConfigContext, TerminalContext):
     @abstractmethod
     async def _authenticate(self) -> Credential: ...
 
-class Lister(SessionContext, TerminalContext):
 
+class Lister(SessionContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
     async def list(self) -> tuple[BookInfo, list[VolInfo]]: ...
 
-class Picker(TerminalContext):
 
+class Picker(TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]: ...
 
-class Downloader(SessionContext, TerminalContext):
 
-    def __init__(self,
-                 dest: str = '.',
-                 callback: Optional[str] = None,
-                 retry: int = 3,
-                 num_workers: int = 8,
-                 *args, **kwargs
-    ):
+class Downloader(SessionContext, TerminalContext):
+    def __init__(self, dest: str = ".", callback: Optional[str] = None, retry: int = 3, num_workers: int = 8, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._dest: str = dest
@@ -103,16 +102,16 @@ class Downloader(SessionContext, TerminalContext):
         if not volumes:
             info("没有可下载的卷。", style="blue")
             return
-        
+
         total_size = sum(v.size or 0 for v in volumes)
         avai = self._avai_quota(cred)
         if avai < total_size:
             if self._console.is_interactive:
                 should_continue = Confirm.ask(
                     f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
-                    default=False
+                    default=False,
                 )
-                
+
                 if not should_continue:
                     info("用户取消下载。")
                     return
@@ -152,10 +151,10 @@ class Downloader(SessionContext, TerminalContext):
         ...
 
 
-SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
-AUTHENTICATOR = Registry[Authenticator]('Authenticator')
-LISTERS = Registry[Lister]('Lister')
-PICKERS = Registry[Picker]('Picker')
-DOWNLOADER = Registry[Downloader]('Downloader', True)
-CONFIGURER = Registry[Configurer]('Configurer')
-POOL_MANAGER = Registry[PoolManager]('PoolManager')
+SESSION_MANAGER = Registry[SessionManager]("SessionManager", True)
+AUTHENTICATOR = Registry[Authenticator]("Authenticator")
+LISTERS = Registry[Lister]("Lister")
+PICKERS = Registry[Picker]("Picker")
+DOWNLOADER = Registry[Downloader]("Downloader", True)
+CONFIGURER = Registry[Configurer]("Configurer")
+POOL_MANAGER = Registry[PoolManager]("PoolManager")

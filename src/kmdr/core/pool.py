@@ -14,10 +14,9 @@ from .utils import calc_reset_time
 UNLIMITED_WORKERS = 99999
 """不限制并发下载数的标记值"""
 
+
 class CredentialPool:
-    def __init__(self, 
-            config: Configurer,
-    ):
+    def __init__(self, config: Configurer):
         self._config = config
         self._cycle_iterator: Optional[Iterator[Credential]] = None
         self._active_count: int = 0
@@ -39,8 +38,6 @@ class CredentialPool:
         """保存当前凭证池到配置文件"""
         self._config.update()
 
-
-    
     def find(self, username: str) -> Optional[Credential]:
         """根据用户名查找对应的凭证"""
         for cred in self.pool:
@@ -52,7 +49,7 @@ class CredentialPool:
         """向凭证池中添加新的凭证"""
         if self._config.config.cred_pool is None:
             self._config.config.cred_pool = []
-        
+
         self._config.config.cred_pool.append(cred)
         self._config.update()
         self.evict_iterator_cache()
@@ -68,7 +65,7 @@ class CredentialPool:
         """从凭证池中移除指定用户名的凭证"""
         if self._config.config.cred_pool is None:
             return False
-        
+
         for cred in self._config.config.cred_pool:
             if cred.username == username:
                 self._config.config.cred_pool.remove(cred)
@@ -88,8 +85,8 @@ class CredentialPool:
         """返回所有状态为 ACTIVE 的凭证"""
         return [cred for cred in self.pool if cred.status == CredentialStatus.ACTIVE]
 
-    def pooled_refresh_candidates(self, max_workers: int = UNLIMITED_WORKERS) -> list['PooledCredential']:
-        return [self.get_pooled(candidate, max_workers) for candidate in self.refresh_candidates]        
+    def pooled_refresh_candidates(self, max_workers: int = UNLIMITED_WORKERS) -> list["PooledCredential"]:
+        return [self.get_pooled(candidate, max_workers) for candidate in self.refresh_candidates]
 
     @property
     def refresh_candidates(self) -> list[Credential]:
@@ -118,14 +115,15 @@ class CredentialPool:
                 continue
 
             if cred.status == CredentialStatus.QUOTA_EXCEEDED:
-                if self.__should_refresh_quota(now_ts, cred.user_quota) \
-                    or self.__should_refresh_quota(now_ts, cred.vip_quota):
+                need_refresh_user = self.__should_refresh_quota(now_ts, cred.user_quota)
+                need_refresh_vip = self.__should_refresh_quota(now_ts, cred.vip_quota)
+                if need_refresh_user or need_refresh_vip:
                     # 如果有任何一项配额在上次更新时间后经过了重置日，则加入更新列表
                     candidates.append(cred)
                     continue
 
         return candidates
-    
+
     def __should_refresh_quota(self, now_ts: float, quota: Optional[QuotaInfo]) -> bool:
         """判断指定的配额信息是否需要刷新"""
         if quota is None:
@@ -135,7 +133,7 @@ class CredentialPool:
         reset_timestamp = calc_reset_time(quota.reset_day, quota.update_at)
         return now_ts >= reset_timestamp
 
-    def get_pooled(self, cred: Credential, max_workers: int) -> 'PooledCredential':
+    def get_pooled(self, cred: Credential, max_workers: int) -> "PooledCredential":
         key = cred.username
 
         if key not in self._pooled_map:
@@ -145,15 +143,17 @@ class CredentialPool:
             self._pooled_map[key].update_cred(cred)
 
         return self._pooled_map[key]
-    
+
     def evict_iterator_cache(self, username: Optional[str] = None) -> None:
         """清除轮询迭代器的缓存，强制在下一次获取时刷新"""
         self._tiered_groups = None
         self._rr_counters = None
         if username:
             self._pooled_map.pop(username, None)
-    
-    def get_tiered_candidates(self, preferred_cred: Optional[Credential] = None, max_workers: int = UNLIMITED_WORKERS) -> Iterator['PooledCredential']:
+
+    def get_tiered_candidates(
+        self, preferred_cred: Optional[Credential] = None, max_workers: int = UNLIMITED_WORKERS
+    ) -> Iterator["PooledCredential"]:
         """
         生成一个分层级的候选凭证迭代器。
         逻辑：
@@ -190,7 +190,7 @@ class CredentialPool:
         # 分层轮询
         for order in sorted_orders:
             group = tiered_groups[order]
-            
+
             start_index = self._rr_counters[order] % len(group)
             self._rr_counters[order] += 1
 
@@ -203,13 +203,15 @@ class CredentialPool:
                 if pooled_cred.status == CredentialStatus.ACTIVE:
                     yield pooled_cred
 
+
 _handle_counter = itertools.count(1)
 """全局的预留句柄生成器"""
+
 
 class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
         self._cred = credential
-        
+
         self._reserved_map: dict[int, float] = {}
         self._reserved: float = 0.0
 
@@ -223,7 +225,7 @@ class PooledCredential:
         if self._update_lock is None:
             self._update_lock = asyncio.Lock()
         return self._update_lock
-    
+
     @property
     def download_semaphore(self) -> asyncio.Semaphore:
         """用于限制当前凭证的并发下载数的信号量"""
@@ -242,7 +244,7 @@ class PooledCredential:
     @property
     def quota_remaining(self) -> float:
         return self._cred.quota_remaining - self._reserved
-    
+
     @property
     def cookies(self) -> dict[str, str]:
         return self._cred.cookies
@@ -254,7 +256,7 @@ class PooledCredential:
     @property
     def status(self) -> CredentialStatus:
         return self._cred.status
-    
+
     @status.setter
     def status(self, value: CredentialStatus):
         self._cred.status = value
@@ -267,11 +269,11 @@ class PooledCredential:
     def update_cred(self, cred: Credential, force: bool = False):
         """
         更新内部的 Credential 信息
-        
+
         :param cred: 新的 Credential 信息
         :param force: 是否强制更新所有信息，默认根据更新时间决定是否覆盖
         """
-        if self._cred.username != '__FROM_COOKIE__' and cred.username != self._cred.username:
+        if self._cred.username != "__FROM_COOKIE__" and cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
         self._cred.cookies = cred.cookies
@@ -299,7 +301,7 @@ class PooledCredential:
         if handle is None:
             return
         reserved_amount = self._reserved_map.pop(handle, None)
-        
+
         if reserved_amount is None:
             return
 
@@ -333,7 +335,7 @@ class PooledCredential:
             如果预留失败，yield None。
         """
         handle = self.reserve(size)
-        
+
         if handle is None:
             yield None
             return

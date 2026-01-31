@@ -2,13 +2,14 @@ from typing import Optional
 
 from kmdr.core.error import ArgsResolveError
 
+
 def resolve_volume(volume: str) -> Optional[set[int]]:
-    if volume == 'all':
+    if volume == "all":
         return None
 
-    if ',' in volume:
+    if "," in volume:
         # 如果使用分隔符
-        volumes = volume.split(',')
+        volumes = volume.split(",")
         volumes = [resolve_volume(v) for v in volumes]
 
         ret = set()
@@ -23,9 +24,9 @@ def resolve_volume(volume: str) -> Optional[set[int]]:
         if (volume_digit := int(volume)) <= 0:
             raise ArgsResolveError(f"卷号必须大于 0，当前值为 {volume_digit}。")
         return {volume_digit}
-    elif '-' in volume and volume.count('-') == 1 and ',' not in volume:
+    elif "-" in volume and volume.count("-") == 1 and "," not in volume:
         # 使用了范围符号
-        start, end = volume.split('-')
+        start, end = volume.split("-")
 
         if not start.strip().isdigit() or not end.strip().isdigit():
             raise ArgsResolveError(f"无效的范围格式: {volume}。请使用 'start-end' 或 'start, end'。")

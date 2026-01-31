@@ -3,6 +3,7 @@ from kmdr.core.console import info
 
 from .option_validate import check_key
 
+
 @CONFIGURER.register()
 class ConfigUnsetter(Configurer):
     def __init__(self, unset: str, *args, **kwargs):

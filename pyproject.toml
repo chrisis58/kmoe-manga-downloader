@@ -25,6 +25,12 @@ dependencies = [
     "typing-extensions~=4.15.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
+
 [project.urls]
 Homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
 Issues = "https://github.com/chrisis58/kmoe-manga-downloader/issues"
@@ -44,3 +50,14 @@ write_to = "src/kmdr/_version.py"
 
 [tool.pytest.ini_options]
 pythonpath = "src"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 150
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"

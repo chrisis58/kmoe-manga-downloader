@@ -31,6 +31,7 @@ def singleton(cls):
 
     return get_instance
 
+
 def construct_callback(callback: Optional[str]) -> Optional[Callable]:
     if callback is None or not isinstance(callback, str) or not callback.strip():
         return None
@@ -52,7 +53,7 @@ def async_retry(
     backoff: float = 2.0,
     retry_on_status: set[int] = {500, 502, 503, 504, 429, 408},
     base_url_setter: Optional[Consumer[str]] = None,
-    on_failure: Optional[Callable[[Exception], None]] = None
+    on_failure: Optional[Callable[[Exception], None]] = None,
 ):
     def decorator(func):
         @functools.wraps(func)
@@ -89,18 +90,20 @@ def async_retry(
                     debug("遇到非重试异常:", e.__class__.__name__)
                     last_exception = e
                     break
-                
+
                 await asyncio.sleep(current_delay)
 
                 current_delay *= backoff
-            
+
             if last_exception:
                 if on_failure:
                     on_failure(last_exception)
                 raise last_exception
 
         return wrapper
+
     return decorator
+
 
 def extract_cookies(response: aiohttp.ClientResponse) -> dict[str, str]:
     extracted_cookies: dict[str, str] = {}
@@ -115,7 +118,9 @@ def extract_cookies(response: aiohttp.ClientResponse) -> dict[str, str]:
     return extracted_cookies
 
 
-H = TypeVar('H', bound=Hashable)
+H = TypeVar("H", bound=Hashable)
+
+
 class PrioritySorter(Generic[H]):
     """
     根据优先级对元素进行排序的工具类
@@ -154,47 +159,49 @@ class PrioritySorter(Generic[H]):
     def sort(self) -> list[H]:
         """返回根据优先级排序后的元素列表，优先级高的元素排在前面"""
         return [k for k, v in sorted(self._items.items(), key=lambda item: item[1], reverse=True)]
-    
+
+
 def _silence_event_loop_closed(func):
     """
     用于静默处理 'Event loop is closed' 异常的装饰器。
     该异常在某些情况下（如 Windows 平台使用 Proactor 事件循环）会在对象销毁时抛出，
     导致程序输出不必要的错误信息。此装饰器捕获该异常并忽略它。
-    
+
     @see https://github.com/aio-libs/aiohttp/issues/4324
     """
+
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
         except RuntimeError as e:
-            if str(e) != 'Event loop is closed':
+            if str(e) != "Event loop is closed":
                 raise
- 
+
     return wrapper
+
 
 _ProactorBasePipeTransport.__del__ = _silence_event_loop_closed(_ProactorBasePipeTransport.__del__)
 
 
-
-SENSITIVE_KEYS = {'cookie', 'authorization', 'proxy-authorization', 'set-cookie'}
+SENSITIVE_KEYS = {"cookie", "authorization", "proxy-authorization", "set-cookie"}
 """定义需要脱敏的字段（全部小写以便不区分大小写匹配）"""
+
 
 def sanitize_headers(headers: Mapping[str, Any]) -> dict:
     """
     清洗 HTTP 头信息，隐藏敏感字段（如 Cookie, Authorization）。
     """
-    return {
-        k: '******' if k.lower() in SENSITIVE_KEYS else v
-        for k, v in headers.items()
-    }
+    return {k: "******" if k.lower() in SENSITIVE_KEYS else v for k, v in headers.items()}
+
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
 ]
+
 
 def get_random_ua() -> str:
     """

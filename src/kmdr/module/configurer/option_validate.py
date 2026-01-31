@@ -7,6 +7,7 @@ from kmdr.core.error import ValidationError
 
 __OPTIONS_VALIDATOR = {}
 
+
 def validate(key: str, value: str) -> Optional[object]:
     """
     供外部调用的验证函数，根据键名调用相应的验证器。
@@ -21,6 +22,7 @@ def validate(key: str, value: str) -> Optional[object]:
         info(f"[red]不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
         return None
 
+
 def check_key(key: str, raise_if_invalid: bool = True) -> None:
     """
     供外部调用的验证函数，用于检查配置项的键名是否有效。
@@ -31,9 +33,13 @@ def check_key(key: str, raise_if_invalid: bool = True) -> None:
     """
     if key not in __OPTIONS_VALIDATOR:
         if raise_if_invalid:
-            raise ValidationError(f"未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}", field=key)
+            raise ValidationError(
+                f"未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}",
+                field=key,
+            )
         else:
             info(f"[red]未知配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
+
 
 def register_validator(arg_name):
     """
@@ -49,7 +55,7 @@ def register_validator(arg_name):
         @wraps(func)
         def inner(*args, **kwargs):
             return func(*args, **kwargs)
-    
+
         return inner
 
     return wrapper
@@ -59,7 +65,8 @@ def register_validator(arg_name):
 ## 以下为各个配置项的验证函数。
 #############################################
 
-@register_validator('num_workers')
+
+@register_validator("num_workers")
 def validate_num_workers(value: str) -> Optional[int]:
     try:
         num_workers = int(value)
@@ -70,7 +77,8 @@ def validate_num_workers(value: str) -> Optional[int]:
         info(f"[red]无效的 num_workers 值: {value}。{str(e)}[/red]")
         return None
 
-@register_validator('dest')
+
+@register_validator("dest")
 def validate_dest(value: str) -> Optional[str]:
     if not value:
         info("[red]目标目录不能为空。[/red]")
@@ -88,7 +96,8 @@ def validate_dest(value: str) -> Optional[str]:
 
     return value
 
-@register_validator('retry')
+
+@register_validator("retry")
 def validate_retry(value: str) -> Optional[int]:
     try:
         retry = int(value)
@@ -99,14 +108,16 @@ def validate_retry(value: str) -> Optional[int]:
         info(f"[red]无效的 retry 值: {value}。{str(e)}[/red]")
         return None
 
-@register_validator('callback')
+
+@register_validator("callback")
 def validate_callback(value: str) -> Optional[str]:
     if not value:
         info("[red]回调不能为空。[/red]")
         return None
     return value
 
-@register_validator('proxy')
+
+@register_validator("proxy")
 def validate_proxy(value: str) -> Optional[str]:
     if not value:
         info("[red]代理不能为空。[/red]")

@@ -1,6 +1,7 @@
 from rich.status import Status
 from contextlib import contextmanager
 
+
 class _StackedStatusManager:
     def __init__(self, console):
         self.console = console
@@ -13,7 +14,7 @@ class _StackedStatusManager:
             token, _ = self._stack[-1]
             if token in self._finished:
                 self._stack.pop()
-                self._finished.remove(token) 
+                self._finished.remove(token)
             else:
                 break
 
@@ -36,15 +37,16 @@ class _StackedStatusManager:
     @contextmanager
     def status(self, text):
         token = object()
-        
+
         self._stack.append((token, text))
         self._refresh()
-        
+
         try:
             yield
         finally:
             self._finished.add(token)
             self._refresh()
+
 
 def apply_status_patch(console_instance):
     """

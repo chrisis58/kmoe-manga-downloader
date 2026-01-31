@@ -5,20 +5,20 @@ from datetime import timedelta, timezone
 
 from typing_extensions import deprecated
 
-class BASE_URL(Enum):
 
+class BASE_URL(Enum):
     @property
     @deprecated("KOX 已过时，请使用 KXO 或 KOZ。")
     def KOX(self) -> str:
-        return 'https://kox.moe'
-    
-    KXX = 'https://kxx.moe'
+        return "https://kox.moe"
 
-    KXO = 'https://kxo.moe'
+    KXX = "https://kxx.moe"
 
-    KOZ = 'https://koz.moe'
+    KXO = "https://kxo.moe"
 
-    MOX = 'https://mox.moe'
+    KOZ = "https://koz.moe"
+
+    MOX = "https://mox.moe"
 
     @classmethod
     def alternatives(cls) -> set[str]:
@@ -27,27 +27,28 @@ class BASE_URL(Enum):
 
     DEFAULT = KXX
 
+
 @dataclass(frozen=True)
-class _ApiRoute():
-    PROFILE: str = '/my.php'
+class _ApiRoute:
+    PROFILE: str = "/my.php"
     """用户信息页面"""
 
-    LOGIN: str = '/login.php'
+    LOGIN: str = "/login.php"
     """登录页面"""
 
-    LOGIN_DO: str = '/login_do.php'
+    LOGIN_DO: str = "/login_do.php"
     """登录接口"""
 
-    MY_FOLLOW: str = '/myfollow.php'
+    MY_FOLLOW: str = "/myfollow.php"
     """关注列表页面"""
 
-    BOOK_DATA: str = '/book_data.php'
+    BOOK_DATA: str = "/book_data.php"
     """书籍数据接口"""
 
-    DOWNLOAD: str = '/dl/{book_id}/{volume_id}/1/2/{is_vip}/'
+    DOWNLOAD: str = "/dl/{book_id}/{volume_id}/1/2/{is_vip}/"
     """下载接口"""
 
-    GETDOWNURL: str = '/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={is_vip}&json=1'
+    GETDOWNURL: str = "/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={is_vip}&json=1"
     """获取下载链接接口"""
 
 
@@ -62,17 +63,18 @@ class LoginResponse(Enum):
     unknown = "未知响应代码。"
 
     @classmethod
-    def from_code(cls, code: str) -> 'LoginResponse':
+    def from_code(cls, code: str) -> "LoginResponse":
         return cls.__members__.get(code, cls.unknown)
 
     @classmethod
-    def ok(cls, code: Union[str, 'LoginResponse']) -> bool:
+    def ok(cls, code: Union[str, "LoginResponse"]) -> bool:
         if isinstance(code, LoginResponse):
             return code == cls.m100
         return cls.from_code(code) == cls.m100
 
+
 API_ROUTE = _ApiRoute()
 """API 路由常量实例"""
 
-TIMEZONE = timezone(offset=timedelta(hours=8), name='Asia/Shanghai')
+TIMEZONE = timezone(offset=timedelta(hours=8), name="Asia/Shanghai")
 """东八区为默认时区"""
