@@ -36,7 +36,8 @@ class TestKmdrConfigOption(unittest.TestCase):
             )
         )
 
-        self.assertIsNone(configurer.option, "No options should be set due to invalid values")
+        self.assertIsNotNone(configurer.option, "No options should be set due to invalid values")
+        self.assertNotIn("other_invalid_arg", configurer.option)
 
     def test_set_options(self):
         os.makedirs(os.path.join(BASE_DIR, self.test_set_options.__name__), exist_ok=True)
