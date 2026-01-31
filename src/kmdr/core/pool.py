@@ -97,7 +97,7 @@ class CredentialPool:
         返回所有需要更新额度信息的凭证列表。
         判定标准：
         1. 超过 3 天未同步
-        2. 累计未同步流量超过 50MB
+        2. 累计未同步流量超过 100MB
         3. 状态为配额耗尽(QUOTA_EXCEEDED) 且 上次更新时间早于最近一次重置日
         """
         candidates = []
@@ -113,7 +113,7 @@ class CredentialPool:
 
             unsynced = cred.user_quota.unsynced_usage + (cred.vip_quota.unsynced_usage if cred.vip_quota else 0.0)
 
-            if unsynced > 50.0:
+            if unsynced > 100.0:
                 candidates.append(cred)
                 continue
 
