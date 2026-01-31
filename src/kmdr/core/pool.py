@@ -1,6 +1,8 @@
 from collections import defaultdict
 import time
 from typing import Iterator, Optional
+import itertools
+from contextlib import contextmanager
 
 import asyncio
 
@@ -32,6 +34,12 @@ class CredentialPool:
     @property
     def active_count(self) -> int:
         return len(self.active_creds)
+
+    def dump(self) -> None:
+        """保存当前凭证池到配置文件"""
+        self._config.update()
+
+
     
     def find(self, username: str) -> Optional[Credential]:
         """根据用户名查找对应的凭证"""
@@ -89,7 +97,7 @@ class CredentialPool:
         返回所有需要更新额度信息的凭证列表。
         判定标准：
         1. 超过 3 天未同步
-        2. 累计未同步流量超过 50MB
+        2. 累计未同步流量超过 100MB
         3. 状态为配额耗尽(QUOTA_EXCEEDED) 且 上次更新时间早于最近一次重置日
         """
         candidates = []
@@ -105,7 +113,7 @@ class CredentialPool:
 
             unsynced = cred.user_quota.unsynced_usage + (cred.vip_quota.unsynced_usage if cred.vip_quota else 0.0)
 
-            if unsynced > 50.0:
+            if unsynced > 100.0:
                 candidates.append(cred)
                 continue
 
@@ -195,13 +203,15 @@ class CredentialPool:
                 if pooled_cred.status == CredentialStatus.ACTIVE:
                     yield pooled_cred
 
+_handle_counter = itertools.count(1)
+"""全局的预留句柄生成器"""
+
 class PooledCredential:
     def __init__(self, credential: Credential, max_workers: int = UNLIMITED_WORKERS):
         self._cred = credential
         
-        self._cred.user_quota.reserved = 0.0
-        if self._cred.vip_quota:
-            self._cred.vip_quota.reserved = 0.0
+        self._reserved_map: dict[int, float] = {}
+        self._reserved: float = 0.0
 
         self._max_workers = max_workers
         self._update_lock = None
@@ -231,11 +241,15 @@ class PooledCredential:
 
     @property
     def quota_remaining(self) -> float:
-        return self._cred.quota_remaining
+        return self._cred.quota_remaining - self._reserved
     
     @property
     def cookies(self) -> dict[str, str]:
         return self._cred.cookies
+
+    @property
+    def reserved(self) -> float:
+        return self._reserved
 
     @property
     def status(self) -> CredentialStatus:
@@ -260,50 +274,89 @@ class PooledCredential:
         if self._cred.username != '__FROM_COOKIE__' and cred.username != self._cred.username:
             raise ValueError("无法更新凭证：用户名不匹配。")
 
-        self.__update_quota(cred.user_quota, self._cred.user_quota, force=force)
+        self._cred.cookies = cred.cookies
+        self._cred.status = cred.status
+        self._cred.level = cred.level
+        self._cred.nickname = cred.nickname
+
+        if force or cred.user_quota.update_at >= self._cred.user_quota.update_at:
+            self._cred.user_quota = cred.user_quota
+
+        if self._cred.vip_quota and cred.vip_quota:
+            if force or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
+                self._cred.vip_quota = cred.vip_quota
+
+    def reserve(self, size_mb: float) -> Optional[int]:
+        """预留指定大小的额度，成功返回句柄，失败返回 None"""
+        if self.quota_remaining >= size_mb:
+            handle = _handle_counter.__next__()
+            self._reserved_map[handle] = size_mb
+            self._reserved += size_mb
+            return handle
+        return None
+
+    def commit(self, handle: Optional[int], is_vip: bool = True):
+        if handle is None:
+            return
+        reserved_amount = self._reserved_map.pop(handle, None)
         
-        if cred.vip_quota and self._cred.vip_quota:
-            self.__update_quota(cred.vip_quota, self._cred.vip_quota, force=force)
-        
-        self._cred = cred
-
-    def __update_quota(self, target: QuotaInfo, source: QuotaInfo, force: bool = False):
-        target.reserved = source.reserved
-
-        target.unsynced_usage = 0.0 if force else source.unsynced_usage
-
-        if force or target.update_at >= source.update_at:
+        if reserved_amount is None:
             return
 
-        target.total = source.total
-        target.used = source.used
-        target.reset_day = source.reset_day
-        target.update_at = source.update_at
-        
-    def reserve(self, size_mb: float, is_vip: bool = True) -> bool:
-        target = self._get_target(is_vip)
-        if target and target.remaining >= size_mb:
-            target.reserved += size_mb
-            return True
-        return False
-
-    def commit(self, size_mb: float, is_vip: bool = True):
         target = self._get_target(is_vip)
         if target:
-            target.reserved = max(0.0, target.reserved - size_mb)
-            
-            target.unsynced_usage += size_mb 
-            
+            self._reserved = max(0.0, self._reserved - reserved_amount)
+            target.unsynced_usage += reserved_amount
             target.update_at = time.time()
 
-    def rollback(self, size_mb: float, is_vip: bool = True):
-        target = self._get_target(is_vip)
-        if target:
-            target.reserved = max(0.0, target.reserved - size_mb)
+    def rollback(self, handle: Optional[int]):
+        if handle is None:
+            return
+        reserved_amount = self._reserved_map.pop(handle, None)
 
-    def is_recently_synced(self, is_vip: bool = True, cooldown: float = 30.0) -> bool:
+        if reserved_amount is not None:
+            self._reserved = max(0.0, self._reserved - reserved_amount)
+
+    def is_recently_synced(self, is_vip: bool = True, cooldown: float = 10.0) -> bool:
         """检查是否最近刚刚同步过"""
         target = self._get_target(is_vip)
         if target:
             return (time.time() - target.update_at) < cooldown
         return False
+
+    @contextmanager
+    def quota_transaction(self, size: float, is_vip: bool = True):
+        """
+        额度预留的上下文管理器。
+        Yields:
+            def finalize(success: bool): 用于在业务完成时手动提交或回滚的回调函数。
+            如果预留失败，yield None。
+        """
+        handle = self.reserve(size)
+        
+        if handle is None:
+            yield None
+            return
+
+        is_finalized = False
+
+        def finalize(success: bool):
+            nonlocal is_finalized
+            is_finalized = True
+            if success:
+                self.commit(handle, is_vip=is_vip)
+            else:
+                self.rollback(handle)
+
+        try:
+            yield finalize
+
+        except Exception:
+            if not is_finalized:
+                self.rollback(handle)
+                is_finalized = True
+            raise
+
+        finally:
+            if not is_finalized:
+                self.rollback(handle)

@@ -20,7 +20,6 @@ dependencies = [
     "beautifulsoup4~=4.13.4",
     "aiohttp~=3.12.15",
     "aiofiles~=24.1.0",
-    "async-lru~=2.0.5",
     "rich~=13.9.4",
     "yarl~=1.20.1",
     "typing-extensions~=4.15.0",

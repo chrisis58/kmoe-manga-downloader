@@ -51,6 +51,7 @@ async def download_file(
         callback: Optional[Callable] = None,
         task_id = None,
         resumable: bool = True,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None
 ):
     """
     下载文件
@@ -66,6 +67,7 @@ async def download_file(
     :param callback: 下载完成后的回调函数
     :param task_id: 进度条任务 ID，如果已经存在则更新该任务
     :param resumable: 是否启用断点续传
+    :param quota_deduct_callback: 流量配额扣减回调函数,参数为是否实际扣减
     """
     if headers is None:
         headers = {}
@@ -78,6 +80,7 @@ async def download_file(
 
     if await aio_os.path.exists(file_path):
         info(f"[yellow]{filename} 已经存在[/yellow]")
+        quota_deduct_callback(False) if quota_deduct_callback else None
         return
 
     log("开始下载文件:", filename, "到路径:", dest_path)
@@ -87,7 +90,7 @@ async def download_file(
 
     while attempts_left > 0:
         attempts_left -= 1
-        
+
         resume_from = (await aio_os.stat(filename_downloading)).st_size \
             if resumable and await aio_os.path.exists(filename_downloading) \
             else 0
@@ -98,9 +101,10 @@ async def download_file(
 
         try:
             async with semaphore:
-                current_url = await fetch_url(url)
-                async with session.get(url=current_url, headers=headers, cookies=cookies) as r:
+                url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
+                async with session.get(url=url, headers=headers, cookies=cookies) as r:
                     r.raise_for_status()
+                    quota_deduct_callback(True) if quota_deduct_callback else None
 
                     total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
 
@@ -166,6 +170,7 @@ async def download_file_multipart(
         cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
         callback: Optional[Callable] = None,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None
 ):
     """
     下载文件
@@ -180,6 +185,7 @@ async def download_file_multipart(
     :param headers: 请求头
     :param cookies: 请求的 cookies
     :param callback: 下载完成后的回调函数
+    :param quota_deduct_callback: 流量配额扣减回调函数,参数为是否实际扣减
     """
     if headers is None:
         headers = {}
@@ -191,6 +197,7 @@ async def download_file_multipart(
         await aio_os.makedirs(dest_path, exist_ok=True)
 
     if await aio_os.path.exists(file_path):
+        quota_deduct_callback(False) if quota_deduct_callback else None
         info(f"[blue]{filename} 已经存在[/blue]")
         return
 
@@ -204,8 +211,8 @@ async def download_file_multipart(
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
-            current_url = await fetch_url(url)
-            total_size = await _fetch_content_length(session, current_url, headers=headers, cookies=cookies)
+            url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
+            total_size = await _fetch_content_length(session, url, headers=headers, cookies=cookies, quota_deduct_callback=quota_deduct_callback)
 
         chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
@@ -229,7 +236,7 @@ async def download_file_multipart(
             task = _download_part(
                 session=session,
                 semaphore=semaphore,
-                url=current_url,
+                url=url,
                 start=start,
                 end=end,
                 part_path=part_paths[i],
@@ -304,6 +311,7 @@ async def _fetch_content_length(
         url: str,
         cookies: Optional[dict] = None,
         headers: Optional[dict] = None,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None
 ) -> int:
     """
     获取文件的内容长度（字节数）
@@ -315,6 +323,7 @@ async def _fetch_content_length(
     :param session: aiohttp.ClientSession 对象
     :param url: 文件 URL
     :param headers: 请求头
+    :param cookies: 请求的 cookies
     :return: 文件大小（字节数）
     """
     if headers is None:
@@ -327,6 +336,7 @@ async def _fetch_content_length(
         # 普通下载链接可能不支持 HEAD 请求，尝试使用 GET 请求获取文件大小
         # see: https://github.com/chrisis58/kmoe-manga-downloader/issues/25
         response.raise_for_status()
+        quota_deduct_callback(True) if quota_deduct_callback else None
 
         debug("请求响应状态码:", response.status)
         debug("请求头:", sanitize_headers(response.request_info.headers))

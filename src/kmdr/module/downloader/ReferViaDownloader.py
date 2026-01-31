@@ -1,8 +1,8 @@
 from functools import partial
+from typing import Callable, Optional
 
 import json
 import aiohttp
-from async_lru import alru_cache
 
 from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
 from kmdr.core.constants import API_ROUTE
@@ -25,7 +25,7 @@ class ReferViaDownloader(Downloader):
         self._disable_multi_part = disable_multi_part
         self._try_multi_part = try_multi_part
 
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
         sub_dir = readable_safe_filename(book.name)
         download_path = f'{self._dest}/{sub_dir}'
 
@@ -37,7 +37,7 @@ class ReferViaDownloader(Downloader):
                 self._session,
                 self._semaphore,
                 self._progress,
-                partial(self.fetch_download_url, cred.is_vip, tuple(cred.cookies.items()), book.id, volume.id),
+                partial(self.fetch_download_url, quota_deduct_callback, cred.cookies, cred.is_vip, book.id, volume.id),
                 download_path,
                 readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
                 self._retry,
@@ -51,7 +51,7 @@ class ReferViaDownloader(Downloader):
             self._session,
             self._semaphore,
             self._progress,
-            partial(self.fetch_download_url, cred.is_vip, tuple(cred.cookies.items()), book.id, volume.id),
+            partial(self.fetch_download_url, quota_deduct_callback, cred.cookies, cred.is_vip, book.id, volume.id),
             download_path,
             readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
             self._retry,
@@ -59,11 +59,8 @@ class ReferViaDownloader(Downloader):
             callback=lambda: self._callback(book, volume) if self._callback else None
         )
 
-    @alru_cache(maxsize=128)
     @async_retry(delay=3, backoff=1.5)
-    async def fetch_download_url(self, is_vip: bool, cookies_tuple: tuple, book_id: str, volume_id: str) -> str:
-
-        cookies = dict(cookies_tuple)
+    async def fetch_download_url(self, quota_deduct_callback: Optional[Callable[[bool], None]], cookies: dict, is_vip: bool, book_id: str, volume_id: str) -> str:
 
         async with self._session.get(
             API_ROUTE.GETDOWNURL.format(
@@ -74,6 +71,7 @@ class ReferViaDownloader(Downloader):
             cookies=cookies,
         ) as response:
             response.raise_for_status()
+            quota_deduct_callback(True) if quota_deduct_callback else None
             data = await response.text()
             data = json.loads(data)
             debug("获取下载链接响应数据:", data)

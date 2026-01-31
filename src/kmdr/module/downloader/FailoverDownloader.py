@@ -1,4 +1,5 @@
 import asyncio
+from typing import Callable, Optional
 
 from kmdr.core.context import CredentialPoolContext
 from kmdr.core.bases import DOWNLOADER, Downloader
@@ -21,7 +22,13 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
     def __init__(self, method: int, num_workers: int = 8, per_cred_ratio: float = 1.0, *args, **kwargs):
         super().__init__(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
 
+        if not (0.0 < per_cred_ratio <= 1.0):
+            info("每个凭证分配的任务比例 `per_cred_ratio` 必须在 (0.0, 1.0] 范围内，已自动调整为默认值 1.0")
+            per_cred_ratio = 1.0
+
         self._num_workers_per_cred = max(1, int(num_workers * per_cred_ratio))
+        debug("每个凭证的最大并发任务数:", self._num_workers_per_cred)
+
         self._refresh_semaphore = asyncio.Semaphore(max(1, self._num_workers_per_cred // 3))
 
         if method not in (1, 2):
@@ -61,17 +68,16 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             self._configurer.update()
     
     def _avai_quota(self, cred: Credential) -> float:
-        """
-        计算并返回指定 Credential 在凭证池中的可用额度（单位：MB）
-        """
+        """计算当前凭证池中，包含指定凭证在内的可用额度总和。"""
         pooled_avai = sum(pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username)
         return cred.quota_remaining + pooled_avai
 
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo):
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
         required_size = volume.size or 0.0
 
         attempts = 0
+
         for pooled_cred in self._pool.get_tiered_candidates(preferred_cred=cred, max_workers=self._num_workers_per_cred):
             debug("尝试使用账号", pooled_cred.username, "下载卷", volume.name)
             async with pooled_cred.download_semaphore:
@@ -88,15 +94,22 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     continue
 
                 try:
-                    pooled_cred.reserve(required_size)
-                    # 委托具体的下载器实现下载
-                    await self._delegate._download(pooled_cred.inner, book, volume)
-                    
-                    pooled_cred.commit(required_size)
-                    return
+                    with pooled_cred.quota_transaction(required_size) as tx_finalize:
+                        if not tx_finalize:
+                            debug("账号", pooled_cred.username, "无法预留额度，跳过。")
+                            continue
+
+                        def deduct_callback(success: bool):
+                            if quota_deduct_callback:
+                                quota_deduct_callback(success)
+                            if tx_finalize:
+                                tx_finalize(success)
+
+                        # 委托具体的下载器实现下载
+                        await self._delegate._download(pooled_cred.inner, book, volume, quota_deduct_callback=deduct_callback)
+                        return
 
                 except QuotaExceededError:
-                    pooled_cred.rollback(required_size)
                     info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
                     # 在判断是否额度全部用尽前，先尝试同步状态                    
@@ -114,13 +127,11 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     continue
 
                 except LoginError:
-                    pooled_cred.rollback(required_size)
                     info(f"账号 {pooled_cred.username} 登录失效。")
                     pooled_cred.status = CredentialStatus.INVALID
                     continue
 
                 except Exception:
-                    pooled_cred.rollback(required_size)
                     info(f"下载卷 {volume.name} 时，账号 {pooled_cred.username} 遇到无法处理的异常。")
                     raise
 

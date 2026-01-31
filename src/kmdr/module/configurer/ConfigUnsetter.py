@@ -9,7 +9,7 @@ class ConfigUnsetter(Configurer):
         super().__init__(*args, **kwargs)
         self._unset = unset
 
-    def operate(self) -> None:
+    def _operate(self) -> None:
         if not self._unset:
             info("[yellow]请提供要取消设置的配置项。[/yellow]")
             return
