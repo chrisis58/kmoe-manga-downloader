@@ -140,15 +140,16 @@ class Downloader(SessionContext, TerminalContext):
         return cred.quota_remaining
 
     @abstractmethod
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None): ...
-    """
-    供子类实现的实际下载方法。
+    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
+        """
+        供子类实现的实际下载方法。
 
-    :param cred: 用于下载的凭证
-    :param book: 要下载的书籍信息
-    :param volume: 要下载的卷信息
-    :param quota_deduct_callback: 可选的额度扣除回调函数，接受一个布尔值参数，表示额度是否被扣除
-    """
+        :param cred: 用于下载的凭证
+        :param book: 要下载的书籍信息
+        :param volume: 要下载的卷信息
+        :param quota_deduct_callback: 可选的额度扣除回调函数，接受一个布尔值参数，表示额度是否被扣除
+        """
+        ...
 
 
 SESSION_MANAGER = Registry[SessionManager]('SessionManager', True)
