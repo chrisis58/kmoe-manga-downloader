@@ -87,8 +87,6 @@ class TestPooledCredential(unittest.TestCase):
         # 提交 20
         self.pooled.commit(handle, is_vip=False)
 
-        print(self.pooled.inner.user_quota)
-
         self.assertEqual(self.pooled.reserved, 0.0)
         self.assertEqual(self.base_cred.user_quota.remaining, 70.0)
         self.assertEqual(self.base_cred.user_quota.unsynced_usage, 20.0)
