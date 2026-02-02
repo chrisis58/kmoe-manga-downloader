@@ -40,7 +40,7 @@ def create_cred(username="user1", order=0, status=CredentialStatus.ACTIVE, is_vi
     )
 
 
-class CredPoolScheduleTest (unittest.TestCase):
+class CredPoolScheduleTest(unittest.TestCase):
     def test_scheduling_basic_round_robin(self):
         """测试基本的同级轮询 (RR)"""
         # 准备三个同级账号
