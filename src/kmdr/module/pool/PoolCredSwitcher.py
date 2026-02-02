@@ -1,17 +1,14 @@
 from kmdr.core.bases import PoolManager, POOL_MANAGER
 from kmdr.core.console import info
 
-@POOL_MANAGER.register(
-    hasvalues={'pool_command': 'use'}
-)
+
+@POOL_MANAGER.register(hasvalues={"pool_command": "use"})
 class PoolCredSwitcher(PoolManager):
-    
     def __init__(self, username: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._username = username
 
     async def operate(self) -> None:
-
         cred = self._pool.find(self._username)
 
         if not cred:

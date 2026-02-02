@@ -5,22 +5,29 @@ from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.structure import Credential
 
-from .download_utils import download_file_multipart, readable_safe_filename, download_file
-
-@DOWNLOADER.register(
-    hasvalues={
-        'method': 2
-    }
+from .download_utils import (
+    download_file_multipart,
+    readable_safe_filename,
+    download_file,
 )
+
+
+@DOWNLOADER.register(hasvalues={"method": 2})
 class DirectDownloader(Downloader):
-    def __init__(self, dest='.', callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
+    def __init__(self, dest=".", callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
         super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
 
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
+    async def _download(
+        self,
+        cred: Credential,
+        book: BookInfo,
+        volume: VolInfo,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+    ):
         sub_dir = readable_safe_filename(book.name)
-        download_path = f'{self._dest}/{sub_dir}'
+        download_path = f"{self._dest}/{sub_dir}"
 
         if self._disable_multi_part:
             await download_file(
@@ -29,10 +36,11 @@ class DirectDownloader(Downloader):
                 self._progress,
                 partial(self.construct_download_url, cred, book, volume),
                 download_path,
-                readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
+                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
                 self._retry,
                 cookies=cred.cookies,
-                callback=lambda: self._callback(book, volume) if self._callback else None
+                callback=lambda: self._callback(book, volume) if self._callback else None,
+                quota_deduct_callback=quota_deduct_callback,
             )
             return
 
@@ -42,15 +50,16 @@ class DirectDownloader(Downloader):
             self._progress,
             partial(self.construct_download_url, cred, book, volume),
             download_path,
-            readable_safe_filename(f'[Kmoe][{book.name}][{volume.name}].epub'),
+            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
             self._retry,
             cookies=cred.cookies,
-            callback=lambda: self._callback(book, volume) if self._callback else None
+            callback=lambda: self._callback(book, volume) if self._callback else None,
+            quota_deduct_callback=quota_deduct_callback,
         )
 
     def construct_download_url(self, cred: Credential, book: BookInfo, volume: VolInfo) -> str:
         return API_ROUTE.DOWNLOAD.format(
             book_id=book.id,
             volume_id=volume.id,
-            is_vip=1 if self._use_vip and cred.is_vip else 0
+            is_vip=1 if self._use_vip and cred.is_vip else 0,
         )

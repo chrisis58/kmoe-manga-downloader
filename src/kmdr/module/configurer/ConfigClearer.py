@@ -1,6 +1,7 @@
 from kmdr.core import Configurer, CONFIGURER
 from kmdr.core.console import info
 
+
 @CONFIGURER.register()
 class ConfigClearer(Configurer):
     def __init__(self, clear: str, *args, **kwargs):

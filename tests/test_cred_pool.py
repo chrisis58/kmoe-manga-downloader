@@ -5,8 +5,10 @@ from unittest.mock import MagicMock
 from kmdr.core.pool import CredentialPool, PooledCredential
 from kmdr.core.structure import Credential, CredentialStatus, QuotaInfo, Config
 
+
 def create_quota(total=100.0, used=10.0):
     return QuotaInfo(total=total, used=used, reset_day=1, update_at=time.time())
+
 
 def create_cred(username="user1", order=0, status=CredentialStatus.ACTIVE, is_vip=False):
     vip_quota = create_quota(500.0, 0.0) if is_vip else None
@@ -18,17 +20,17 @@ def create_cred(username="user1", order=0, status=CredentialStatus.ACTIVE, is_vi
         level=1,
         order=order,
         status=status,
-        nickname=f"Nick-{username}"
+        nickname=f"Nick-{username}",
     )
 
-class TestCredentialPool(unittest.TestCase):
 
+class TestCredentialPool(unittest.TestCase):
     def setUp(self):
         self.mock_configurer = MagicMock()
         self.mock_config = Config()
         self.mock_config.cred_pool = []
         self.mock_configurer.config = self.mock_config
-        
+
         self.pool_mgr = CredentialPool(self.mock_configurer)
 
     def test_add_and_check_duplicate(self):
@@ -49,16 +51,16 @@ class TestCredentialPool(unittest.TestCase):
         """删除凭证后不应在列表中"""
         cred = create_cred("user_rem")
         self.pool_mgr.add(cred)
-        
+
         result = self.pool_mgr.remove("user_rem")
-        
+
         self.assertTrue(result)
         assert self.mock_config.cred_pool is not None
         self.assertEqual(len(self.mock_config.cred_pool), 0)
         self.mock_configurer.update.assert_called()
 
-class TestPooledCredential(unittest.TestCase):
 
+class TestPooledCredential(unittest.TestCase):
     def setUp(self):
         # User配额 100/10，VIP配额 500/0
         self.base_cred = create_cred("pool_user", is_vip=True)
@@ -90,7 +92,7 @@ class TestPooledCredential(unittest.TestCase):
         self.assertEqual(self.pooled.reserved, 0.0)
         self.assertEqual(self.base_cred.user_quota.remaining, 70.0)
         self.assertEqual(self.base_cred.user_quota.unsynced_usage, 20.0)
-        
+
     def test_rollback(self):
         """回滚预留流量后应更新 reserved 字段"""
         # 预留 20
@@ -105,24 +107,24 @@ class TestPooledCredential(unittest.TestCase):
         """从服务端更新凭证信息应覆盖本地数据"""
         # 本地有 unsynced 数据
         self.base_cred.user_quota.unsynced_usage = 50.0
-        
+
         # 服务端发来新数据
         server_cred = create_cred("pool_user", is_vip=True)
         server_cred.user_quota.total = 200.0
         server_cred.user_quota.used = 59.0
-        
+
         self.pooled.update_cred(server_cred, force=True)
-        
+
         self.assertEqual(self.pooled.inner.user_quota.total, 200.0)
         self.assertEqual(self.pooled.inner.user_quota.unsynced_usage, 0.0)
         self.assertEqual(self.pooled.inner.user_quota.used, 59.0)
-    
+
     def test_transaction_context_manager_commit(self):
         """使用事务上下文管理器提交预留流量"""
 
         with self.pooled.quota_transaction(30.0, is_vip=False) as finalize:
             assert finalize is not None
             finalize(True)
-        
+
         self.assertEqual(self.pooled.reserved, 0.0)
         self.assertEqual(self.base_cred.user_quota.unsynced_usage, 30.0)

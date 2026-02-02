@@ -3,6 +3,7 @@ from kmdr.core.console import info
 
 from .option_validate import validate
 
+
 @CONFIGURER.register()
 class OptionSetter(Configurer):
     def __init__(self, set: list[str], *args, **kwargs):
@@ -11,11 +12,11 @@ class OptionSetter(Configurer):
 
     def _operate(self) -> None:
         for option in self._set:
-            if '=' not in option:
+            if "=" not in option:
                 info(f"[red]无效的选项格式: `{option}`。[/red] 应为 key=value 格式。")
                 continue
 
-            key, value = option.split('=', 1)
+            key, value = option.split("=", 1)
             key = key.strip()
             value = value.strip()
 

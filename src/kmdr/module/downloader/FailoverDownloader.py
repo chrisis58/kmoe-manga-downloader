@@ -13,8 +13,8 @@ from kmdr.module.authenticator.utils import check_status
 
 
 @DOWNLOADER.register(
-    hasvalues={'use_pool': True},
-    order=-99, # 确保优先匹配
+    hasvalues={"use_pool": True},
+    order=-99,  # 确保优先匹配
 )
 class FailoverDownloader(Downloader, CredentialPoolContext):
     """实现了故障转移的下载器，根据用户选择的下载方法，委托给具体的下载器实现。"""
@@ -36,27 +36,25 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
         if method == 2:
             from .DirectDownloader import DirectDownloader
+
             self._delegate: Downloader = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
         else:
             # 默认使用 ReferViaDownloader
             from .ReferViaDownloader import ReferViaDownloader
+
             self._delegate: Downloader = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
 
     async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
-
         with self._console.status("同步凭证池状态..."):
             candidates = self._pool.pooled_refresh_candidates()
-            
+
             if candidates:
                 debug("发现", len(candidates), "个凭证需要同步。")
-                
-                tasks = [
-                    self.__refresh_cred(p_cred, self._refresh_semaphore) 
-                    for p_cred in candidates
-                ]
-                
+
+                tasks = [self.__refresh_cred(p_cred, self._refresh_semaphore) for p_cred in candidates]
+
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                
+
                 for res in results:
                     if isinstance(res, Exception):
                         debug("凭证同步失败:", res)
@@ -66,13 +64,19 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         finally:
             # 持久化更新后的凭证池状态
             self._configurer.update()
-    
+
     def _avai_quota(self, cred: Credential) -> float:
         """计算当前凭证池中，包含指定凭证在内的可用额度总和。"""
         pooled_avai = sum(pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username)
         return cred.quota_remaining + pooled_avai
 
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
+    async def _download(
+        self,
+        cred: Credential,
+        book: BookInfo,
+        volume: VolInfo,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+    ):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
         required_size = volume.size or 0.0
 
@@ -106,13 +110,18 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                                 tx_finalize(success)
 
                         # 委托具体的下载器实现下载
-                        await self._delegate._download(pooled_cred.inner, book, volume, quota_deduct_callback=deduct_callback)
+                        await self._delegate._download(
+                            pooled_cred.inner,
+                            book,
+                            volume,
+                            quota_deduct_callback=deduct_callback,
+                        )
                         return
 
                 except QuotaExceededError:
                     info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
-                    # 在判断是否额度全部用尽前，先尝试同步状态                    
+                    # 在判断是否额度全部用尽前，先尝试同步状态
                     await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
 
                     if pooled_cred.status != CredentialStatus.ACTIVE:
@@ -154,10 +163,10 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
                 async with semaphore:
                     new_info = await check_status(
-                        session=self._session, 
+                        session=self._session,
                         console=self._console,
-                        username=pooled_cred.username, 
-                        cookies=pooled_cred.cookies
+                        username=pooled_cred.username,
+                        cookies=pooled_cred.cookies,
                     )
 
                 pooled_cred.update_cred(new_info, force=True)

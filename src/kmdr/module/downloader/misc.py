@@ -7,14 +7,14 @@ from kmdr.core.console import debug
 
 
 class STATUS(Enum):
-    WAITING='[blue]等待中[/blue]'
-    RETRYING='[yellow]重试中[/yellow]'
-    DOWNLOADING='[cyan]下载中[/cyan]'
-    MERGING='[magenta]合并中[/magenta]'
-    COMPLETED='[green]完成[/green]'
-    PARTIALLY_FAILED='[red]分片失败[/red]'
-    FAILED='[red]失败[/red]'
-    CANCELLED='[yellow]已取消[/yellow]'
+    WAITING = "[blue]等待中[/blue]"
+    RETRYING = "[yellow]重试中[/yellow]"
+    DOWNLOADING = "[cyan]下载中[/cyan]"
+    MERGING = "[magenta]合并中[/magenta]"
+    COMPLETED = "[green]完成[/green]"
+    PARTIALLY_FAILED = "[red]分片失败[/red]"
+    FAILED = "[red]失败[/red]"
+    CANCELLED = "[yellow]已取消[/yellow]"
 
     @property
     def order(self) -> int:
@@ -29,7 +29,7 @@ class STATUS(Enum):
             STATUS.CANCELLED: 8,
         }
         return order_mapping[self]
-    
+
     def __lt__(self, other):
         if not isinstance(other, STATUS):
             return NotImplemented
@@ -37,7 +37,6 @@ class STATUS(Enum):
 
 
 class StateManager:
-
     def __init__(self, progress: Progress, task_id: TaskID):
         self._part_states: dict[int, STATUS] = {}
         self._progress = progress
@@ -54,7 +53,7 @@ class StateManager:
     def _update_status(self):
         if not self._part_states:
             return
-        
+
         highest_status = max(self._part_states.values())
         if highest_status != self._current_status:
             self._current_status = highest_status
@@ -63,7 +62,7 @@ class StateManager:
     async def pop_part(self, part_id: int):
         """
         下载完成后移除分片状态记录，不再参与状态计算
-        
+
         :note: 为避免状态闪烁，调用后不会更新状态
         """
         async with self._lock:

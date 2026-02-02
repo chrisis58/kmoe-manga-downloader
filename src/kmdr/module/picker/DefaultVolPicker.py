@@ -7,9 +7,9 @@ from kmdr.core.error import NotInteractableError
 
 from .utils import resolve_volume
 
+
 @PICKERS.register()
 class DefaultVolPicker(Picker):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -37,14 +37,14 @@ class DefaultVolPicker(Picker):
                 str(volume.index),
                 volume.vol_type.value,
                 str(volume.pages),
-                f"{volume.size:.2f}"
+                f"{volume.size:.2f}",
             )
-        
+
         info(table)
-        
+
         choice_str = Prompt.ask(
             "[green]请选择要下载的卷序号 (例如 'all', '1,2,3', '1-3,4-6')[/green]",
-            default="all"
+            default="all",
         )
 
         chosen_indices = resolve_volume(choice_str)

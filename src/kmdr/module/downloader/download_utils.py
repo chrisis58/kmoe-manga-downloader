@@ -19,7 +19,7 @@ from kmdr.core.utils import async_retry, sanitize_headers
 
 from .misc import STATUS, StateManager
 
-CONTENT_RANGE_PATTERN = re.compile(r'bytes\s+(\d+)-(\d+)/(\d+|\*)', re.IGNORECASE)
+CONTENT_RANGE_PATTERN = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECASE)
 """用于解析 Content-Range 头的正则表达式模式。"""
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
@@ -29,29 +29,30 @@ _HEAD_SEMAPHORE_VALUE = 3
 _HEAD_SEMAPHORE: Optional[asyncio.Semaphore] = None
 """定义的用于 HEAD 请求的信号量，限制并发数量以避免触发服务器限流。"""
 
+
 def _get_head_request_semaphore() -> asyncio.Semaphore:
     """惰性初始化 HEAD 请求信号量。"""
     global _HEAD_SEMAPHORE
-    
+
     if _HEAD_SEMAPHORE is None:
         _HEAD_SEMAPHORE = asyncio.Semaphore(_HEAD_SEMAPHORE_VALUE)
     return _HEAD_SEMAPHORE
 
 
 async def download_file(
-        session: aiohttp.ClientSession,
-        semaphore: asyncio.Semaphore,
-        progress: Progress,
-        url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
-        dest_path: str,
-        filename: str,
-        retry_times: int = 3,
-        cookies: Optional[dict] = None,
-        headers: Optional[dict] = None,
-        callback: Optional[Callable] = None,
-        task_id = None,
-        resumable: bool = True,
-        quota_deduct_callback: Optional[Callable[[bool], None]] = None
+    session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
+    progress: Progress,
+    url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
+    dest_path: str,
+    filename: str,
+    retry_times: int = 3,
+    cookies: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    callback: Optional[Callable] = None,
+    task_id=None,
+    resumable: bool = True,
+    quota_deduct_callback: Optional[Callable[[bool], None]] = None,
 ):
     """
     下载文件
@@ -73,7 +74,7 @@ async def download_file(
         headers = {}
 
     file_path = os.path.join(dest_path, filename)
-    filename_downloading = f'{file_path}.downloading'
+    filename_downloading = f"{file_path}.downloading"
 
     if not await aio_os.path.exists(dest_path):
         await aio_os.makedirs(dest_path, exist_ok=True)
@@ -91,36 +92,45 @@ async def download_file(
     while attempts_left > 0:
         attempts_left -= 1
 
-        resume_from = (await aio_os.stat(filename_downloading)).st_size \
-            if resumable and await aio_os.path.exists(filename_downloading) \
-            else 0
+        resume_from = (await aio_os.stat(filename_downloading)).st_size if resumable and await aio_os.path.exists(filename_downloading) else 0
 
         if resumable and resume_from > 0:
             headers = headers.copy()
-            headers['Range'] = f'bytes={resume_from}-'
+            headers["Range"] = f"bytes={resume_from}-"
 
         try:
             async with semaphore:
-                url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
+                url = await fetch_url(url)  # 对 url 重新赋值，以对其结果进行缓存
                 async with session.get(url=url, headers=headers, cookies=cookies) as r:
                     r.raise_for_status()
                     quota_deduct_callback(True) if quota_deduct_callback else None
 
-                    total_size_in_bytes = int(r.headers.get('content-length', 0)) + resume_from
+                    total_size_in_bytes = int(r.headers.get("content-length", 0)) + resume_from
 
                     if task_id is None:
-                        task_id = progress.add_task("download", filename=filename, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
+                        task_id = progress.add_task(
+                            "download",
+                            filename=filename,
+                            total=total_size_in_bytes,
+                            completed=resume_from,
+                            status=STATUS.DOWNLOADING.value,
+                        )
                     else:
-                        progress.update(task_id, total=total_size_in_bytes, completed=resume_from, status=STATUS.DOWNLOADING.value)
-                    
-                    mode = 'ab' if resumable and resume_from > 0 else 'wb'
+                        progress.update(
+                            task_id,
+                            total=total_size_in_bytes,
+                            completed=resume_from,
+                            status=STATUS.DOWNLOADING.value,
+                        )
+
+                    mode = "ab" if resumable and resume_from > 0 else "wb"
                     debug("下载文件:", filename, "使用模式:", mode, "，起始位置:", resume_from)
                     async with aiofiles.open(filename_downloading, mode) as f:
                         async for chunk in r.content.iter_chunked(block_size):
                             if chunk:
                                 await f.write(chunk)
                                 progress.update(task_id, advance=len(chunk))
-                    
+
             await aio_os.rename(filename_downloading, file_path)
             break
 
@@ -133,7 +143,7 @@ async def download_file(
         except QuotaExceededError as e:
             # 如果是配额用尽错误，直接抛出，不进行重试
             raise e
-        
+
         except Exception as e:
             if attempts_left > 0:
                 log("正在重试... 剩余重试次数:", attempts_left)
@@ -158,19 +168,20 @@ async def download_file(
                 if callback:
                     callback()
 
+
 async def download_file_multipart(
-        session: aiohttp.ClientSession,
-        semaphore: asyncio.Semaphore,
-        progress: Progress,
-        url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
-        dest_path: str,
-        filename: str,
-        retry_times: int = 3,
-        chunk_size_mb: int = 10,
-        cookies: Optional[dict] = None,
-        headers: Optional[dict] = None,
-        callback: Optional[Callable] = None,
-        quota_deduct_callback: Optional[Callable[[bool], None]] = None
+    session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
+    progress: Progress,
+    url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
+    dest_path: str,
+    filename: str,
+    retry_times: int = 3,
+    chunk_size_mb: int = 10,
+    cookies: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    callback: Optional[Callable] = None,
+    quota_deduct_callback: Optional[Callable[[bool], None]] = None,
 ):
     """
     下载文件
@@ -189,10 +200,10 @@ async def download_file_multipart(
     """
     if headers is None:
         headers = {}
-        
+
     file_path = os.path.join(dest_path, filename)
-    filename_downloading = f'{file_path}.mp.downloading'
-    
+    filename_downloading = f"{file_path}.mp.downloading"
+
     if not await aio_os.path.exists(dest_path):
         await aio_os.makedirs(dest_path, exist_ok=True)
 
@@ -211,14 +222,20 @@ async def download_file_multipart(
         async with _get_head_request_semaphore():
             # 获取文件信息，请求以获取文件大小
             # 控制并发，避免过多并发请求触发服务器限流
-            url = await fetch_url(url) # 对 url 重新赋值，以对其结果进行缓存
-            total_size = await _fetch_content_length(session, url, headers=headers, cookies=cookies, quota_deduct_callback=quota_deduct_callback)
+            url = await fetch_url(url)  # 对 url 重新赋值，以对其结果进行缓存
+            total_size = await _fetch_content_length(
+                session,
+                url,
+                headers=headers,
+                cookies=cookies,
+                quota_deduct_callback=quota_deduct_callback,
+            )
 
         chunk_size = determine_chunk_size(file_size=total_size, base_chunk_mb=chunk_size_mb)
         num_chunks = math.ceil(total_size / chunk_size)
 
         tasks = []
-        
+
         resumed_size = 0
         for i in range(num_chunks):
             part_path = os.path.join(dest_path, f"{filename}.mp.{i + 1:03d}.downloading")
@@ -226,7 +243,13 @@ async def download_file_multipart(
             if await aio_os.path.exists(part_path):
                 resumed_size += (await aio_os.stat(part_path)).st_size
 
-        task_id = progress.add_task("download", filename=filename, status=STATUS.WAITING.value, total=total_size, completed=resumed_size)
+        task_id = progress.add_task(
+            "download",
+            filename=filename,
+            status=STATUS.WAITING.value,
+            total=total_size,
+            completed=resumed_size,
+        )
         state_manager = StateManager(progress=progress, task_id=task_id)
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
@@ -243,17 +266,14 @@ async def download_file_multipart(
                 state_manager=state_manager,
                 cookies=cookies,
                 headers=headers,
-                retry_times=retry_times
+                retry_times=retry_times,
             )
             tasks.append(task)
-            
+
         await asyncio.gather(*tasks)
 
         assert len(part_paths) == len(part_expected_sizes)
-        results = await asyncio.gather(*[
-            asyncio.to_thread(_sync_validate_part, part_paths[i], part_expected_sizes[i]) 
-            for i in range(num_chunks)
-        ])
+        results = await asyncio.gather(*[asyncio.to_thread(_sync_validate_part, part_paths[i], part_expected_sizes[i]) for i in range(num_chunks)])
         if all(results):
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.MERGING)
             await asyncio.to_thread(_sync_merge_parts, part_paths, filename_downloading)
@@ -261,9 +281,8 @@ async def download_file_multipart(
         else:
             # 如果有任何一个分片校验失败，则视为下载失败
             await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
-    
-    except RangeNotSupportedError:
 
+    except RangeNotSupportedError:
         # 尝试清理临时文件
         state_manager = None
         cleanup_tasks = []
@@ -288,7 +307,7 @@ async def download_file_multipart(
             headers=headers,
             callback=callback,
             task_id=task_id,
-            resumable=False
+            resumable=False,
         )
 
     finally:
@@ -305,13 +324,14 @@ async def download_file_multipart(
             if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
 
+
 @async_retry()
 async def _fetch_content_length(
-        session: aiohttp.ClientSession,
-        url: str,
-        cookies: Optional[dict] = None,
-        headers: Optional[dict] = None,
-        quota_deduct_callback: Optional[Callable[[bool], None]] = None
+    session: aiohttp.ClientSession,
+    url: str,
+    cookies: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    quota_deduct_callback: Optional[Callable[[bool], None]] = None,
 ) -> int:
     """
     获取文件的内容长度（字节数）
@@ -328,9 +348,9 @@ async def _fetch_content_length(
     """
     if headers is None:
         headers = {}
-    
+
     probe_headers = headers.copy()
-    probe_headers['Range'] = 'bytes=0-0'
+    probe_headers["Range"] = "bytes=0-0"
 
     async with session.get(url, cookies=cookies, headers=probe_headers, allow_redirects=True) as response:
         # 普通下载链接可能不支持 HEAD 请求，尝试使用 GET 请求获取文件大小
@@ -341,13 +361,16 @@ async def _fetch_content_length(
         debug("请求响应状态码:", response.status)
         debug("请求头:", sanitize_headers(response.request_info.headers))
         debug("响应头:", sanitize_headers(response.headers))
-        
-        if 'Content-Range' not in response.headers:
+
+        if "Content-Range" not in response.headers:
             raise RangeNotSupportedError("响应头中缺少 Content-Range。")
 
-        cr = response.headers['Content-Range']
+        cr = response.headers["Content-Range"]
         start, end, total_size = resolve_content_range(cr)
+
+        # fmt: off
         debug("解析 Content-Range:", cr, "得到 start:", start, "end:", end, "total_size:", total_size)
+        # fmt: on
 
         if total_size is None:
             raise RangeNotSupportedError("服务器未提供完整的文件大小信息。", content_range=cr)
@@ -357,44 +380,45 @@ async def _fetch_content_length(
 
         return total_size
 
+
 async def _download_part(
-        session: aiohttp.ClientSession,
-        semaphore: asyncio.Semaphore,
-        url: str,
-        start: int,
-        end: int,
-        part_path: str,
-        state_manager: StateManager,
-        cookies: Optional[dict] = None,
-        headers: Optional[dict] = None,
-        retry_times: int = 3
+    session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
+    url: str,
+    start: int,
+    end: int,
+    part_path: str,
+    state_manager: StateManager,
+    cookies: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    retry_times: int = 3,
 ):
     if headers is None:
         headers = {}
-    
+
     local_headers = headers.copy()
     block_size = 8192
     attempts_left = retry_times + 1
 
     while attempts_left > 0:
         attempts_left -= 1
-        
+
         try:
             resume_from = (await aio_os.path.getsize(part_path)) if await aio_os.path.exists(part_path) else 0
-            
+
             if resume_from >= (end - start + 1):
                 return
 
             current_start = start + resume_from
-            local_headers['Range'] = f'bytes={current_start}-{end}'
-            
+            local_headers["Range"] = f"bytes={current_start}-{end}"
+
             async with semaphore:
                 debug("开始下载分片:", os.path.basename(part_path), "范围:", current_start, "-", end)
                 async with session.get(url, cookies=cookies, headers=local_headers) as response:
                     response.raise_for_status()
                     await state_manager.request_status_update(part_id=start, status=STATUS.DOWNLOADING)
 
-                    async with aiofiles.open(part_path, 'ab') as f:
+                    async with aiofiles.open(part_path, "ab") as f:
                         async for chunk in response.content.iter_chunked(block_size):
                             if chunk:
                                 await f.write(chunk)
@@ -402,7 +426,7 @@ async def _download_part(
                 await state_manager.pop_part(part_id=start)
                 log("分片", os.path.basename(part_path), "下载完成。")
             return
-        
+
         except (RangeNotSupportedError, QuotaExceededError):
             raise
 
@@ -421,6 +445,7 @@ async def _download_part(
                 debug("分片", os.path.basename(part_path), "下载失败:", e)
                 await state_manager.request_status_update(part_id=start, status=STATUS.PARTIALLY_FAILED)
 
+
 def _sync_validate_part(part_path: str, expected_size: int) -> bool:
     """
     使用同步的 IO 来验证分片文件的完整性。
@@ -436,6 +461,7 @@ def _sync_validate_part(part_path: str, expected_size: int) -> bool:
     actual_size = os.path.getsize(part_path)
     return actual_size == expected_size
 
+
 def _sync_merge_parts(part_paths: list[str], final_path: str):
     """
     使用同步的 IO 来合并文件。
@@ -447,9 +473,9 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
     """
     debug("合并分片到最终文件:", final_path)
     try:
-        with open(final_path, 'wb') as final_file:
+        with open(final_path, "wb") as final_file:
             for part_path in part_paths:
-                with open(part_path, 'rb') as part_file:
+                with open(part_path, "rb") as part_file:
                     shutil.copyfileobj(part_file, final_file)
     except Exception as e:
         if os.path.exists(final_path):
@@ -458,10 +484,10 @@ def _sync_merge_parts(part_paths: list[str], final_path: str):
 
 
 def determine_chunk_size(
-        file_size: int, 
-        base_chunk_mb: int = 10,
-        max_chunks_limit: int = 100,
-        min_chunk_threshold_factor: float = 0.2
+    file_size: int,
+    base_chunk_mb: int = 10,
+    max_chunks_limit: int = 100,
+    min_chunk_threshold_factor: float = 0.2,
 ) -> int:
     """
     计算合适的分片大小以优化下载性能。
@@ -485,7 +511,7 @@ def determine_chunk_size(
         return base_chunk
 
     if file_size <= base_chunk * (1 + min_chunk_threshold_factor):
-        # 如果文件较小，直接使用单分片下载，避免无谓的分片开销 
+        # 如果文件较小，直接使用单分片下载，避免无谓的分片开销
         # 例如 10.2MB 会被视为单分片下载
         return file_size
 
@@ -507,38 +533,45 @@ def determine_chunk_size(
     else:
         return base_chunk
 
+
 CHAR_MAPPING = {
-    '\\': '＼',
-    '/': '／',
-    ':': '：',
-    '*': '＊',
-    '?': '？',
-    '"': '＂',
-    '<': '＜',
-    '>': '＞',
-    '|': '｜',
+    "\\": "＼",
+    "/": "／",
+    ":": "：",
+    "*": "＊",
+    "?": "？",
+    '"': "＂",
+    "<": "＜",
+    ">": "＞",
+    "|": "｜",
 }
-DEFAULT_ILLEGAL_CHARS_REPLACEMENT = '_'
+DEFAULT_ILLEGAL_CHARS_REPLACEMENT = "_"
 ILLEGAL_CHARS_RE = re.compile(r'[\\/:*?"<>|]')
+
 
 def readable_safe_filename(name: str) -> str:
     """
     将字符串转换为安全的文件名，替换掉非法字符。
     """
+
     def replace_char(match):
         char = match.group(0)
         return CHAR_MAPPING.get(char, DEFAULT_ILLEGAL_CHARS_REPLACEMENT)
 
     return ILLEGAL_CHARS_RE.sub(replace_char, name).strip()
 
+
 @deprecated("请使用 'readable_safe_filename'")
 def safe_filename(name: str) -> str:
     """
     替换非法文件名字符为下划线
     """
-    return re.sub(r'[\\/:*?"<>|]', '_', name)
+    return re.sub(r'[\\/:*?"<>|]', "_", name)
 
-async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]]) -> str:
+
+async def fetch_url(
+    url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
+) -> str:
     """
     获取下载链接的包装函数，支持直接传入字符串或异步/同步的 Supplier 函数。
 
@@ -558,8 +591,9 @@ async def fetch_url(url: Union[str, Callable[[], str], Callable[[], Awaitable[st
         # 如果 url 只是个字符串，直接返回
         return url
 
+
 def resolve_content_range(
-        content_range_header: Optional[str],
+    content_range_header: Optional[str],
 ) -> Tuple[int, int, Optional[int]]:
     """
     解析 Content-Range 头以获取文件的起始字节、结束字节和总大小。
@@ -577,6 +611,6 @@ def resolve_content_range(
 
     start_str, end_str, total_size_str = match.group(1), match.group(2), match.group(3)
 
-    total_size = int(total_size_str) if total_size_str != '*' else None
-    
+    total_size = int(total_size_str) if total_size_str != "*" else None
+
     return int(start_str), int(end_str), total_size

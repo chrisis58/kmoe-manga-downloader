@@ -3,10 +3,12 @@ from enum import Enum
 import time
 from typing import Optional
 
+
 class VolumeType(Enum):
     VOLUME = "單行本"
     EXTRA = "番外篇"
     SERIALIZED = "連載話"
+
 
 @dataclass(frozen=True)
 class VolInfo:
@@ -53,9 +55,9 @@ class BookInfo:
     status: str
     last_update: str
 
+
 @dataclass
 class Config:
-
     option: Optional[dict] = None
     """
     用来存储下载相关的配置选项
@@ -72,20 +74,18 @@ class Config:
 
     base_url: Optional[str] = None
 
-    cred_pool: Optional[list['Credential']] = None
+    cred_pool: Optional[list["Credential"]] = None
     """
     凭证池，存储多个账号的凭证信息
     """
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Config':
+    def from_dict(cls, data: dict) -> "Config":
         filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
-        if 'cred_pool' in filtered_data and isinstance(filtered_data['cred_pool'], list):
-            filtered_data['cred_pool'] = [
-                Credential.from_dict(cred) if isinstance(cred, dict) else cred
-                for cred in filtered_data['cred_pool']
-            ]
+        if "cred_pool" in filtered_data and isinstance(filtered_data["cred_pool"], list):
+            filtered_data["cred_pool"] = [Credential.from_dict(cred) if isinstance(cred, dict) else cred for cred in filtered_data["cred_pool"]]
         return cls(**filtered_data)
+
 
 class CredentialStatus(Enum):
     ACTIVE = "active"
@@ -103,9 +103,9 @@ class CredentialStatus(Enum):
     TEMPORARILY = "temporarily"
     """标记凭证为临时的状态"""
 
+
 @dataclass
 class QuotaInfo:
-
     reset_day: int
     """
     流量重置日, 当日 0 点重置
@@ -122,11 +122,12 @@ class QuotaInfo:
     def remaining(self) -> float:
         real_remaining = self.total - self.used - self.unsynced_usage
         return max(0.0, real_remaining)
-    
+
     @classmethod
     def from_dict(cls, data: dict):
         filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
         return cls(**filtered_data)
+
 
 @dataclass
 class Credential:
@@ -162,24 +163,24 @@ class Credential:
         return u_rem + v_rem
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Credential':
+    def from_dict(cls, data: dict) -> "Credential":
         filtered_data = {k: data[k] for k in cls.__annotations__ if k in data}
 
-        if 'user_quota' in filtered_data and isinstance(filtered_data['user_quota'], dict):
-            filtered_data['user_quota'] = QuotaInfo.from_dict(filtered_data['user_quota'])
+        if "user_quota" in filtered_data and isinstance(filtered_data["user_quota"], dict):
+            filtered_data["user_quota"] = QuotaInfo.from_dict(filtered_data["user_quota"])
 
-        if 'vip_quota' in filtered_data and isinstance(filtered_data['vip_quota'], dict):
-            filtered_data['vip_quota'] = QuotaInfo.from_dict(filtered_data['vip_quota'])
+        if "vip_quota" in filtered_data and isinstance(filtered_data["vip_quota"], dict):
+            filtered_data["vip_quota"] = QuotaInfo.from_dict(filtered_data["vip_quota"])
 
-        if 'status' in filtered_data and isinstance(filtered_data['status'], str):
-            filtered_data['status'] = CredentialStatus(filtered_data['status'])
-        
+        if "status" in filtered_data and isinstance(filtered_data["status"], str):
+            filtered_data["status"] = CredentialStatus(filtered_data["status"])
+
         return cls(**filtered_data)
 
     def __rich_repr__(self):
         """对敏感字段进行脱敏"""
         yield "username", self.username
-        
+
         masked_cookies = {}
         if self.cookies:
             for k, v in self.cookies.items():
@@ -188,7 +189,7 @@ class Credential:
                 else:
                     masked_v = "******"
                 masked_cookies[k] = masked_v
-        
+
         yield "cookies", masked_cookies
 
         yield "user_quota", self.user_quota
@@ -197,6 +198,6 @@ class Credential:
         yield "vip_quota", self.vip_quota
         yield "order", self.order
         yield "status", self.status
-        
+
         if self.note:
             yield "note", self.note

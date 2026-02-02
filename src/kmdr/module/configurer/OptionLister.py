@@ -4,11 +4,8 @@ from rich.pretty import Pretty
 from kmdr.core import CONFIGURER, Configurer
 from kmdr.core.console import info
 
-@CONFIGURER.register(
-    hasvalues={
-        'list_option': True
-    }
-)
+
+@CONFIGURER.register(hasvalues={"list_option": True})
 class OptionLister(Configurer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -18,7 +15,11 @@ class OptionLister(Configurer):
             info("[blue]当前没有任何配置项。[/blue]")
             return
 
-        table = Table(title="[green]当前 Kmdr 配置项[/green]", show_header=False, header_style="blue")
+        table = Table(
+            title="[green]当前 Kmdr 配置项[/green]",
+            show_header=False,
+            header_style="blue",
+        )
 
         table.add_column("配置类型 (Type)", style="magenta", no_wrap=True, min_width=10)
         table.add_column("配置项 (Key)", style="cyan", no_wrap=True, min_width=10)
@@ -30,10 +31,10 @@ class OptionLister(Configurer):
                 if isinstance(value, (dict, list, set, tuple)):
                     value_to_display = Pretty(value)
 
-                table.add_row('下载配置' if idx == 0 else '', key, value_to_display)
+                table.add_row("下载配置" if idx == 0 else "", key, value_to_display)
                 table.add_section()
 
         if self._configurer.base_url is not None:
-            table.add_row('应用配置', '镜像地址', self._configurer.base_url or '未设置')
+            table.add_row("应用配置", "镜像地址", self._configurer.base_url or "未设置")
 
         info(table)

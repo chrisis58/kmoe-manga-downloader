@@ -7,11 +7,8 @@ from kmdr.core.console import info
 from kmdr.module.authenticator.LoginAuthenticator import LoginAuthenticator
 
 
-@POOL_MANAGER.register(
-    hasvalues={'pool_command': 'add'}
-)
+@POOL_MANAGER.register(hasvalues={"pool_command": "add"})
 class PoolInsertionHandler(PoolManager):
-
     def __init__(self, username: str, password: Optional[str] = None, order: Optional[int] = None, note: Optional[str] = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._username = username
@@ -20,12 +17,11 @@ class PoolInsertionHandler(PoolManager):
         self._note = note
 
     async def operate(self) -> None:
-
         if self._pool.check_duplicate(self._username):
             info(f"用户 '{self._username}' 已存在于凭证池中。")
             return
-        
-        async with (await KmdrSessionManager().session()):
+
+        async with await KmdrSessionManager().session():
             authenticator = LoginAuthenticator(
                 username=self._username,
                 password=self._password,
