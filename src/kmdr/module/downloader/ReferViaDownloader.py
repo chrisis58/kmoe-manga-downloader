@@ -111,7 +111,7 @@ class ReferViaDownloader(Downloader):
                 book_id=book_id,
                 volume_id=volume_id,
                 book_format=self._format.value,
-                is_vip=is_vip if self._use_vip else 0,
+                is_vip=1 if (self._use_vip and is_vip) else 0,
             ),
             cookies=cookies,
         ) as response:
