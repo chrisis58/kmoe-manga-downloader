@@ -14,8 +14,8 @@ from .download_utils import (
 
 @DOWNLOADER.register(hasvalues={"method": 2})
 class DirectDownloader(Downloader):
-    def __init__(self, dest=".", callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
-        super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
+    def __init__(self, dest=".", format="epub", callback=None, retry=3, num_workers=8, proxy=None, vip=False, disable_multi_part=False, *args, **kwargs):
+        super().__init__(dest, format, callback, retry, num_workers, proxy, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
 
@@ -36,7 +36,7 @@ class DirectDownloader(Downloader):
                 self._progress,
                 partial(self.construct_download_url, cred, book, volume),
                 download_path,
-                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
+                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
                 self._retry,
                 cookies=cred.cookies,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
@@ -50,7 +50,7 @@ class DirectDownloader(Downloader):
             self._progress,
             partial(self.construct_download_url, cred, book, volume),
             download_path,
-            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
+            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
             self._retry,
             cookies=cred.cookies,
             callback=lambda: self._callback(book, volume) if self._callback else None,
@@ -61,5 +61,6 @@ class DirectDownloader(Downloader):
         return API_ROUTE.DOWNLOAD.format(
             book_id=book.id,
             volume_id=volume.id,
+            book_format=self._format.value,
             is_vip=1 if self._use_vip and cred.is_vip else 0,
         )

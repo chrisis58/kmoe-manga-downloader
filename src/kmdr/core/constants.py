@@ -45,11 +45,25 @@ class _ApiRoute:
     BOOK_DATA: str = "/book_data.php"
     """书籍数据接口"""
 
-    DOWNLOAD: str = "/dl/{book_id}/{volume_id}/1/2/{is_vip}/"
-    """下载接口"""
+    DOWNLOAD: str = "/dl/{book_id}/{volume_id}/1/{book_format}/{is_vip}/"
+    """
+    下载接口
+    
+    :param book_id: 书籍 ID
+    :param volume_id: 卷 ID
+    :param book_format: 书籍格式，1 表示 mobi，2 表示 epub
+    :param is_vip: 是否为 VIP 书籍，1 表示是，0 表示否
+    """
 
-    GETDOWNURL: str = "/getdownurl.php?b={book_id}&v={volume_id}&mobi=2&vip={is_vip}&json=1"
-    """获取下载链接接口"""
+    GETDOWNURL: str = "/getdownurl.php?b={book_id}&v={volume_id}&mobi={book_format}&vip={is_vip}&json=1"
+    """
+    获取下载链接接口
+    
+    :param book_id: 书籍 ID
+    :param volume_id: 卷 ID
+    :param book_format: 书籍格式，1 表示 mobi，2 表示 epub
+    :param is_vip: 是否为 VIP 书籍，1 表示是，0 表示否
+    """
 
 
 class LoginResponse(Enum):
@@ -71,6 +85,18 @@ class LoginResponse(Enum):
         if isinstance(code, LoginResponse):
             return code == cls.m100
         return cls.from_code(code) == cls.m100
+
+
+class BookFormat(Enum):
+    EPUB = 2
+    MOBI = 1
+
+    @classmethod
+    def from_name(cls, name: str) -> "BookFormat":
+        ext = cls.__members__.get(name.upper())
+        if ext is None:
+            raise ValueError(f"未知的书籍格式：{name}")
+        return ext
 
 
 API_ROUTE = _ApiRoute()
