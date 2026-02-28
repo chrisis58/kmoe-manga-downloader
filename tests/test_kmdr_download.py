@@ -99,6 +99,7 @@ class TestKmdrDownload(unittest.TestCase):
                 vol_type="extra",
                 volume="all",
                 max_size=0.6,
+                format="mobi",
                 limit=1,
                 retry=3,
             )
@@ -107,6 +108,7 @@ class TestKmdrDownload(unittest.TestCase):
         assert len(sub_dir := os.listdir(dest)) == 1, "Expected one subdirectory in the destination"
         assert os.path.isdir(os.path.join(dest, book_dir := sub_dir[0])), "Expected the subdirectory to be a directory"
         assert len(os.listdir(os.path.join(dest, book_dir))) == 1, "Expected 1 volume to be downloaded"
+        assert any(f.endswith(".mobi") for f in os.listdir(os.path.join(dest, book_dir))), "Expected downloaded file to be in mobi format"
 
         total_size = sum(
             os.path.getsize(os.path.join(dest, book_dir, f))
