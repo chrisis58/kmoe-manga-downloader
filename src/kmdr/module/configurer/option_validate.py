@@ -4,6 +4,7 @@ import os
 
 from kmdr.core.console import info
 from kmdr.core.error import ValidationError
+from kmdr.core.constants import BookFormat
 
 __OPTIONS_VALIDATOR = {}
 
@@ -123,3 +124,12 @@ def validate_proxy(value: str) -> Optional[str]:
         info("[red]代理不能为空。[/red]")
         return None
     return value
+
+@register_validator("format")
+def validate_format(value: str) -> Optional[str]:
+    try:
+        fmt = BookFormat.from_name(value)
+        return fmt.name.lower()
+    except ValueError:
+        info(f"[red]无效的格式: {value}。可用格式：{', '.join(BookFormat.__members__.keys())}[/red]")
+        return None

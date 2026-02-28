@@ -61,7 +61,7 @@ def argument_parser():
     download_parser.add_argument("-d", "--dest", type=str, help="指定下载文件的保存路径，默认为当前目录", required=False)
     download_parser.add_argument("-l", "--book-url", type=str, help="漫画详情页面的 URL", required=False)
     download_parser.add_argument("-v", "--volume", type=str, help="指定下载的卷，多个用逗号分隔，例如 `1,2,3` 或 `1-5,8`，`all` 表示全部", required=False)
-    download_parser.add_argument("-f", "--format", type=str, help="指定下载的漫画格式，`mobi` 或 `epub`", required=False, choices=["mobi", "epub"], default="epub")
+    download_parser.add_argument("-f", "--format", type=str, help="指定下载的漫画格式，`mobi` 或 `epub`，默认为 `epub`", required=False, choices=["mobi", "epub"])
     download_parser.add_argument("-t", "--vol-type", type=str, help="指定下载的卷类型，`vol` 为单行本, `extra` 为番外, `seri` 为连载", required=False, choices=["vol", "extra", "seri", "all"], default="vol")
     download_parser.add_argument("--max-size", type=float, help="限制下载卷的最大体积 (单位: MB)", required=False)
     download_parser.add_argument("--limit", type=int, help="限制下载卷的总数量", required=False)
