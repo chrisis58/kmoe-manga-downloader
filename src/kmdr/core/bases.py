@@ -5,6 +5,8 @@ import asyncio
 from aiohttp import ClientSession
 from rich.prompt import Confirm
 
+from kmdr.core.constants import BookFormat
+
 from .console import *
 from .error import LoginError
 from .registry import Registry
@@ -90,10 +92,11 @@ class Picker(TerminalContext):
 
 
 class Downloader(SessionContext, TerminalContext):
-    def __init__(self, dest: str = ".", callback: Optional[str] = None, retry: int = 3, num_workers: int = 8, *args, **kwargs):
+    def __init__(self, dest: str = ".", format: str = "epub", callback: Optional[str] = None, retry: int = 3, num_workers: int = 8, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._dest: str = dest
+        self._format: BookFormat = BookFormat.from_name(format)
         self._callback: Optional[Callable] = construct_callback(callback)
         self._retry: int = retry
         self._semaphore = asyncio.Semaphore(num_workers)

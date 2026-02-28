@@ -90,6 +90,7 @@ kmdr download -d path/to/destination -l https://kxx.moe/c/50076.htm -t extra -v 
 - `-l`, `--book-url`: 指定漫画的主页地址
 - `-v`, `--volume`: 指定下载的卷，多个用逗号分隔，例如 `1,2,3` 或 `1-5,8`，`all` 表示全部
 - `-t`, `--vol-type`: 卷类型，`vol`: 单行本（默认）；`extra`: 番外；`seri`: 连载话；`all`: 全部
+- `-f`, `--format`: 卷格式，`epub`（默认）；`mobi`
 - `-p`, `--proxy`: 代理服务器地址
 - `-r`, `--retry`: 下载失败时的重试次数，默认为 3
 - `-c`, `--callback`: 下载完成后的回调脚本（使用方式详见 [4. 回调函数](https://github.com/chrisis58/kmoe-manga-downlaoder?tab=readme-ov-file#4-%E5%9B%9E%E8%B0%83%E5%87%BD%E6%95%B0)）
@@ -155,7 +156,7 @@ kmdr config -s num_workers=5 "callback=echo '{b.name} {v.name} downloaded!' >> ~
 - `-d`, `--delete`, `--unset`: 清除单项配置
 
 > [!NOTE]
-> 当前仅支持部分下载参数的持久化：`num_workers`, `dest`, `retry`, `callback`, `proxy`
+> 当前仅支持部分下载参数的持久化：`format` ,`num_workers`, `dest`, `retry`, `callback`, `proxy`
 
 ### 6. 凭证池与故障转移 ![V1.3.0+](https://img.shields.io/badge/v1.3.0%2B-blue?style=flat-square)
 

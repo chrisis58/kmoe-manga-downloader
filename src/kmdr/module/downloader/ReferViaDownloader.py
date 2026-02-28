@@ -27,6 +27,7 @@ class ReferViaDownloader(Downloader):
     def __init__(
         self,
         dest=".",
+        format="epub",
         callback=None,
         retry=3,
         num_workers=8,
@@ -37,7 +38,7 @@ class ReferViaDownloader(Downloader):
         *args,
         **kwargs,
     ):
-        super().__init__(dest, callback, retry, num_workers, proxy, *args, **kwargs)
+        super().__init__(dest, format, callback, retry, num_workers, proxy, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
         self._try_multi_part = try_multi_part
@@ -69,7 +70,7 @@ class ReferViaDownloader(Downloader):
                     volume.id,
                 ),
                 download_path,
-                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
+                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
                 self._retry,
                 headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
@@ -90,7 +91,7 @@ class ReferViaDownloader(Downloader):
                 volume.id,
             ),
             download_path,
-            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].epub"),
+            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
             self._retry,
             headers=DOWNLOAD_HEAD,
             callback=lambda: self._callback(book, volume) if self._callback else None,
@@ -109,7 +110,8 @@ class ReferViaDownloader(Downloader):
             API_ROUTE.GETDOWNURL.format(
                 book_id=book_id,
                 volume_id=volume_id,
-                is_vip=is_vip if self._use_vip else 0,
+                book_format=self._format.value,
+                is_vip=1 if (self._use_vip and is_vip) else 0,
             ),
             cookies=cookies,
         ) as response:
