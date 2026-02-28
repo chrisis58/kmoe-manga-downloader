@@ -131,5 +131,6 @@ def validate_format(value: str) -> Optional[str]:
         fmt = BookFormat.from_name(value)
         return fmt.name.lower()
     except ValueError:
-        info(f"[red]无效的格式: {value}。可用格式：{', '.join(BookFormat.__members__.keys())}[/red]")
+        available_formats = ", ".join(fmt.name.lower() for fmt in BookFormat)
+        info(f"[red]无效的格式: {value}。可用格式：{available_formats}[/red]")
         return None
