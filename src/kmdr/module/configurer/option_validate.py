@@ -125,6 +125,7 @@ def validate_proxy(value: str) -> Optional[str]:
         return None
     return value
 
+
 @register_validator("format")
 def validate_format(value: str) -> Optional[str]:
     try:
