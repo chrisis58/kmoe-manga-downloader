@@ -16,7 +16,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        # Ensure full history for versioning tools `setuptools-scm`
+        # Ensure full history for poetry-dynamic-versioning
         fetch-depth: 0
 
     - name: Set up Python

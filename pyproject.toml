@@ -1,13 +1,10 @@
-[project]
+[tool.poetry]
 name = "kmoe-manga-downloader"
-dynamic = ["version"]
-authors = [
-    { name="Chris Zheng", email="chrisis58@outlook.com" },
-]
+version = "0.0.0" # placeholder, dynamic versioning will replace it
 description = "A CLI-downloader for site @kox.moe."
+authors = ["Chris Zheng <chrisis58@outlook.com>"]
 readme = "README.md"
-requires-python = ">=3.9"
-license = { file="LICENSE" }
+license = "MIT"
 keywords = ["manga", "downloader", "kmoe"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -15,38 +12,29 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+packages = [{include = "kmdr", from = "src"}]
+homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
+repository = "https://github.com/chrisis58/kmoe-manga-downloader"
 
-dependencies = [
-    "beautifulsoup4~=4.13.4",
-    "aiohttp~=3.12.15",
-    "aiofiles~=24.1.0",
-    "rich~=13.9.4",
-    "yarl~=1.20.1",
-    "typing-extensions~=4.15.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "ruff",
-    "pytest",
-]
-
-[project.urls]
-Homepage = "https://github.com/chrisis58/kmoe-manga-downloader"
-Issues = "https://github.com/chrisis58/kmoe-manga-downloader/issues"
-
-[project.scripts]
+[tool.poetry.scripts]
 kmdr = "kmdr.main:entry_point"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.poetry.dependencies]
+python = ">=3.9"
+beautifulsoup4 = "~4.13.4"
+aiohttp = "~3.12.15"
+aiofiles = "~24.1.0"
+rich = "~13.9.4"
+yarl = "~1.20.1"
+typing-extensions = "~4.15.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+pytest = "*"
 
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm[toml]>=8.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
-write_to = "src/kmdr/_version.py"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.pytest.ini_options]
 pythonpath = "src"
@@ -61,3 +49,11 @@ ignore = []
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["src/kmdr/_version.py"]
