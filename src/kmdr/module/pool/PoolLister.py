@@ -92,6 +92,7 @@ class PoolLister(PoolManager):
         table.add_column("用户名", justify="center", style="magenta")
         table.add_column("昵称", justify="center", style="green")
         table.add_column("剩余额度", justify="center")
+        table.add_column("配额刷新日", justify="center")
         table.add_column("状态", justify="center")
         table.add_column("最后更新", justify="center", style="dim", width=22)
         table.add_column("备注", justify="center", style="dim italic")
@@ -108,16 +109,21 @@ class PoolLister(PoolManager):
                 status_renderable = Spinner("dots", text="更新中...", style="yellow")
                 last_update_renderable = Spinner("dots", text=f" {time_str}", style="yellow")
                 quota_str = Spinner("dots", text=f"{cred.quota_remaining:.1f} MB", style="yellow")
+                quota_refresh_str = Spinner("dots", text="加载中...", style="yellow")
             else:
                 status_renderable = self._format_status(cred.status)
                 last_update_renderable = time_str
                 quota_str = f"{cred.quota_remaining:.1f} MB"
+                quota_refresh_str = f"{cred.user_quota.reset_day} 日"
+                if cred.vip_quota:
+                    quota_refresh_str += f" / {cred.vip_quota.reset_day} 日(VIP)"
 
             table.add_row(
                 str(cred.order),
                 cred.username,
                 cred.nickname or "-",
                 quota_str,
+                quota_refresh_str,
                 status_renderable,
                 last_update_renderable,
                 cred.note or "-",
