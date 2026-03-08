@@ -58,7 +58,7 @@ class KmdrSessionManager(SessionManager):
             # session_var 尚未设置
             pass
 
-        with self._console.status("初始化中..."):
+        with self._console.status("连接中..."):
             self._base_url = await self._probing_base_url()
             # 持久化配置
             self._configurer.set_base_url(self._base_url)

@@ -3,12 +3,24 @@ from argparse import Namespace
 import asyncio
 
 from kmdr import __version__
-from kmdr.core import *
-from kmdr.core.bases import POOL_MANAGER
-from kmdr.module import *
 
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT IMPLEMENTED!")) -> None:
+    from kmdr.core.console import info, debug, log, _console
+    
+    with _console.status("初始化中..."):
+        from kmdr.core.bases import (
+            SESSION_MANAGER,
+            AUTHENTICATOR,
+            LISTERS,
+            PICKERS,
+            DOWNLOADER,
+            CONFIGURER,
+            POOL_MANAGER,
+        )
+        from kmdr.core.defaults import post_init
+        import kmdr.module  # Register plugins
+    
     post_init(args)
     log("[Lifecycle:Start] 启动 kmdr, 版本", __version__)
     debug("[bold green]以调试模式启动[/bold green]")
@@ -56,6 +68,10 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
+    from kmdr.core.defaults import argument_parser
+    from kmdr.core.error import KmdrError
+    from kmdr.core.console import info, exception, log
+    
     try:
         parser = argument_parser()
         args = parser.parse_args()
