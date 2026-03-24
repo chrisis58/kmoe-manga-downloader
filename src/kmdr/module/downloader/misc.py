@@ -1,5 +1,5 @@
-from enum import Enum
 import asyncio
+from enum import Enum
 
 from rich.progress import Progress, TaskID
 

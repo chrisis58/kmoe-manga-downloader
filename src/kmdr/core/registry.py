@@ -1,9 +1,9 @@
-from typing import Optional, Callable, TypeVar, Generic
-from dataclasses import dataclass, field
 from argparse import Namespace
+from dataclasses import dataclass, field
+from typing import Callable, Generic, Optional, TypeVar
 
-from .defaults import combine_args
 from .console import debug
+from .defaults import combine_args
 
 T = TypeVar("T")
 
@@ -11,7 +11,7 @@ T = TypeVar("T")
 class Registry(Generic[T]):
     def __init__(self, name: str, combine_args: bool = False):
         self._name = name
-        self._modules: list["Predication"] = list()
+        self._modules: list[Predication] = list()
         self._combine_args = combine_args
 
     def register(

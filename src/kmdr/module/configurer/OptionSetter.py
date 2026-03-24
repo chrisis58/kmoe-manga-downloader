@@ -1,4 +1,4 @@
-from kmdr.core import Configurer, CONFIGURER
+from kmdr.core import CONFIGURER, Configurer
 from kmdr.core.console import info
 
 from .option_validate import validate

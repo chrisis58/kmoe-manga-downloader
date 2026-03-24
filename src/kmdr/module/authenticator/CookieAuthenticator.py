@@ -1,6 +1,4 @@
-from typing import Optional
-
-from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
+from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
 from kmdr.core.structure import Credential
 
 from .utils import check_status

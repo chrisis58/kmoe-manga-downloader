@@ -4,9 +4,9 @@ KMDR 用于管理控制台输出的模块。
 提供信息、调试和日志记录功能，确保在交互式和非交互式环境中均能正确输出。
 """
 
-from typing import Any
-import sys
 import io
+import sys
+from typing import Any
 
 from rich.console import Console
 from rich.traceback import Traceback
@@ -77,4 +77,4 @@ def log(*args, debug=False, **kwargs):
 
 
 def exception(exception: Exception):
-    _console.print((Traceback.from_exception(type(exception), exception, exception.__traceback__)))
+    _console.print(Traceback.from_exception(type(exception), exception, exception.__traceback__))

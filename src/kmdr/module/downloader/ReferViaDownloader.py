@@ -1,15 +1,15 @@
+import json
 from functools import partial
 from typing import Callable, Optional
 
-import json
 import aiohttp
 
-from kmdr.core import Downloader, VolInfo, DOWNLOADER, BookInfo
+from kmdr.core import DOWNLOADER, BookInfo, Downloader, VolInfo
+from kmdr.core.console import debug
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import QuotaExceededError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import async_retry
-from kmdr.core.console import debug
 
 from .download_utils import (
     download_file,

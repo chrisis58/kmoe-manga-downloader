@@ -1,5 +1,5 @@
-from rich.table import Table
 from rich.pretty import Pretty
+from rich.table import Table
 
 from kmdr.core import CONFIGURER, Configurer
 from kmdr.core.console import info

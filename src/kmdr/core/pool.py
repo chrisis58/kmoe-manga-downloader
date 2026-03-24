@@ -1,14 +1,13 @@
-from collections import defaultdict
-import time
-from typing import Iterator, Optional
-import itertools
-from contextlib import contextmanager
-
 import asyncio
+import itertools
+import time
+from collections import defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Optional
 
 from .defaults import Configurer
 from .structure import Credential, CredentialStatus, QuotaInfo
-from .console import debug
 from .utils import calc_reset_time
 
 UNLIMITED_WORKERS = 99999

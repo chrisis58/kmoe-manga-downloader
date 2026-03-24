@@ -1,6 +1,6 @@
 from .DirectDownloader import DirectDownloader
-from .ReferViaDownloader import ReferViaDownloader
 from .FailoverDownloader import FailoverDownloader
+from .ReferViaDownloader import ReferViaDownloader
 
 __all__ = [
     "DirectDownloader",

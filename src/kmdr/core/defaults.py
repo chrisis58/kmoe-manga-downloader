@@ -1,24 +1,24 @@
-import dataclasses
-from enum import Enum
-import os
-import json
-from typing import Optional, Any
 import argparse
+import dataclasses
+import json
+import os
 from contextvars import ContextVar
+from enum import Enum
+from typing import Any, Optional
 
 from rich.progress import (
     BarColumn,
     DownloadColumn,
     TextColumn,
-    TransferSpeedColumn,
     TimeRemainingColumn,
+    TransferSpeedColumn,
 )
 
-from .utils import singleton
-from .structure import Config, Credential
-from .constants import BASE_URL
 from .console import _update_verbose_setting
+from .constants import BASE_URL
 from .error import InitializationError
+from .structure import Config, Credential
+from .utils import singleton
 
 TRUE_UA = "kmdr/1.0 (https://github.com/chrisis58/kmoe-manga-downloader)"
 
@@ -92,7 +92,7 @@ def argument_parser():
     config_parser.add_argument("-d", "--delete", "--unset", dest="unset", type=str, help="删除特定的配置选项")
 
     pool_parser = subparsers.add_parser("pool", aliases=["profile"], help="管理凭证池")
-    
+
     pool_subparsers = pool_parser.add_subparsers(title="凭证池操作", dest="pool_command")
 
     pool_add = pool_subparsers.add_parser("add", help="向池中添加账号")
@@ -154,7 +154,7 @@ class Configurer:
             self._config: Config = Config()
             self.update()
         else:
-            with open(os.path.join(os.path.expanduser("~"), self.__filename), "r") as f:
+            with open(os.path.join(os.path.expanduser("~"), self.__filename)) as f:
                 config_data = json.load(f)
             self._config: Config = Config.from_dict(config_data)
 

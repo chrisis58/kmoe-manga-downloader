@@ -1,14 +1,14 @@
 from functools import partial
 from typing import Callable, Optional
 
-from kmdr.core import Downloader, BookInfo, VolInfo, DOWNLOADER
+from kmdr.core import DOWNLOADER, BookInfo, Downloader, VolInfo
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.structure import Credential
 
 from .download_utils import (
+    download_file,
     download_file_multipart,
     readable_safe_filename,
-    download_file,
 )
 
 

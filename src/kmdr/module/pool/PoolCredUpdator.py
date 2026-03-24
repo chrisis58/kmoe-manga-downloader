@@ -1,6 +1,6 @@
 from typing import Optional
 
-from kmdr.core.bases import PoolManager, POOL_MANAGER
+from kmdr.core.bases import POOL_MANAGER, PoolManager
 from kmdr.core.console import info
 
 

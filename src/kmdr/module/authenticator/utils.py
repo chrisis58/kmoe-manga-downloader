@@ -1,16 +1,16 @@
-from typing import Optional, Union
 import re
+from typing import Optional, Union
 
 from aiohttp import ClientSession
-from rich.console import Console
 from bs4 import BeautifulSoup, Tag
+from rich.console import Console
 from yarl import URL
 
-from kmdr.core.error import LoginError
-from kmdr.core.utils import async_retry, extract_cookies
+from kmdr.core.console import debug, info
 from kmdr.core.constants import API_ROUTE
-from kmdr.core.console import *
-from kmdr.core.structure import Credential, QuotaInfo, CredentialStatus
+from kmdr.core.error import LoginError
+from kmdr.core.structure import Credential, CredentialStatus, QuotaInfo
+from kmdr.core.utils import async_retry, extract_cookies
 
 NICKNAME_ID = "div_nickname_display"
 

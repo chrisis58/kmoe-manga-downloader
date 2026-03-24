@@ -1,8 +1,8 @@
 from .BaseUrlUpdator import BaseUrlUpdator
 from .ConfigClearer import ConfigClearer
+from .ConfigUnsetter import ConfigUnsetter
 from .OptionLister import OptionLister
 from .OptionSetter import OptionSetter
-from .ConfigUnsetter import ConfigUnsetter
 
 __all__ = [
     "BaseUrlUpdator",

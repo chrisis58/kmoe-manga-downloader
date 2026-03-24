@@ -1,19 +1,17 @@
-from typing import Optional
-from urllib.parse import urlsplit, urljoin
-from typing import Type
-from types import TracebackType
-
 import asyncio
+from types import TracebackType
+from typing import Optional
+from urllib.parse import urljoin, urlsplit
+
 from aiohttp import ClientSession, DummyCookieJar
 
-from .constants import BASE_URL, API_ROUTE
-from .utils import async_retry, PrioritySorter, get_random_ua
 from .bases import SESSION_MANAGER, SessionManager
+from .console import debug, info
+from .constants import API_ROUTE, BASE_URL
 from .defaults import TRUE_UA
 from .error import InitializationError, RedirectError
-from .protocol import Supplier
-from .console import *
-from .protocol import AsyncCtxManager
+from .protocol import AsyncCtxManager, Supplier
+from .utils import PrioritySorter, async_retry, get_random_ua
 
 
 # 通常只会有一个 SessionManager 的实现
@@ -131,7 +129,7 @@ class KmdrSessionManager(SessionManager):
                     return get_base_url()
 
             raise InitializationError(
-                f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json"
+                "所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json"
             )
 
 
@@ -145,7 +143,7 @@ class SessionCtxManager:
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ):
