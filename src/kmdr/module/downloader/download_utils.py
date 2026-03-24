@@ -1,20 +1,20 @@
 import asyncio
+import math
 import os
 import re
-import math
-from typing import Callable, Optional, Union, Awaitable, Tuple
 import shutil
+from collections.abc import Awaitable
+from typing import Callable, Optional, Union
 
-from typing_extensions import deprecated
-
-import aiohttp
 import aiofiles
 import aiofiles.os as aio_os
-from rich.progress import Progress
+import aiohttp
 from aiohttp.client_exceptions import ClientPayloadError
+from rich.progress import Progress
+from typing_extensions import deprecated
 
-from kmdr.core.console import info, log, debug
-from kmdr.core.error import RangeNotSupportedError, QuotaExceededError
+from kmdr.core.console import debug, info, log
+from kmdr.core.error import QuotaExceededError, RangeNotSupportedError
 from kmdr.core.utils import async_retry, sanitize_headers
 
 from .misc import STATUS, StateManager
@@ -594,7 +594,7 @@ async def fetch_url(
 
 def resolve_content_range(
     content_range_header: Optional[str],
-) -> Tuple[int, int, Optional[int]]:
+) -> tuple[int, int, Optional[int]]:
     """
     解析 Content-Range 头以获取文件的起始字节、结束字节和总大小。
 

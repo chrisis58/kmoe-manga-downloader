@@ -1,9 +1,5 @@
-from typing import Optional
-
-from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
+from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
 from kmdr.core.structure import Credential
-
-from .utils import check_status
 
 
 @AUTHENTICATOR.register()
@@ -17,6 +13,8 @@ class CookieAuthenticator(Authenticator):
             self._show_quota = False
 
     async def _authenticate(self) -> Credential:
+        from .utils import check_status
+
         cookie = self._configurer.cookie
 
         if not cookie:

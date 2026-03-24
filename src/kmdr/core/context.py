@@ -5,13 +5,15 @@ from rich.progress import Progress
 
 from kmdr.core.pool import CredentialPool
 
+from .console import _console
 from .defaults import (
     Configurer as InnerConfigurer,
-    session_var,
+)
+from .defaults import (
     base_url_var,
     progress_definition,
+    session_var,
 )
-from .console import _console
 
 _lazy_progress: Optional[Progress] = None
 _lazy_cred_pool: Optional[CredentialPool] = None

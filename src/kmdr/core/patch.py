@@ -1,5 +1,6 @@
-from rich.status import Status
 from contextlib import contextmanager
+
+from rich.status import Status
 
 
 class _StackedStatusManager:

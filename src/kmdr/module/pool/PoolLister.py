@@ -1,19 +1,16 @@
 import asyncio
-from datetime import datetime
 import random
-from typing import Set
+from datetime import datetime
 
-from rich.live import Live
-from rich.table import Table
-from rich.spinner import Spinner
 from rich import box
+from rich.live import Live
+from rich.spinner import Spinner
+from rich.table import Table
 
-from kmdr.core.bases import PoolManager, POOL_MANAGER
-from kmdr.core.session import KmdrSessionManager
-from kmdr.core.structure import CredentialStatus, Credential
+from kmdr.core.bases import POOL_MANAGER, PoolManager
 from kmdr.core.console import debug, info
-
-from kmdr.module.authenticator.utils import check_status
+from kmdr.core.session import KmdrSessionManager
+from kmdr.core.structure import Credential, CredentialStatus
 
 
 @POOL_MANAGER.register(hasvalues={"pool_command": "list"})
@@ -22,7 +19,7 @@ class PoolLister(PoolManager):
         super().__init__(*args, **kwargs)
         self.__refresh = refresh
         self.__num_workers = num_workers
-        self._updating_users: Set[str] = set()
+        self._updating_users: set[str] = set()
 
     async def operate(self) -> None:
         if not self._pool.pool:
@@ -132,6 +129,8 @@ class PoolLister(PoolManager):
         return table
 
     async def _check_and_update_single(self, session, cred: Credential, semaphore: asyncio.Semaphore):
+        from kmdr.module.authenticator.utils import check_status
+
         async with semaphore:
             # 防止瞬时并发过高
             await asyncio.sleep(random.uniform(0, 0.3))

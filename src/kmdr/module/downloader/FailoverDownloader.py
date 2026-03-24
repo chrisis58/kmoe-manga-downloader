@@ -1,15 +1,12 @@
 import asyncio
 from typing import Callable, Optional
 
-from kmdr.core.context import CredentialPoolContext
 from kmdr.core.bases import DOWNLOADER, Downloader
-from kmdr.core.error import LoginError
-from kmdr.core.structure import BookInfo, Credential, VolInfo, CredentialStatus
-from kmdr.core.pool import PooledCredential
 from kmdr.core.console import debug, info
-from kmdr.core.error import QuotaExceededError, NoCandidateCredentialError
-
-from kmdr.module.authenticator.utils import check_status
+from kmdr.core.context import CredentialPoolContext
+from kmdr.core.error import LoginError, NoCandidateCredentialError, QuotaExceededError
+from kmdr.core.pool import PooledCredential
+from kmdr.core.structure import BookInfo, Credential, CredentialStatus, VolInfo
 
 
 @DOWNLOADER.register(
@@ -148,6 +145,8 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
 
     async def __refresh_cred(self, pooled_cred: PooledCredential, semaphore: asyncio.Semaphore) -> None:
         """更新指定 PooledCredential 的状态信息"""
+        from kmdr.module.authenticator.utils import check_status
+
         if pooled_cred.is_recently_synced():
             debug("账号", pooled_cred.username, "最近已同步，使用缓存数据。")
             return

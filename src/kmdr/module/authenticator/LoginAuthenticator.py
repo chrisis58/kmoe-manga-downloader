@@ -1,15 +1,13 @@
-from typing import Optional
 import re
+from typing import Optional
 
 from rich.prompt import Prompt
 
-from kmdr.core import Authenticator, AUTHENTICATOR, LoginError
+from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
 from kmdr.core.constants import API_ROUTE, LoginResponse
+from kmdr.core.error import NotInteractableError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import extract_cookies
-from kmdr.core.error import NotInteractableError
-
-from .utils import check_status
 
 
 @AUTHENTICATOR.register(hasvalues={"command": "login"})
@@ -35,6 +33,8 @@ class LoginAuthenticator(Authenticator):
         self._password = password
 
     async def _authenticate(self) -> Credential:
+        from .utils import check_status
+
         async with self._session.post(
             url=API_ROUTE.LOGIN_DO,
             data={"email": self._username, "passwd": self._password, "keepalive": "on"},

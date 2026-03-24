@@ -1,6 +1,6 @@
 from typing import Optional
 
-from kmdr.core import Picker, PICKERS, VolInfo, VolumeType
+from kmdr.core import PICKERS, Picker, VolInfo, VolumeType
 
 from .utils import resolve_volume
 

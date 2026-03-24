@@ -1,20 +1,52 @@
-import functools
-from typing import Optional, Callable, TypeVar, Hashable, Generic, Mapping, Any
 import asyncio
-from asyncio.proactor_events import _ProactorBasePipeTransport
+import functools
 import random
-from datetime import datetime
+import subprocess
+from asyncio.proactor_events import _ProactorBasePipeTransport
 from calendar import monthrange
+from collections.abc import Coroutine, Hashable, Mapping
+from datetime import datetime
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 import aiohttp
 
-import subprocess
-
+from .console import debug
 from .constants import TIMEZONE
-from .structure import BookInfo, VolInfo
 from .error import RedirectError
 from .protocol import Consumer
-from .console import debug
+from .structure import BookInfo, VolInfo
+
+T = TypeVar("T")
+
+
+class SharedAwaitable(Generic[T]):
+    """
+    封装协程，使其结果可被多次 await。
+    第一次 await 时执行协程并缓存结果，后续 await 直接返回缓存结果。
+    """
+
+    def __init__(self, coro: Coroutine[Any, Any, T]):
+        self._coro = coro
+        self._result: T
+        self._event = asyncio.Event()
+        self._started = False
+
+    def __await__(self):
+        return self._wait().__await__()
+
+    def __call__(self) -> "SharedAwaitable[T]":
+        return self
+
+    async def _wait(self) -> T:
+        if not self._started:
+            self._started = True
+            try:
+                self._result = await self._coro
+            finally:
+                self._event.set()
+        else:
+            await self._event.wait()
+        return self._result
 
 
 def singleton(cls):

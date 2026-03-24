@@ -1,19 +1,17 @@
-from typing import Optional
-from urllib.parse import urlsplit, urljoin
-from typing import Type
-from types import TracebackType
-
 import asyncio
-from aiohttp import ClientSession, DummyCookieJar
+from types import TracebackType
+from typing import Optional
+from urllib.parse import urljoin, urlsplit
 
-from .constants import BASE_URL, API_ROUTE
-from .utils import async_retry, PrioritySorter, get_random_ua
+from aiohttp import ClientSession, ClientTimeout, DummyCookieJar
+
 from .bases import SESSION_MANAGER, SessionManager
+from .console import debug, info
+from .constants import API_ROUTE, BASE_URL
 from .defaults import TRUE_UA
 from .error import InitializationError, RedirectError
-from .protocol import Supplier
-from .console import *
-from .protocol import AsyncCtxManager
+from .protocol import AsyncCtxManager, Supplier
+from .utils import PrioritySorter, async_retry, get_random_ua
 
 
 # 通常只会有一个 SessionManager 的实现
@@ -58,7 +56,7 @@ class KmdrSessionManager(SessionManager):
             # session_var 尚未设置
             pass
 
-        with self._console.status("初始化中..."):
+        with self._console.status("连接中..."):
             self._base_url = await self._probing_base_url()
             # 持久化配置
             self._configurer.set_base_url(self._base_url)
@@ -118,20 +116,22 @@ class KmdrSessionManager(SessionManager):
             nonlocal ret_base_url
             ret_base_url = value
 
-        async with ClientSession(proxy=self._proxy, trust_env=True, headers=self._headers) as probe_session:
+        async with ClientSession(proxy=self._proxy, trust_env=True, headers=self._headers, timeout=ClientTimeout(total=2.0)) as probe_session:
             # TODO: 请求远程仓库中的镜像列表，并添加到 sorter 中
 
             for bu in self._sorter.sort():
                 set_base_url(bu)
 
                 if await async_retry(
+                    attempts=1,
+                    backoff=1,
                     base_url_setter=set_base_url,
                     on_failure=lambda e: info(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
                 )(self.validate_url)(probe_session, get_base_url):
                     return get_base_url()
 
             raise InitializationError(
-                f"所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json"
+                "所有镜像均不可用，请检查您的网络连接或使用其他镜像。\n详情参考：https://github.com/chrisis58/kmoe-manga-downloader/blob/main/mirror/mirrors.json"
             )
 
 
@@ -145,7 +145,7 @@ class SessionCtxManager:
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ):

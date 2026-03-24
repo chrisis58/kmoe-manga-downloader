@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from datetime import timedelta, timezone
 from enum import Enum
 from typing import Union
-from datetime import timedelta, timezone
 
 from typing_extensions import deprecated
 
@@ -48,7 +48,7 @@ class _ApiRoute:
     DOWNLOAD: str = "/dl/{book_id}/{volume_id}/1/{book_format}/{is_vip}/"
     """
     下载接口
-    
+
     :param book_id: 书籍 ID
     :param volume_id: 卷 ID
     :param book_format: 书籍格式，1 表示 mobi，2 表示 epub
@@ -58,7 +58,7 @@ class _ApiRoute:
     GETDOWNURL: str = "/getdownurl.php?b={book_id}&v={volume_id}&mobi={book_format}&vip={is_vip}&json=1"
     """
     获取下载链接接口
-    
+
     :param book_id: 书籍 ID
     :param volume_id: 卷 ID
     :param book_format: 书籍格式，1 表示 mobi，2 表示 epub

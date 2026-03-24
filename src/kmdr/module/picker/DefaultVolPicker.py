@@ -1,7 +1,7 @@
-from rich.table import Table
 from rich.prompt import Prompt
+from rich.table import Table
 
-from kmdr.core import Picker, PICKERS, VolInfo
+from kmdr.core import PICKERS, Picker, VolInfo
 from kmdr.core.console import info
 from kmdr.core.error import NotInteractableError
 
