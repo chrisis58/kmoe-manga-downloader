@@ -1,26 +1,26 @@
-from typing import Callable
-from argparse import Namespace
 import asyncio
+from argparse import Namespace
+from typing import Callable
 
 from kmdr import __version__
 
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT IMPLEMENTED!")) -> None:
-    from kmdr.core.console import info, debug, log, _console
-    
+    from kmdr.core.console import _console, debug, info, log
+
     with _console.status("初始化中..."):
+        import kmdr.module  # noqa: F401
         from kmdr.core.bases import (
-            SESSION_MANAGER,
             AUTHENTICATOR,
+            CONFIGURER,
+            DOWNLOADER,
             LISTERS,
             PICKERS,
-            DOWNLOADER,
-            CONFIGURER,
             POOL_MANAGER,
+            SESSION_MANAGER,
         )
         from kmdr.core.defaults import post_init
-        import kmdr.module  # Register plugins
-    
+
     post_init(args)
     log("[Lifecycle:Start] 启动 kmdr, 版本", __version__)
     debug("[bold green]以调试模式启动[/bold green]")
@@ -44,8 +44,13 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
 
     elif args.command == "download":
         async with await SESSION_MANAGER.get(args).session():
-            t_auth = AUTHENTICATOR.get(args).authenticate()
-            t_list = LISTERS.get(args).list()
+            from kmdr.core.utils import SharedAwaitable
+
+            authenticator = AUTHENTICATOR.get(args)
+            lister = LISTERS.get(args)
+
+            t_auth = SharedAwaitable(authenticator.authenticate())
+            t_list = lister.list(awaitable_cred=t_auth)
 
             cred, (book, volumes) = await asyncio.gather(t_auth, t_list)
             debug("认证成功，凭证信息: ", cred)
@@ -68,10 +73,10 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
+    from kmdr.core.console import exception, info, log
     from kmdr.core.defaults import argument_parser
     from kmdr.core.error import KmdrError
-    from kmdr.core.console import info, exception, log
-    
+
     try:
         parser = argument_parser()
         args = parser.parse_args()

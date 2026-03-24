@@ -1,25 +1,25 @@
-from typing import Callable, Optional
-from abc import abstractmethod
-
 import asyncio
+from abc import abstractmethod
+from collections.abc import Awaitable
+from typing import Callable, Optional
+
 from aiohttp import ClientSession
 from rich.prompt import Confirm
 
 from kmdr.core.constants import BookFormat
 
-from .console import *
-from .error import LoginError
-from .registry import Registry
-from .structure import VolInfo, BookInfo, Credential
-from .utils import construct_callback, async_retry
-from .protocol import AsyncCtxManager
-
+from .console import exception, info, log
 from .context import (
-    TerminalContext,
-    SessionContext,
     ConfigContext,
     CredentialPoolContext,
+    SessionContext,
+    TerminalContext,
 )
+from .error import LoginError
+from .protocol import AsyncCtxManager
+from .registry import Registry
+from .structure import BookInfo, Credential, VolInfo
+from .utils import async_retry, construct_callback
 
 
 class Configurer(ConfigContext, TerminalContext):
@@ -80,7 +80,9 @@ class Lister(SessionContext, TerminalContext):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    async def list(self) -> tuple[BookInfo, list[VolInfo]]: ...
+    async def list(
+        self, awaitable_cred: Callable[[], Awaitable[Credential]]
+    ) -> tuple[BookInfo, list[VolInfo]]: ...
 
 
 class Picker(TerminalContext):

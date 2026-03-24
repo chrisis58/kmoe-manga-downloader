@@ -1,23 +1,32 @@
-from bs4 import BeautifulSoup
 import re
-from typing import Optional
+from collections.abc import Awaitable
+from typing import Callable, Optional
 
-from yarl import URL
 from aiohttp import ClientSession as Session
+from bs4 import BeautifulSoup
+from yarl import URL
 
-from kmdr.core import BookInfo, VolInfo, VolumeType
-from kmdr.core.utils import async_retry, extract_cookies
+from kmdr.core import BookInfo, Credential, VolInfo, VolumeType
 from kmdr.core.console import debug
-from kmdr.core.error import KmdrError
+from kmdr.core.error import ContentBlockedError
+from kmdr.core.utils import async_retry, extract_cookies
 
 
 @async_retry()
-async def extract_book_info_and_volumes(session: Session, url: str, book_info: Optional[BookInfo] = None) -> tuple[BookInfo, list[VolInfo]]:
+async def extract_book_info_and_volumes(
+    session: Session,
+    url: str,
+    book_info: Optional[BookInfo] = None,
+    awaitable_cred: Optional[Callable[[], Awaitable[Optional[Credential]]]] = None,
+    cookies: Optional[dict[str, str]] = None,
+) -> tuple[BookInfo, list[VolInfo]]:
     """
     从指定的书籍页面 URL 中提取书籍信息和卷信息。
 
     :param session: 已经建立的 HTTP 会话。
     :param url: 书籍页面的 URL。
+    :param book_info: 可选的书籍信息，用于补充作者、状态等字段。
+    :param awaitable_cred: 当遇到需要登录才能访问的内容时，可以调用此回调获取凭证并重试。
     :return: 包含书籍信息和卷信息的元组。
     """
     structured_url = URL(url)
@@ -29,25 +38,50 @@ async def extract_book_info_and_volumes(session: Session, url: str, book_info: O
         debug("检测到移动端链接，转换为桌面端链接进行处理。")
         route = structured_url.path[2:]
 
-    async with session.get(route) as response:
+    return await __do_extract(session, route, url, book_info, awaitable_cred, cookies)
+
+
+async def __do_extract(
+    session: Session,
+    route: str,
+    url: str,
+    book_info: Optional[BookInfo],
+    awaitable_cred: Optional[Callable[[], Awaitable[Optional[Credential]]]] = None,
+    cookies: Optional[dict[str, str]] = None,
+) -> tuple[BookInfo, list[VolInfo]]:
+    """实际执行提取操作的内部函数，支持在遇到需要登录的内容时重试。"""
+    async with session.get(route, cookies=cookies) as response:
         response.raise_for_status()
 
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         book_page = BeautifulSoup(await response.text(), "html.parser")
 
-        cookies = extract_cookies(response)
+        resp_cookies = extract_cookies(response)
 
-        book_info = __extract_book_info(url, book_page, book_info)
-        volumes = await __extract_volumes(session, book_page, cookies)
+        try:
+            extracted_book_info = __extract_book_info(url, book_page, book_info)
+        except ContentBlockedError:
+            if awaitable_cred is not None:
+                debug("检测到内容被屏蔽，尝试等待凭证获取后重试")
+                cred = await awaitable_cred()
+                if cred is not None:
+                    debug("已获取凭证，正在重试获取书籍信息")
+                    # 使用新凭证的 cookies 重试请求
+                    return await __do_extract(session, route, url, book_info, None, cred.cookies)
+            elif cookies is not None:
+                debug("使用凭证也无法访问内容")
+            raise
 
-        return book_info, volumes
+        volumes = await __extract_volumes(session, book_page, resp_cookies)
+
+        return extracted_book_info, volumes
 
 
 def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[BookInfo]) -> BookInfo:
     book_name = book_page.find("font", class_="text_bglight_big").text
 
     if "為符合要求，此書內容已屏蔽" in book_name:
-        raise KmdrError(
+        raise ContentBlockedError(
             "[yellow]该书籍内容已被屏蔽，请检查代理配置。[/yellow]",
             solution=["kmdr config -s proxy=<your_proxy>  # 设置可用的代理地址"],
         )
