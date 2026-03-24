@@ -56,7 +56,8 @@ async def __do_extract(
         # 如果后续有性能问题，可以先考虑使用 lxml 进行解析
         book_page = BeautifulSoup(await response.text(), "html.parser")
 
-        resp_cookies = extract_cookies(response)
+        # 如果携带凭证访问主页，服务器不会设置新的 cookies，所以需要复用旧的
+        resp_cookies = extract_cookies(response) if cookies is None else cookies
 
         try:
             extracted_book_info = __extract_book_info(url, book_page, book_info)
