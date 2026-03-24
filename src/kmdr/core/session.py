@@ -3,7 +3,7 @@ from types import TracebackType
 from typing import Optional
 from urllib.parse import urljoin, urlsplit
 
-from aiohttp import ClientSession, DummyCookieJar
+from aiohttp import ClientSession, ClientTimeout, DummyCookieJar
 
 from .bases import SESSION_MANAGER, SessionManager
 from .console import debug, info
@@ -116,13 +116,15 @@ class KmdrSessionManager(SessionManager):
             nonlocal ret_base_url
             ret_base_url = value
 
-        async with ClientSession(proxy=self._proxy, trust_env=True, headers=self._headers) as probe_session:
+        async with ClientSession(proxy=self._proxy, trust_env=True, headers=self._headers, timeout=ClientTimeout(total=2.0)) as probe_session:
             # TODO: 请求远程仓库中的镜像列表，并添加到 sorter 中
 
             for bu in self._sorter.sort():
                 set_base_url(bu)
 
                 if await async_retry(
+                    attempts=1,
+                    backoff=1,
                     base_url_setter=set_base_url,
                     on_failure=lambda e: info(f"[yellow]无法连接到镜像: {get_base_url()}，错误信息: {e}[/yellow]"),
                 )(self.validate_url)(probe_session, get_base_url):
