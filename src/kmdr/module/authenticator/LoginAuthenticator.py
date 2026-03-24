@@ -9,8 +9,6 @@ from kmdr.core.error import NotInteractableError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import extract_cookies
 
-from .utils import check_status
-
 
 @AUTHENTICATOR.register(hasvalues={"command": "login"})
 class LoginAuthenticator(Authenticator):
@@ -35,6 +33,8 @@ class LoginAuthenticator(Authenticator):
         self._password = password
 
     async def _authenticate(self) -> Credential:
+        from .utils import check_status
+
         async with self._session.post(
             url=API_ROUTE.LOGIN_DO,
             data={"email": self._username, "passwd": self._password, "keepalive": "on"},

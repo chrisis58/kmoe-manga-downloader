@@ -2,7 +2,6 @@ import asyncio
 from collections.abc import Awaitable
 from typing import Callable
 
-from bs4 import BeautifulSoup
 from rich.prompt import IntPrompt
 from rich.table import Table
 
@@ -11,8 +10,6 @@ from kmdr.core.console import info
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import EmptyResultError, NotInteractableError
 from kmdr.core.utils import async_retry
-
-from .utils import extract_book_info_and_volumes
 
 
 @LISTERS.register()
@@ -23,6 +20,8 @@ class FollowedBookLister(Lister):
     async def list(
         self, awaitable_cred: Callable[[], Awaitable[Credential]]
     ) -> tuple[BookInfo, list[VolInfo]]:
+        from .utils import extract_book_info_and_volumes
+
         if not self._console.is_interactive:
             raise NotInteractableError("无法选择关注的书籍。")
 
@@ -68,6 +67,8 @@ class FollowedBookLister(Lister):
 
     @async_retry()
     async def _list_followed_books(self, cookies: dict[str, str]) -> "list[BookInfo]":
+        from bs4 import BeautifulSoup
+
         async with self._session.get(API_ROUTE.MY_FOLLOW, cookies=cookies) as response:
             response.raise_for_status()
             html_text = await response.text()

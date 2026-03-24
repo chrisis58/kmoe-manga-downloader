@@ -11,7 +11,6 @@ from kmdr.core.bases import POOL_MANAGER, PoolManager
 from kmdr.core.console import debug, info
 from kmdr.core.session import KmdrSessionManager
 from kmdr.core.structure import Credential, CredentialStatus
-from kmdr.module.authenticator.utils import check_status
 
 
 @POOL_MANAGER.register(hasvalues={"pool_command": "list"})
@@ -130,6 +129,8 @@ class PoolLister(PoolManager):
         return table
 
     async def _check_and_update_single(self, session, cred: Credential, semaphore: asyncio.Semaphore):
+        from kmdr.module.authenticator.utils import check_status
+
         async with semaphore:
             # 防止瞬时并发过高
             await asyncio.sleep(random.uniform(0, 0.3))
