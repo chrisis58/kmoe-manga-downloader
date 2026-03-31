@@ -6,7 +6,9 @@ from kmdr import __version__
 
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT IMPLEMENTED!")) -> None:
-    from kmdr.core.console import _console, debug, info, log
+    from kmdr.core.console import _console, debug, info, log, emit
+    from kmdr.core.defaults import post_init
+    post_init(args)
 
     with _console.status("初始化中..."):
         import kmdr.module  # noqa: F401
@@ -19,15 +21,14 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
             POOL_MANAGER,
             SESSION_MANAGER,
         )
-        from kmdr.core.defaults import post_init
-
-    post_init(args)
+    
     log("[Lifecycle:Start] 启动 kmdr, 版本", __version__)
     debug("[bold green]以调试模式启动[/bold green]")
     debug("接收到的参数:", args)
 
     if args.command == "version":
         info(f"[green]{__version__}[/green]")
+        emit(version=__version__)
 
     elif args.command == "config":
         CONFIGURER.get(args).operate()
