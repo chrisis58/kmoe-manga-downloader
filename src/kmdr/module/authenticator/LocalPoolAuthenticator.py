@@ -17,17 +17,11 @@ class LocalPoolAuthenticator(Authenticator):
         pool = self._configurer.config.cred_pool
 
         if not pool:
-            raise LoginError(
-                "未找到本地关联账号凭证，无法请求配置数据。请先执行 login 或者取消 --fast-auth",
-                ["kmdr login -u <username>"]
-            )
+            raise LoginError("未找到本地关联账号凭证，无法请求配置数据。请先执行 login 或者取消 --fast-auth", ["kmdr login -u <username>"])
 
         for cred in pool:
             if cred.status.value == "active" and cred.username == self._configurer.config.username:
                 emit(cred)
                 return cred
 
-        raise LoginError(
-            "本地凭证池中没有状态为 active 的可用凭证。请重新登录或取消 --fast-auth 进行联网验证。",
-            ["kmdr login -u <username>"]
-        )
+        raise LoginError("本地凭证池中没有状态为 active 的可用凭证。请重新登录或取消 --fast-auth 进行联网验证。", ["kmdr login -u <username>"])

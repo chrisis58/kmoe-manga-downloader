@@ -150,12 +150,14 @@ class NoCandidateCredentialError(KmdrError):
     def __str__(self):
         return f"没有可用的凭证：{self.message}"
 
+
 class ContentBlockedError(KmdrError):
     """
     内容被屏蔽错误，可能是以下两种原因：
     1. 无法在当前网络环境访问，如 https://kxx.moe/c/13663.htm
     2. 需要登录后才能访问，如 https://kzo.moe/c/0f496f.htm
     """
+
     code: int = 44
 
     def __init__(self, message, solution: Optional[list[str]] = None):

@@ -12,9 +12,7 @@ class FollowedCataloger(Cataloger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def catalog(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> list[BookInfo]:
+    async def catalog(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> list[BookInfo]:
         cred: Credential = await awaitable_cred()
         with self._console.status("正在获取关注列表..."):
             return await self._list_followed_books(cookies=cred.cookies)

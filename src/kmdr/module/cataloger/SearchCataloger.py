@@ -18,9 +18,7 @@ class SearchCataloger(Cataloger):
         self._page = page
         self._minimal = minimal
 
-    async def catalog(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> list[BookInfo]:
+    async def catalog(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> list[BookInfo]:
         url = API_ROUTE.SEARCH.format(keyword=quote(self._keyword), page=self._page)
 
         cred: Credential = await awaitable_cred()
@@ -42,7 +40,9 @@ class SearchCataloger(Cataloger):
                     else:
                         emit(total_pages=total_pages, page=self._page, count=len(books), books=books)
                 else:
-                    table = Table(title=f"搜索 '{self._keyword}' 的结果 [第 {self._page}/{total_pages} 页]", show_header=True, header_style="bold blue")
+                    table = Table(
+                        title=f"搜索 '{self._keyword}' 的结果 [第 {self._page}/{total_pages} 页]", show_header=True, header_style="bold blue"
+                    )
                     table.add_column("书名", style="cyan")
                     table.add_column("作者", style="green")
                     table.add_column("状态", style="blue")

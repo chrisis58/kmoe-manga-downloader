@@ -80,9 +80,7 @@ class Lister(SessionContext, TerminalContext):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    async def list(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> tuple[BookInfo, list[VolInfo]]: ...
+    async def list(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> tuple[BookInfo, list[VolInfo]]: ...
 
 
 class Cataloger(SessionContext, TerminalContext):
@@ -90,9 +88,7 @@ class Cataloger(SessionContext, TerminalContext):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    async def catalog(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> list[BookInfo]: ...
+    async def catalog(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> list[BookInfo]: ...
 
 
 class Picker(TerminalContext):

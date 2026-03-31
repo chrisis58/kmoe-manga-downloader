@@ -168,7 +168,7 @@ def extract_search_results(html: str) -> tuple[list[BookInfo], int]:
     total_pages = int(page_match.group(1)) if page_match else 1
 
     pattern = re.compile(
-        r'disp_divinfo\(\s*[^,]+,\s*'
+        r"disp_divinfo\(\s*[^,]+,\s*"
         r'"([^"]*)",\s*'  # 1: book_url
         r'"([^"]*)",\s*'  # 2: cover_url
         r'"[^"]*",\s*'  # border_color

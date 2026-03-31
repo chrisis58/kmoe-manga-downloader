@@ -20,10 +20,7 @@ def validate(key: str, value: str) -> Optional[object]:
     if key in __OPTIONS_VALIDATOR:
         return __OPTIONS_VALIDATOR[key](value)
     else:
-        raise ValidationError(
-            f"不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}",
-            field=key
-        )
+        raise ValidationError(f"不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}", field=key)
 
 
 def check_key(key: str, raise_if_invalid: bool = True) -> None:

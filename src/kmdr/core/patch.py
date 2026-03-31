@@ -73,11 +73,7 @@ def apply_argparse_patch(p: argparse.ArgumentParser):
         return
 
     if not isinstance(p, AgentFriendlyParserMixin):
-        p.__class__ = type(
-            f"AgentFriendly{p.__class__.__name__}",
-            (AgentFriendlyParserMixin, p.__class__),
-            {}
-        )
+        p.__class__ = type(f"AgentFriendly{p.__class__.__name__}", (AgentFriendlyParserMixin, p.__class__), {})
 
     # 处理 subparsers (如果存在)
     if p._subparsers is not None:
@@ -98,11 +94,7 @@ class AgentFriendlyParserMixin:
         sys.exit(1)
 
     def print_help(self, file=None):
-        response = {
-            "code": 0,
-            "msg": "usage_info",
-            "data": _extract_semantic_help(self)
-        }
+        response = {"code": 0, "msg": "usage_info", "data": _extract_semantic_help(self)}
         sys.stdout.write(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
         sys.exit(0)
 
@@ -111,13 +103,7 @@ def _extract_semantic_help(p: argparse.ArgumentParser) -> dict:
     """
     从解析器提取语义化信息的原子函数。
     """
-    help_data = {
-        "prog": p.prog,
-        "description": p.description,
-        "usage": p.format_usage().strip(),
-        "arguments": [],
-        "subcommands": []
-    }
+    help_data = {"prog": p.prog, "description": p.description, "usage": p.format_usage().strip(), "arguments": [], "subcommands": []}
 
     for action in p._actions:
         if isinstance(action, argparse._HelpAction):
@@ -127,12 +113,14 @@ def _extract_semantic_help(p: argparse.ArgumentParser) -> dict:
             help_data["subcommands"] = list(action.choices.keys())
             continue
 
-        help_data["arguments"].append({
-            "names": action.option_strings,
-            "dest": action.dest,
-            "help": action.help,
-            "required": action.required,
-            "default": action.default if action.default is not argparse.SUPPRESS else None
-        })
+        help_data["arguments"].append(
+            {
+                "names": action.option_strings,
+                "dest": action.dest,
+                "help": action.help,
+                "required": action.required,
+                "default": action.default if action.default is not argparse.SUPPRESS else None,
+            }
+        )
 
     return help_data

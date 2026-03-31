@@ -143,7 +143,6 @@ def parse_args():
     return args
 
 
-
 @singleton
 class Configurer:
     def __init__(self):

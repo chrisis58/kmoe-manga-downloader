@@ -19,9 +19,7 @@ class CatalogGuidedLister(Lister):
         # 保存传入的参数字典，用于重构成 Namespace 供 CATALOGERS 调度
         self._kwargs = kwargs
 
-    async def list(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> tuple[BookInfo, list[VolInfo]]:
+    async def list(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> tuple[BookInfo, list[VolInfo]]:
         from .utils import extract_book_info_and_volumes
 
         if not self._console.is_interactive:
@@ -29,7 +27,7 @@ class CatalogGuidedLister(Lister):
 
         mock_args = Namespace(**self._kwargs)
         cataloger = CATALOGERS.get(mock_args)
-        
+
         books = await cataloger.catalog(awaitable_cred=awaitable_cred)
 
         if not books:
@@ -60,7 +58,5 @@ class CatalogGuidedLister(Lister):
         selected_book = books[chosen_idx - 1]
 
         with self._console.status(f"正在获取 '{selected_book.name}' 的详细信息..."):
-            book_info, volumes = await extract_book_info_and_volumes(
-                self._session, selected_book.url, selected_book, awaitable_cred=awaitable_cred
-            )
+            book_info, volumes = await extract_book_info_and_volumes(self._session, selected_book.url, selected_book, awaitable_cred=awaitable_cred)
             return book_info, volumes

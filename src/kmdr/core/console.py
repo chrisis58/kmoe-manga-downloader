@@ -29,6 +29,7 @@ apply_status_patch(_console)  # Monkey patch
 
 _is_verbose = False
 
+
 class OutputMode(str, Enum):
     INTERACTIVE = "interactive"
     LOG = "log"
@@ -36,6 +37,7 @@ class OutputMode(str, Enum):
 
 
 _current_mode: OutputMode = OutputMode.INTERACTIVE
+
 
 def in_toolcall_mode() -> bool:
     """判断当前是否为工具调用模式，不显示富文本"""
@@ -51,6 +53,7 @@ def _set_output_mode(mode: OutputMode):
         _console.quiet = True
 
         import atexit
+
         atexit.register(_flush_emit)
 
 
