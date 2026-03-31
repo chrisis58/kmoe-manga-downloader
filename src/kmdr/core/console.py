@@ -39,7 +39,9 @@ _current_mode: OutputMode = OutputMode.INTERACTIVE
 
 def in_toolcall_mode() -> bool:
     """判断当前是否为工具调用模式，不显示富文本"""
-    return _current_mode in (OutputMode.TOOLCALL,)
+    if _current_mode == OutputMode.TOOLCALL:
+        return True
+    return "toolcall" in sys.argv
 
 
 def _set_output_mode(mode: OutputMode):
