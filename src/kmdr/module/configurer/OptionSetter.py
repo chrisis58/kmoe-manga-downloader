@@ -21,8 +21,6 @@ class OptionSetter(Configurer):
             value = value.strip()
 
             validated_value = validate(key, value)
-            if validated_value is None:
-                continue
 
             self._configurer.set_option(key, validated_value)
             info(f"[green]已设置配置: {key} = {validated_value}[/green]")
