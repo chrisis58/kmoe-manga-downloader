@@ -1,5 +1,5 @@
 from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
-from kmdr.core.console import emit
+from kmdr.core.console import emit, is_interactive
 from kmdr.core.structure import Credential
 
 
@@ -9,7 +9,7 @@ class CookieAuthenticator(Authenticator):
         super().__init__(auto_save=auto_save, *args, **kwargs)
 
         if "command" in kwargs and kwargs["command"] == "status":
-            self._show_quota = self._console.is_interactive
+            self._show_quota = is_interactive()
         else:
             self._show_quota = False
 

@@ -2,7 +2,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from kmdr.core import PICKERS, Picker, VolInfo
-from kmdr.core.console import info
+from kmdr.core.console import info, is_interactive
 from kmdr.core.error import NotInteractableError
 
 from .utils import resolve_volume
@@ -14,7 +14,7 @@ class DefaultVolPicker(Picker):
         super().__init__(*args, **kwargs)
 
     def pick(self, volumes: list[VolInfo]) -> list[VolInfo]:
-        if not self._console.is_interactive:
+        if not is_interactive():
             raise NotInteractableError("无法选择卷信息。")
 
         table = Table(title="可用卷列表", show_header=True, header_style="bold blue")

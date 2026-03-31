@@ -8,7 +8,7 @@ from rich.table import Table
 
 from kmdr.core import LISTERS, BookInfo, Credential, Lister, VolInfo
 from kmdr.core.bases import CATALOGERS
-from kmdr.core.console import info
+from kmdr.core.console import info, is_interactive
 from kmdr.core.error import EmptyResultError, NotInteractableError
 
 
@@ -22,7 +22,7 @@ class CatalogGuidedLister(Lister):
     async def list(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> tuple[BookInfo, list[VolInfo]]:
         from .utils import extract_book_info_and_volumes
 
-        if not self._console.is_interactive:
+        if not is_interactive():
             raise NotInteractableError("无法交互式选择书籍。")
 
         mock_args = Namespace(**self._kwargs)

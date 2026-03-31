@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup, Tag
 from rich.console import Console
 from yarl import URL
 
-from kmdr.core.console import debug, info
+from kmdr.core.console import debug, info, is_interactive
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import LoginError
 from kmdr.core.structure import Credential, CredentialStatus, QuotaInfo
@@ -67,7 +67,7 @@ async def check_status(
         raw_quota = soup.find("div", id=__resolve_quota_id(is_vip, user_level)).text.strip().replace("\xa0", "")
 
         if show_quota:
-            if console.is_interactive:
+            if is_interactive():
                 info(f"\n当前登录为 [bold cyan]{nickname}[/bold cyan]\n\n{raw_quota}")
             else:
                 info(f"当前登录为 {nickname}")
