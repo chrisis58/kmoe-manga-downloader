@@ -11,13 +11,8 @@ class OptionLister(Configurer):
         super().__init__(*args, **kwargs)
 
     def _operate(self) -> None:
-        if self._configurer.option is None and self._configurer.base_url is None:
-            info("[blue]当前没有任何配置项。[/blue]")
-            emit("当前没有任何配置项。")
-            return
-
         if in_toolcall_mode():
-            emit(self._configurer.option)
+            emit(option=self._configurer.option, base_url=self._configurer.base_url)
             return
 
         table = Table(
