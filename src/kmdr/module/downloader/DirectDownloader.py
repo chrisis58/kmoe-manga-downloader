@@ -43,6 +43,7 @@ class DirectDownloader(Downloader):
                 self._retry,
                 cookies=cred.cookies,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
+                quota_deduct_callback=quota_deduct_callback,
                 progress_callback=progress_callback,
             )
             return
