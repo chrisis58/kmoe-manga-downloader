@@ -42,6 +42,20 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
             cred = await AUTHENTICATOR.get(args).authenticate()
             debug("认证成功，凭证信息: ", cred)
 
+    elif args.command == "search":
+        async with await SESSION_MANAGER.get(args).session():
+            from kmdr.core.bases import CATALOGERS
+            from kmdr.core.utils import SharedAwaitable
+
+            authenticator = AUTHENTICATOR.get(args)
+            cataloger = CATALOGERS.get(args)
+
+            t_auth = SharedAwaitable(authenticator.authenticate())
+            t_catalog = cataloger.catalog(awaitable_cred=t_auth)
+
+            _, books = await asyncio.gather(t_auth, t_catalog)
+            debug("搜索成功，获取到", len(books), "本漫画。")
+
     elif args.command == "download":
         async with await SESSION_MANAGER.get(args).session():
             from kmdr.core.utils import SharedAwaitable
@@ -73,7 +87,7 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
-    from kmdr.core.console import exception, info, log
+    from kmdr.core.console import exception, info, log, emit
     from kmdr.core.defaults import argument_parser
     from kmdr.core.error import KmdrError
 
@@ -85,10 +99,12 @@ def entry_point():
         asyncio.run(main_coro)
     except KmdrError as e:
         info(f"[red]错误: {e}[/red]")
+        emit(e)
     except KeyboardInterrupt:
         info("\n操作已取消（KeyboardInterrupt）", style="yellow")
     except Exception as e:
         exception(e)
+        emit(e)
     finally:
         log("[Lifecycle:End] 运行结束，kmdr 已退出")
 

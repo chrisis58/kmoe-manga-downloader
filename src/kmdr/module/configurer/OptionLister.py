@@ -2,7 +2,7 @@ from rich.pretty import Pretty
 from rich.table import Table
 
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info
+from kmdr.core.console import info, emit, in_toolcall_mode
 
 
 @CONFIGURER.register(hasvalues={"list_option": True})
@@ -13,6 +13,11 @@ class OptionLister(Configurer):
     def _operate(self) -> None:
         if self._configurer.option is None and self._configurer.base_url is None:
             info("[blue]当前没有任何配置项。[/blue]")
+            emit("当前没有任何配置项。")
+            return
+
+        if in_toolcall_mode():
+            emit(self._configurer.option)
             return
 
         table = Table(

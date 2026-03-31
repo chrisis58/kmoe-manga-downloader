@@ -51,11 +51,17 @@ def argument_parser():
     parser = argparse.ArgumentParser(description="Kmoe 漫画下载器")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="启用详细输出")
-    parser.add_argument("--mode", type=str, choices=["interactive", "log", "toolcall"], help="指定运行和输出模式: interactive (人类交互), log (日志输出), toolcall (工具调用)", default="interactive")
+    parser.add_argument("--mode", type=str, choices=["interactive", "log", "toolcall"], help="指定运行和输出模式: interactive (交互模式), log (日志模式), toolcall (工具调用)", default="interactive")
+    parser.add_argument("--fast-auth", action="store_true", help="跳过账户配额预检直接从本地读取缓存以加速响应")
 
     subparsers = parser.add_subparsers(title="可用的子命令", dest="command")
 
     subparsers.add_parser("version", help="显示当前版本信息")
+
+    search_parser = subparsers.add_parser("search", help="搜索指定的漫画")
+    search_parser.add_argument("keyword", type=str, help="要搜索的关键字")
+    search_parser.add_argument("-p", "--page", type=int, help="搜索结果的页码", required=False, default=1)
+    search_parser.add_argument("-m", "--minimal", action="store_true", help="只返回书名和链接 (仅在 toolcall 模式下生效)")
 
     download_parser = subparsers.add_parser("download", help="下载指定的漫画")
     download_parser.add_argument("-d", "--dest", type=str, help="指定下载文件的保存路径，默认为当前目录", required=False)

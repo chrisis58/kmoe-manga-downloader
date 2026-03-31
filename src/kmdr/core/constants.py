@@ -42,6 +42,14 @@ class _ApiRoute:
     MY_FOLLOW: str = "/myfollow.php"
     """关注列表页面"""
 
+    SEARCH: str = "/l/{keyword},all,all,sortpoint,all,all,none/{page}.htm"
+    """
+    搜索及列表接口
+
+    :param keyword: 关键字
+    :param page: 页码
+    """
+
     BOOK_DATA: str = "/book_data.php"
     """书籍数据接口"""
 

@@ -85,6 +85,16 @@ class Lister(SessionContext, TerminalContext):
     ) -> tuple[BookInfo, list[VolInfo]]: ...
 
 
+class Cataloger(SessionContext, TerminalContext):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abstractmethod
+    async def catalog(
+        self, awaitable_cred: Callable[[], Awaitable[Credential]]
+    ) -> list[BookInfo]: ...
+
+
 class Picker(TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -163,3 +173,4 @@ PICKERS = Registry[Picker]("Picker")
 DOWNLOADER = Registry[Downloader]("Downloader", True)
 CONFIGURER = Registry[Configurer]("Configurer")
 POOL_MANAGER = Registry[PoolManager]("PoolManager")
+CATALOGERS = Registry[Cataloger]("Cataloger", True)

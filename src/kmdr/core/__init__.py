@@ -5,12 +5,14 @@ from .bases import (
     LISTERS,
     PICKERS,
     SESSION_MANAGER,
+    CATALOGERS,
     Authenticator,
     Configurer,
     Downloader,
     Lister,
     Picker,
     SessionManager,
+    Cataloger,
 )
 from .console import debug, exception, info, log
 from .defaults import argument_parser, post_init
@@ -37,11 +39,13 @@ __all__ = (
     "PICKERS",
     "DOWNLOADER",
     "CONFIGURER",
+    "CATALOGERS",
     "SessionManager",
     "Authenticator",
     "Lister",
     "Picker",
     "Configurer",
     "Downloader",
-    "KmdrSessionManager"
+    "Cataloger",
+    "KmdrSessionManager",
 )

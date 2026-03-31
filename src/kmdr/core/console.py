@@ -37,15 +37,15 @@ class OutputMode(str, Enum):
 
 _current_mode: OutputMode = OutputMode.INTERACTIVE
 
-def _is_toolcall_mode() -> bool:
-    """判断当前模式是否为机器/Agent读取模式（不需要人类读的富文本/进度条）"""
+def in_toolcall_mode() -> bool:
+    """判断当前是否为工具调用模式，不显示富文本"""
     return _current_mode in (OutputMode.TOOLCALL,)
 
 
 def _set_output_mode(mode: OutputMode):
     global _current_mode
     _current_mode = mode
-    if _is_toolcall_mode():
+    if in_toolcall_mode():
         _console.quiet = True
 
         import atexit
@@ -57,7 +57,8 @@ def _update_verbose_setting(value: bool):
     _is_verbose = value
 
 
-def _is_effective_interactive() -> bool:
+def is_interactive() -> bool:
+    """判断当前是否为交互式终端"""
     # 默认兜底或显式指定 interactive 时，都需检查终端环境
     if _current_mode == OutputMode.INTERACTIVE:
         return _console.is_interactive
@@ -70,11 +71,11 @@ def info(*args, **kwargs):
 
     会根据终端是否为交互式选择合适的输出方式。
     """
-    if _is_toolcall_mode():
+    if in_toolcall_mode():
         # 工具调用模式不渲染富文本
         return
 
-    if _is_effective_interactive():
+    if is_interactive():
         _console.print(*args, **kwargs)
     else:
         _console.log(*args, **kwargs, _stack_offset=2)
@@ -86,12 +87,12 @@ def debug(*args, **kwargs):
 
     `info` 的条件版本，仅当启用详细模式时才会输出。
     """
-    if _is_toolcall_mode():
+    if in_toolcall_mode():
         # 工具调用模式不支持显示调试信息
         return
 
     if _is_verbose:
-        if _is_effective_interactive():
+        if is_interactive():
             _console.print("[dim]DEBUG:[/]", *args, **kwargs)
         else:
             _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
@@ -103,7 +104,7 @@ def log(*args, debug=False, **kwargs):
 
     :warning: 仅在非交互式终端中输出日志信息，避免干扰交互式用户界面。
     """
-    if _is_toolcall_mode() or _is_effective_interactive():
+    if in_toolcall_mode() or is_interactive():
         # 如果是交互式终端或工具调用模式，则不记录日志
         return
 
@@ -122,7 +123,7 @@ def emit(*args, **kwargs):
     专门用于在工具调用模式下，向下游暂存最终的规整数据。
     该函数支持多次调用，但只有生命周期中最后一次调用时传入的数据才会在程序退出时被真正输出。
     """
-    if not _is_toolcall_mode():
+    if not in_toolcall_mode():
         # 非工具调用模式下，不额外输出这段纯数据
         return
 
@@ -137,17 +138,23 @@ def _flush_emit():
         try:
             args, kwargs = _emit_payload
 
-            # 如果只传递了一个对象且不是字符串，自动转为安全 JSON 并打印纯文本
-            if len(args) == 1 and not isinstance(args[0], str):
-                import json
+            import json
+            from .encoder import SafeJSONEncoder
 
-                from .encoder import SafeJSONEncoder
-                output_str = json.dumps(args[0], cls=SafeJSONEncoder, ensure_ascii=False, indent=2)
-                _console.print(output_str, markup=False, highlight=False)
+            payload = kwargs if kwargs else args[0]
+            response = {}
+
+            if isinstance(payload, Exception):
+                response["code"] = getattr(payload, "code", 50)
+                response["msg"] = str(payload) or payload.__class__.__name__
+                response["data"] = None
             else:
-                kwargs.setdefault("markup", False)
-                kwargs.setdefault("highlight", False)
-                _console.print(*args, **kwargs)
+                response["code"] = 0
+                response["msg"] = "success"
+                response["data"] = payload
+
+            output_str = json.dumps(response, cls=SafeJSONEncoder, ensure_ascii=False, indent=2)
+            _console.print(output_str, markup=False, highlight=False)
         finally:
             _console.quiet = was_quiet
 
