@@ -6,7 +6,8 @@ KMDR 用于管理控制台输出的模块。
 
 import io
 import sys
-from typing import Any
+from enum import Enum
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.traceback import Traceback
@@ -28,10 +29,39 @@ apply_status_patch(_console)  # Monkey patch
 
 _is_verbose = False
 
+class OutputMode(str, Enum):
+    INTERACTIVE = "interactive"
+    LOG = "log"
+    TOOLCALL = "toolcall"
+
+
+_current_mode: OutputMode = OutputMode.INTERACTIVE
+
+def _is_toolcall_mode() -> bool:
+    """判断当前模式是否为机器/Agent读取模式（不需要人类读的富文本/进度条）"""
+    return _current_mode in (OutputMode.TOOLCALL,)
+
+
+def _set_output_mode(mode: OutputMode):
+    global _current_mode
+    _current_mode = mode
+    if _is_toolcall_mode():
+        _console.quiet = True
+
+        import atexit
+        atexit.register(_flush_emit)
+
 
 def _update_verbose_setting(value: bool):
     global _is_verbose
     _is_verbose = value
+
+
+def _is_effective_interactive() -> bool:
+    # 默认兜底或显式指定 interactive 时，都需检查终端环境
+    if _current_mode == OutputMode.INTERACTIVE:
+        return _console.is_interactive
+    return False
 
 
 def info(*args, **kwargs):
@@ -40,7 +70,11 @@ def info(*args, **kwargs):
 
     会根据终端是否为交互式选择合适的输出方式。
     """
-    if _console.is_interactive:
+    if _is_toolcall_mode():
+        # 工具调用模式不渲染富文本
+        return
+
+    if _is_effective_interactive():
         _console.print(*args, **kwargs)
     else:
         _console.log(*args, **kwargs, _stack_offset=2)
@@ -52,8 +86,12 @@ def debug(*args, **kwargs):
 
     `info` 的条件版本，仅当启用详细模式时才会输出。
     """
+    if _is_toolcall_mode():
+        # 工具调用模式不支持显示调试信息
+        return
+
     if _is_verbose:
-        if _console.is_interactive:
+        if _is_effective_interactive():
             _console.print("[dim]DEBUG:[/]", *args, **kwargs)
         else:
             _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
@@ -65,8 +103,8 @@ def log(*args, debug=False, **kwargs):
 
     :warning: 仅在非交互式终端中输出日志信息，避免干扰交互式用户界面。
     """
-    if _console.is_interactive:
-        # 如果是交互式终端，则不记录日志
+    if _is_toolcall_mode() or _is_effective_interactive():
+        # 如果是交互式终端或工具调用模式，则不记录日志
         return
 
     if debug and _is_verbose:
@@ -74,6 +112,44 @@ def log(*args, debug=False, **kwargs):
         _console.log("DEBUG:", *args, **kwargs, _stack_offset=2)
     else:
         _console.log(*args, **kwargs, _stack_offset=2)
+
+
+_emit_payload = None
+
+
+def emit(*args, **kwargs):
+    """
+    专门用于在工具调用模式下，向下游暂存最终的规整数据。
+    该函数支持多次调用，但只有生命周期中最后一次调用时传入的数据才会在程序退出时被真正输出。
+    """
+    if not _is_toolcall_mode():
+        # 非工具调用模式下，不额外输出这段纯数据
+        return
+
+    global _emit_payload
+    _emit_payload = (args, kwargs)
+
+
+def _flush_emit():
+    if _emit_payload is not None:
+        was_quiet = _console.quiet
+        _console.quiet = False
+        try:
+            args, kwargs = _emit_payload
+
+            # 如果只传递了一个对象且不是字符串，自动转为安全 JSON 并打印纯文本
+            if len(args) == 1 and not isinstance(args[0], str):
+                import json
+
+                from .encoder import SafeJSONEncoder
+                output_str = json.dumps(args[0], cls=SafeJSONEncoder, ensure_ascii=False, indent=2)
+                _console.print(output_str, markup=False, highlight=False)
+            else:
+                kwargs.setdefault("markup", False)
+                kwargs.setdefault("highlight", False)
+                _console.print(*args, **kwargs)
+        finally:
+            _console.quiet = was_quiet
 
 
 def exception(exception: Exception):

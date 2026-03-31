@@ -1,4 +1,5 @@
 from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
+from kmdr.core.console import emit
 from kmdr.core.structure import Credential
 
 
@@ -27,5 +28,7 @@ class CookieAuthenticator(Authenticator):
             cookies=cookie,
             show_quota=self._show_quota,
         )
+
+        emit(cred)
 
         return cred

@@ -1,9 +1,7 @@
 import argparse
-import dataclasses
 import json
 import os
 from contextvars import ContextVar
-from enum import Enum
 from typing import Any, Optional
 
 from rich.progress import (
@@ -14,8 +12,9 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from .console import _update_verbose_setting
+from .console import OutputMode, _set_output_mode, _update_verbose_setting
 from .constants import BASE_URL
+from .encoder import KmdrJSONEncoder
 from .error import InitializationError
 from .structure import Config, Credential
 from .utils import singleton
@@ -52,6 +51,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(description="Kmoe 漫画下载器")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="启用详细输出")
+    parser.add_argument("--mode", type=str, choices=["interactive", "log", "toolcall"], help="指定运行和输出模式: interactive (人类交互), log (日志输出), toolcall (工具调用)", default="interactive")
 
     subparsers = parser.add_subparsers(title="可用的子命令", dest="command")
 
@@ -133,16 +133,6 @@ def parse_args():
 
     return args
 
-
-class KmdrJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o) and not isinstance(o, type):
-            return dataclasses.asdict(o)
-
-        if isinstance(o, Enum):
-            return o.value
-
-        return super().default(o)
 
 
 @singleton
@@ -273,3 +263,6 @@ base_url_var = ContextVar("base_url", default=Configurer().base_url)
 def post_init(args) -> None:
     _verbose = getattr(args, "verbose", False)
     _update_verbose_setting(_verbose)
+
+    _mode = getattr(args, "mode", "interactive")
+    _set_output_mode(OutputMode(_mode))
