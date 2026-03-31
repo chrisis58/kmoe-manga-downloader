@@ -16,6 +16,7 @@ from .console import OutputMode, _set_output_mode, _update_verbose_setting
 from .constants import BASE_URL
 from .encoder import KmdrJSONEncoder
 from .error import InitializationError
+from .patch import apply_argparse_patch
 from .structure import Config, Credential
 from .utils import singleton
 
@@ -121,6 +122,8 @@ def argument_parser():
     pool_update.add_argument("username", type=str, help="要更新的用户名")
     pool_update.add_argument("-n", "--note", type=str, help="更新备注信息")
     pool_update.add_argument("-o", "--order", type=int, help="更新账号优先级，数值越小优先级越高")
+
+    apply_argparse_patch(parser)
 
     return parser
 # fmt: on

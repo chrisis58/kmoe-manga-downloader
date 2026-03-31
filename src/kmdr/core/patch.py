@@ -1,3 +1,6 @@
+import argparse
+import json
+import sys
 from contextlib import contextmanager
 
 from rich.status import Status
@@ -59,3 +62,77 @@ def apply_status_patch(console_instance):
     """
     manager = _StackedStatusManager(console_instance)
     console_instance.status = manager.status
+
+
+def apply_argparse_patch(p: argparse.ArgumentParser):
+    """
+    为 ArgumentParser 提供工具调用的补丁。
+    """
+    # 正常模式直接跳过
+    if "toolcall" not in sys.argv:
+        return
+
+    if not isinstance(p, AgentFriendlyParserMixin):
+        p.__class__ = type(
+            f"AgentFriendly{p.__class__.__name__}",
+            (AgentFriendlyParserMixin, p.__class__),
+            {}
+        )
+
+    # 处理 subparsers (如果存在)
+    if p._subparsers is not None:
+        for action in p._subparsers._group_actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for sub_p in action.choices.values():
+                    apply_argparse_patch(sub_p)
+
+
+class AgentFriendlyParserMixin:
+    """
+    混入类，仅在 toolcall 模式下被混入（由 apply_argparse_patch 守卫），
+    """
+
+    def error(self, message: str):
+        response = {"code": 13, "msg": message, "data": None}
+        sys.stderr.write(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+        sys.exit(1)
+
+    def print_help(self, file=None):
+        response = {
+            "code": 0,
+            "msg": "usage_info",
+            "data": _extract_semantic_help(self)
+        }
+        sys.stdout.write(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+        sys.exit(0)
+
+
+def _extract_semantic_help(p: argparse.ArgumentParser) -> dict:
+    """
+    从解析器提取语义化信息的原子函数。
+    """
+    help_data = {
+        "prog": p.prog,
+        "description": p.description,
+        "usage": p.format_usage().strip(),
+        "arguments": [],
+        "subcommands": []
+    }
+
+    for action in p._actions:
+        if isinstance(action, argparse._HelpAction):
+            continue
+
+        if isinstance(action, argparse._SubParsersAction):
+            help_data["subcommands"] = list(action.choices.keys())
+            continue
+
+        help_data["arguments"].append({
+            "names": action.option_strings,
+            "dest": action.dest,
+            "help": action.help,
+            "required": action.required,
+            "default": action.default if action.default is not argparse.SUPPRESS else None
+        })
+
+    return help_data
