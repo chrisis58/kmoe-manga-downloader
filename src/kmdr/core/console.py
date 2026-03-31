@@ -7,7 +7,7 @@ KMDR 用于管理控制台输出的模块。
 import io
 import sys
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.traceback import Traceback
@@ -139,6 +139,7 @@ def _flush_emit():
             args, kwargs = _emit_payload
 
             import json
+
             from .encoder import SafeJSONEncoder
 
             payload = kwargs if kwargs else args[0]

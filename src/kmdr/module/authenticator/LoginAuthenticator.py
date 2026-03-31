@@ -4,11 +4,11 @@ from typing import Optional
 from rich.prompt import Prompt
 
 from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
+from kmdr.core.console import emit, is_interactive
 from kmdr.core.constants import API_ROUTE, LoginResponse
 from kmdr.core.error import NotInteractableError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import extract_cookies
-from kmdr.core.console import emit, is_interactive
 
 
 @AUTHENTICATOR.register(hasvalues={"command": "login"})

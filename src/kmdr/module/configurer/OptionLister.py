@@ -2,7 +2,7 @@ from rich.pretty import Pretty
 from rich.table import Table
 
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info, emit, in_toolcall_mode
+from kmdr.core.console import emit, in_toolcall_mode, info
 
 
 @CONFIGURER.register(hasvalues={"list_option": True})

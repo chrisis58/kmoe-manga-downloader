@@ -6,7 +6,7 @@ from rich.table import Table
 
 from kmdr.core import BookInfo, Credential
 from kmdr.core.bases import CATALOGERS, Cataloger
-from kmdr.core.console import emit, info, in_toolcall_mode
+from kmdr.core.console import emit, in_toolcall_mode, info
 from kmdr.core.constants import API_ROUTE
 
 

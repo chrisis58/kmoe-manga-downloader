@@ -1,18 +1,18 @@
 from .bases import (
     AUTHENTICATOR,
+    CATALOGERS,
     CONFIGURER,
     DOWNLOADER,
     LISTERS,
     PICKERS,
     SESSION_MANAGER,
-    CATALOGERS,
     Authenticator,
+    Cataloger,
     Configurer,
     Downloader,
     Lister,
     Picker,
     SessionManager,
-    Cataloger,
 )
 from .console import debug, exception, info, log
 from .defaults import argument_parser, post_init

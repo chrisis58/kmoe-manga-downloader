@@ -1,5 +1,5 @@
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info, emit
+from kmdr.core.console import emit, info
 
 from .option_validate import check_key
 

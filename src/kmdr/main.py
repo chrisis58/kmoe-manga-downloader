@@ -87,7 +87,7 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
-    from kmdr.core.console import exception, info, log, emit
+    from kmdr.core.console import emit, exception, info, log
     from kmdr.core.defaults import argument_parser
     from kmdr.core.error import KmdrError
 
