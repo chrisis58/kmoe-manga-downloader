@@ -10,7 +10,7 @@ from typing import Any, Callable, Generic, Optional, TypeVar
 
 import aiohttp
 
-from .console import debug
+from .console import debug, emit_progress, in_toolcall_mode
 from .constants import TIMEZONE
 from .error import RedirectError
 from .protocol import Consumer
@@ -47,6 +47,43 @@ class SharedAwaitable(Generic[T]):
         else:
             await self._event.wait()
         return self._result
+
+
+class DownloadTracker:
+    def __init__(self, total: int):
+        self._total = total
+        self._completed = 0
+        self._failed = 0
+        self._skipped = 0
+
+    @property
+    def total(self) -> int:
+        return self._total
+
+    @property
+    def completed(self) -> int:
+        return self._completed
+
+    @property
+    def failed(self) -> int:
+        return self._failed
+
+    @property
+    def skipped(self) -> int:
+        return self._skipped
+
+    def __call__(self, status: str, **kwargs):
+        if not in_toolcall_mode():
+            return
+
+        if status == "completed":
+            self._completed += 1
+        elif status == "failed":
+            self._failed += 1
+        elif status == "skipped":
+            self._skipped += 1
+
+        emit_progress(status=status, **kwargs)
 
 
 def singleton(cls):

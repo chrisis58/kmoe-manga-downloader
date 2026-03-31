@@ -49,6 +49,7 @@ class ReferViaDownloader(Downloader):
         book: BookInfo,
         volume: VolInfo,
         quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+        progress_callback: Optional[Callable[..., None]] = None,
     ):
         sub_dir = readable_safe_filename(book.name)
         download_path = f"{self._dest}/{sub_dir}"
@@ -75,6 +76,7 @@ class ReferViaDownloader(Downloader):
                 headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
                 resumable=cred.is_vip,  # 仅 VIP 用户支持断点续传
+                progress_callback=progress_callback,
             )
             return
 
@@ -95,6 +97,7 @@ class ReferViaDownloader(Downloader):
             self._retry,
             headers=DOWNLOAD_HEAD,
             callback=lambda: self._callback(book, volume) if self._callback else None,
+            progress_callback=progress_callback,
         )
 
     @async_retry(delay=3, backoff=1.5)

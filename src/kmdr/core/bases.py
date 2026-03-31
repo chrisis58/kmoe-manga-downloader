@@ -1,4 +1,5 @@
 import asyncio
+from functools import partial
 from abc import abstractmethod
 from collections.abc import Awaitable
 from typing import Callable, Optional
@@ -8,7 +9,7 @@ from rich.prompt import Confirm
 
 from kmdr.core.constants import BookFormat
 
-from .console import exception, info, log
+from .console import emit, emit_progress, exception, info, log
 from .context import (
     ConfigContext,
     CredentialPoolContext,
@@ -19,7 +20,7 @@ from .error import LoginError
 from .protocol import AsyncCtxManager
 from .registry import Registry
 from .structure import BookInfo, Credential, VolInfo
-from .utils import async_retry, construct_callback
+from .utils import async_retry, construct_callback, DownloadTracker
 
 
 class Configurer(ConfigContext, TerminalContext):
@@ -129,9 +130,13 @@ class Downloader(SessionContext, TerminalContext):
             else:
                 log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。[/red]")
 
+        tracker = DownloadTracker(len(volumes))
         try:
             with self._progress:
-                tasks = [self._download(cred, book, volume) for volume in volumes]
+                tasks = [
+                    self._download(cred, book, volume, progress_callback=partial(tracker, volume=volume.name, size_mb=volume.size))
+                    for volume in volumes
+                ]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
             exceptions = [res for res in results if isinstance(res, Exception)]
@@ -144,13 +149,29 @@ class Downloader(SessionContext, TerminalContext):
         except asyncio.CancelledError:
             await asyncio.sleep(0.01)
             raise
+        finally:
+            # 工具调用模式下的最终汇总输出
+            emit(
+                book=book.name,
+                total=tracker.total,
+                completed=tracker.completed,
+                failed=tracker.failed,
+                skipped=tracker.skipped,
+            )
 
     def _avai_quota(self, cred: Credential) -> float:
         """计算并返回指定 Credential 的可用额度（单位：MB）"""
         return cred.quota_remaining
 
     @abstractmethod
-    async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
+    async def _download(
+        self,
+        cred: Credential,
+        book: BookInfo,
+        volume: VolInfo,
+        quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+        progress_callback: Optional[Callable[..., None]] = None,
+    ):
         """
         供子类实现的实际下载方法。
 
@@ -158,6 +179,7 @@ class Downloader(SessionContext, TerminalContext):
         :param book: 要下载的书籍信息
         :param volume: 要下载的卷信息
         :param quota_deduct_callback: 可选的额度扣除回调函数，接受一个布尔值参数，表示额度是否被扣除
+        :param progress_callback: 可选的进度回调函数
         """
         ...
 

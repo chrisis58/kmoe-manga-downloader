@@ -138,6 +138,34 @@ def emit(*args, **kwargs):
     _emit_payload = (args, kwargs)
 
 
+def emit_progress(**kwargs):
+    """
+    在工具调用模式下，立即向 stdout 输出一行进度 JSON。
+    用于耗时命令（如 download）的中间状态上报，每次调用输出一行独立的 JSON。
+
+    与 emit() 不同，emit_progress() 不暂存，而是立即写入。
+    输出格式: {"type": "progress", ...kwargs}
+
+    :param kwargs: 进度信息的键值对
+    """
+    if not in_toolcall_mode():
+        return
+
+    import json
+
+    from .encoder import SafeJSONEncoder
+
+    payload = {"type": "progress", **kwargs}
+    output_str = json.dumps(payload, cls=SafeJSONEncoder, ensure_ascii=False)
+
+    was_quiet = _console.quiet
+    _console.quiet = False
+    try:
+        _console.print(output_str, markup=False, highlight=False, soft_wrap=True)
+    finally:
+        _console.quiet = was_quiet
+
+
 def _flush_emit():
     if _emit_payload is not None:
         was_quiet = _console.quiet
@@ -150,7 +178,7 @@ def _flush_emit():
             from .encoder import SafeJSONEncoder
 
             payload = kwargs if kwargs else args[0]
-            response = {}
+            response = {"type": "result"}
 
             if isinstance(payload, Exception):
                 response["code"] = getattr(payload, "code", 50)
@@ -161,8 +189,8 @@ def _flush_emit():
                 response["msg"] = "success"
                 response["data"] = payload
 
-            output_str = json.dumps(response, cls=SafeJSONEncoder, ensure_ascii=False, indent=2)
-            _console.print(output_str, markup=False, highlight=False)
+            output_str = json.dumps(response, cls=SafeJSONEncoder, ensure_ascii=False, indent=None)
+            _console.print(output_str, markup=False, highlight=False, soft_wrap=True)
         finally:
             _console.quiet = was_quiet
 

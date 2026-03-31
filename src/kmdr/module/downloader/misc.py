@@ -1,5 +1,6 @@
 import asyncio
 from enum import Enum
+from typing import Callable, Optional
 
 from rich.progress import Progress, TaskID
 
@@ -37,11 +38,20 @@ class STATUS(Enum):
 
 
 class StateManager:
-    def __init__(self, progress: Progress, task_id: TaskID):
+    def __init__(
+        self,
+        progress: Progress,
+        task_id: TaskID,
+        progress_callback: Optional[Callable[..., None]] = None,
+        emit_interval: int = 10 * 1024 * 1024,
+    ):
         self._part_states: dict[int, STATUS] = {}
         self._progress = progress
         self._task_id = task_id
         self._current_status = STATUS.WAITING
+        self._progress_callback = progress_callback
+        self._emit_interval = emit_interval
+        self._last_emit_size = 0
 
         self._lock = asyncio.Lock()
 
@@ -49,6 +59,13 @@ class StateManager:
 
     def advance(self, advance: int):
         self._progress.update(self._task_id, advance=advance)
+        if self._progress_callback:
+            task = self._progress.tasks[self._task_id]
+            total = task.total
+            if total is not None and total > 0:
+                if task.completed - self._last_emit_size > self._emit_interval:
+                    self._progress_callback(status="downloading", percentage=round(task.completed / total * 100, 1))
+                    self._last_emit_size = task.completed
 
     def _update_status(self):
         if not self._part_states:

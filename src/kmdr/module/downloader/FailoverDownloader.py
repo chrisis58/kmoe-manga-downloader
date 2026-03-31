@@ -73,6 +73,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         book: BookInfo,
         volume: VolInfo,
         quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+        progress_callback: Optional[Callable[..., None]] = None,
     ):
         """使用凭证池中的账号下载指定的卷，遇到额度不足或登录失效时自动切换账号继续下载。"""
         required_size = volume.size or 0.0
@@ -112,6 +113,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                             book,
                             volume,
                             quota_deduct_callback=deduct_callback,
+                            progress_callback=progress_callback,
                         )
                         return
 
