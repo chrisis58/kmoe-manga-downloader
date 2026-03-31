@@ -8,7 +8,7 @@ from rich.spinner import Spinner
 from rich.table import Table
 
 from kmdr.core.bases import POOL_MANAGER, PoolManager
-from kmdr.core.console import debug, info
+from kmdr.core.console import debug, emit, info
 from kmdr.core.session import KmdrSessionManager
 from kmdr.core.structure import Credential, CredentialStatus
 
@@ -24,17 +24,16 @@ class PoolLister(PoolManager):
     async def operate(self) -> None:
         if not self._pool.pool:
             info("凭证池为空, 请先使用 'kmdr pool add' 命令添加凭证。")
+            emit("凭证池为空, 请先使用 'kmdr pool add' 命令添加凭证。")
             return
 
         candidates = self._pool.pool if self.__refresh else self._pool.refresh_candidates
         debug("需要刷新的凭证数：", len(candidates))
         if not candidates:
             self._console.print(self._generate_table())
-            info(
-                "剩余可用总额度: ",
-                str(sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)),
-                " MB",
-            )
+            total_quota = sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)
+            info("剩余可用总额度: ", str(total_quota), " MB")
+            emit(total_quota=total_quota, pool=self._pool.pool)
             return
 
         # 耗时操作，刷新所有凭证状态
@@ -51,11 +50,10 @@ class PoolLister(PoolManager):
                     self._updating_users.remove(updated_cred.username)
                     live.update(self._generate_table())
 
-        info(
-            "剩余可用总额度: ",
-            str(sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)),
-            " MB",
-        )
+        total_quota = sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)
+
+        info("剩余可用总额度: ", str(total_quota), " MB")
+        emit(total_quota=total_quota, pool=self._pool.pool)
         try:
             self._configurer.update()
             debug("[green]已更新", len(candidates), "个凭证。[/green]")

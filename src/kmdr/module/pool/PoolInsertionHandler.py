@@ -1,7 +1,7 @@
 from typing import Optional
 
 from kmdr.core.bases import POOL_MANAGER, PoolManager
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 from kmdr.core.session import KmdrSessionManager
 from kmdr.module.authenticator.LoginAuthenticator import LoginAuthenticator
 
@@ -18,6 +18,7 @@ class PoolInsertionHandler(PoolManager):
     async def operate(self) -> None:
         if self._pool.check_duplicate(self._username):
             info(f"用户 '{self._username}' 已存在于凭证池中。")
+            emit(f"用户 '{self._username}' 已存在于凭证池中。")
             return
 
         async with await KmdrSessionManager().session():
@@ -36,4 +37,5 @@ class PoolInsertionHandler(PoolManager):
 
             self._pool.add(cred)
 
+            emit(cred)
             info(f"已将用户 '{self._username}' 添加到凭证池中。")
