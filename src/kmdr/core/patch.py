@@ -90,12 +90,12 @@ class AgentFriendlyParserMixin:
 
     def error(self, message: str):
         response = {"code": 13, "msg": message, "data": None}
-        sys.stderr.write(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+        sys.stderr.write(json.dumps(response, ensure_ascii=False) + "\n")
         sys.exit(1)
 
     def print_help(self, file=None):
         response = {"code": 0, "msg": "usage_info", "data": _extract_semantic_help(self)}
-        sys.stdout.write(json.dumps(response, ensure_ascii=False, indent=2) + "\n")
+        sys.stdout.write(json.dumps(response, ensure_ascii=False) + "\n")
         sys.exit(0)
 
 
