@@ -1,6 +1,6 @@
 from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
 from kmdr.core.console import emit
-from kmdr.core.structure import Credential
+from kmdr.core.structure import Credential, CredentialStatus
 
 
 @AUTHENTICATOR.register(hasvalues={"fast_auth": True}, order=-10)
@@ -20,7 +20,7 @@ class LocalPoolAuthenticator(Authenticator):
             raise LoginError("未找到本地关联账号凭证，无法请求配置数据。请先执行 login 或者取消 --fast-auth", ["kmdr login -u <username>"])
 
         for cred in pool:
-            if cred.status.value == "active" and cred.username == self._configurer.config.username:
+            if cred.status == CredentialStatus.ACTIVE and cred.username == self._configurer.config.username:
                 emit(cred)
                 return cred
 
