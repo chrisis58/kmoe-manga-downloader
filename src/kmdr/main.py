@@ -6,7 +6,7 @@ from kmdr import __version__
 
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT IMPLEMENTED!")) -> None:
-    from kmdr.core.console import _console, debug, info, log, emit
+    from kmdr.core.console import _console, debug, emit, info, log
     from kmdr.core.defaults import post_init
 
     post_init(args)

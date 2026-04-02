@@ -13,7 +13,7 @@ from aiohttp.client_exceptions import ClientPayloadError
 from rich.progress import Progress
 from typing_extensions import deprecated
 
-from kmdr.core.console import debug, info, log, is_interactive
+from kmdr.core.console import debug, info, is_interactive, log
 from kmdr.core.error import QuotaExceededError, RangeNotSupportedError
 from kmdr.core.utils import async_retry, sanitize_headers
 

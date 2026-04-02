@@ -1,7 +1,7 @@
 import asyncio
-from functools import partial
 from abc import abstractmethod
 from collections.abc import Awaitable
+from functools import partial
 from typing import Callable, Optional
 
 from aiohttp import ClientSession
@@ -9,7 +9,7 @@ from rich.prompt import Confirm
 
 from kmdr.core.constants import BookFormat
 
-from .console import emit, emit_progress, exception, info, log
+from .console import emit, exception, info, log
 from .context import (
     ConfigContext,
     CredentialPoolContext,
@@ -20,7 +20,7 @@ from .error import LoginError
 from .protocol import AsyncCtxManager
 from .registry import Registry
 from .structure import BookInfo, Credential, VolInfo
-from .utils import async_retry, construct_callback, DownloadTracker
+from .utils import DownloadTracker, async_retry, construct_callback
 
 
 class Configurer(ConfigContext, TerminalContext):
