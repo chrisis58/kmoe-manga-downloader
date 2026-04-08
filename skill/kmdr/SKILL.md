@@ -22,7 +22,7 @@ pip install kmoe-manga-downloader
 验证安装：
 
 ```bash
-kmdr --version
+kmdr --mode toolcall version
 ```
 
 如果命令不存在，说明 kmdr 未安装或未添加到 PATH。
@@ -146,7 +146,9 @@ kmdr --mode toolcall config --clear
 1. **检查环境** → 确认已安装并登录（参见"环境准备"）
 2. **搜索** → `kmdr --mode toolcall --fast-auth search "漫画名称"`
 3. **获取详情** → 从搜索结果中获取 `url` 字段
-4. **下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> [-d <path>]`
+4. **预估下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --explain`
+5. **确认配额** → 根据预估消耗决定是否继续（若消耗较大需向用户确认）
+6. **下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> [-d <path>]`
 
 ## 注意事项
 
@@ -162,6 +164,7 @@ kmdr --mode toolcall config --clear
 | 命令 | 用途 | 示例 |
 |------|------|------|
 | `search` | 搜索漫画 | `kmdr --mode toolcall [--fast-auth] search "fate"` |
+| `download --explain` | 预估下载计划 | `kmdr --mode toolcall [--fast-auth] download -l <url> -v <volume> --explain` |
 | `download` | 下载漫画 | `kmdr --mode toolcall [--fast-auth] download -l <url>` |
 | `login` | 登录账号 | `kmdr --mode toolcall login -u user -p pass` |
 | `status` | 查看配额 | `kmdr --mode toolcall status` |

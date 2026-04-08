@@ -82,6 +82,7 @@ kmdr --mode toolcall [--fast-auth] download [options]
 | `-t, --type` | string | 否 | 卷类型过滤：`vol`/`extra`/`seri` |
 | `-f, --format` | string | 否 | 文件格式：`mobi`/`eput`，默认为 `epub` |
 | `--num-workers` | int | 否 | 并发下载数，默认 8 |
+| `--explain` | flag | 否 | 仅输出下载计划和预估信息，不执行实际下载 |
 
 ### 进度输出
 
@@ -103,6 +104,7 @@ kmdr --mode toolcall [--fast-auth] download [options]
 - 首次下载建议先检查配额：`kmdr --mode toolcall status`
 - 大批量下载建议使用凭证池
 - 如果最近已经验证过凭证可用，可以在本次会话中使用 `--fast-auth` 来跳过联网验证
+- 下载大量卷时，建议先执行 `--explain` 获取下载计划和预估配额消耗，确认后再执行实际下载
 
 ---
 
