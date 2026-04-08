@@ -1,10 +1,64 @@
 import asyncio
+import subprocess
 from enum import Enum
 from typing import Callable, Optional
 
 from rich.progress import Progress, TaskID
 
-from kmdr.core.console import debug
+from kmdr.core.console import debug, emit_progress, in_toolcall_mode
+from kmdr.core.structure import BookInfo, VolInfo
+
+
+class DownloadTracker:
+    def __init__(self, total: int):
+        self._total = total
+        self._completed = 0
+        self._failed = 0
+        self._skipped = 0
+
+    @property
+    def total(self) -> int:
+        return self._total
+
+    @property
+    def completed(self) -> int:
+        return self._completed
+
+    @property
+    def failed(self) -> int:
+        return self._failed
+
+    @property
+    def skipped(self) -> int:
+        return self._skipped
+
+    def __call__(self, status: str, **kwargs):
+        if not in_toolcall_mode():
+            return
+
+        if status == "completed":
+            self._completed += 1
+        elif status == "failed":
+            self._failed += 1
+        elif status == "skipped":
+            self._skipped += 1
+
+        emit_progress(status=status, **kwargs)
+
+
+def construct_callback(callback: Optional[str]) -> Optional[Callable]:
+    if callback is None or not isinstance(callback, str) or not callback.strip():
+        return None
+
+    def _callback(book: BookInfo, volume: VolInfo) -> int:
+        nonlocal callback
+
+        assert callback, "Callback script cannot be empty"
+        formatted_callback = callback.strip().format(b=book, v=volume)
+
+        return subprocess.run(formatted_callback, shell=True, check=True).returncode
+
+    return _callback
 
 
 class STATUS(Enum):
@@ -91,3 +145,4 @@ class StateManager:
             debug("分片", part_id, "请求状态更新为", status)
             self._part_states[part_id] = status
             self._update_status()
+

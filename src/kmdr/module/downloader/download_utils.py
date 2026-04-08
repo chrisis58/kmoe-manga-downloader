@@ -609,6 +609,10 @@ def safe_filename(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|]', "_", name)
 
 
+def format_filename(book_name: str, volume_name: str, file_format: str) -> str:
+    return readable_safe_filename(f"[Kmoe][{book_name}][{volume_name}].{file_format}")
+
+
 async def fetch_url(
     url: Union[str, Callable[[], str], Callable[[], Awaitable[str]]],
 ) -> str:

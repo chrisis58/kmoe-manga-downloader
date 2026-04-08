@@ -1,19 +1,21 @@
 import asyncio
 from typing import Callable, Optional
 
-from kmdr.core.bases import DOWNLOADER, Downloader
+from kmdr.core.bases import DOWNLOADER
 from kmdr.core.console import debug, info
 from kmdr.core.context import CredentialPoolContext
 from kmdr.core.error import LoginError, NoCandidateCredentialError, QuotaExceededError
 from kmdr.core.pool import PooledCredential
 from kmdr.core.structure import BookInfo, Credential, CredentialStatus, VolInfo
 
+from .base import BaseDownloader
+
 
 @DOWNLOADER.register(
     hasvalues={"use_pool": True},
     order=-99,  # 确保优先匹配
 )
-class FailoverDownloader(Downloader, CredentialPoolContext):
+class FailoverDownloader(BaseDownloader, CredentialPoolContext):
     """实现了故障转移的下载器，根据用户选择的下载方法，委托给具体的下载器实现。"""
 
     def __init__(self, method: int, num_workers: int = 8, per_cred_ratio: float = 1.0, *args, **kwargs):
@@ -34,12 +36,12 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         if method == 2:
             from .DirectDownloader import DirectDownloader
 
-            self._delegate: Downloader = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+            self._delegate: BaseDownloader = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
         else:
             # 默认使用 ReferViaDownloader
             from .ReferViaDownloader import ReferViaDownloader
 
-            self._delegate: Downloader = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+            self._delegate: BaseDownloader = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
 
     async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
         with self._console.status("同步凭证池状态..."):

@@ -1,7 +1,6 @@
 import asyncio
 import functools
 import random
-import subprocess
 from asyncio.proactor_events import _ProactorBasePipeTransport
 from calendar import monthrange
 from collections.abc import Coroutine, Hashable, Mapping
@@ -10,11 +9,10 @@ from typing import Any, Callable, Generic, Optional, TypeVar
 
 import aiohttp
 
-from .console import debug, emit_progress, in_toolcall_mode
+from .console import debug
 from .constants import TIMEZONE
 from .error import RedirectError
 from .protocol import Consumer
-from .structure import BookInfo, VolInfo
 
 T = TypeVar("T")
 
@@ -49,43 +47,6 @@ class SharedAwaitable(Generic[T]):
         return self._result
 
 
-class DownloadTracker:
-    def __init__(self, total: int):
-        self._total = total
-        self._completed = 0
-        self._failed = 0
-        self._skipped = 0
-
-    @property
-    def total(self) -> int:
-        return self._total
-
-    @property
-    def completed(self) -> int:
-        return self._completed
-
-    @property
-    def failed(self) -> int:
-        return self._failed
-
-    @property
-    def skipped(self) -> int:
-        return self._skipped
-
-    def __call__(self, status: str, **kwargs):
-        if not in_toolcall_mode():
-            return
-
-        if status == "completed":
-            self._completed += 1
-        elif status == "failed":
-            self._failed += 1
-        elif status == "skipped":
-            self._skipped += 1
-
-        emit_progress(status=status, **kwargs)
-
-
 def singleton(cls):
     """
     **非线程安全**的单例装饰器
@@ -99,21 +60,6 @@ def singleton(cls):
         return instances[cls]
 
     return get_instance
-
-
-def construct_callback(callback: Optional[str]) -> Optional[Callable]:
-    if callback is None or not isinstance(callback, str) or not callback.strip():
-        return None
-
-    def _callback(book: BookInfo, volume: VolInfo) -> int:
-        nonlocal callback
-
-        assert callback, "Callback script cannot be empty"
-        formatted_callback = callback.strip().format(b=book, v=volume)
-
-        return subprocess.run(formatted_callback, shell=True, check=True).returncode
-
-    return _callback
 
 
 def async_retry(

@@ -1,15 +1,10 @@
-import asyncio
 from abc import abstractmethod
 from collections.abc import Awaitable
-from functools import partial
-from typing import Callable, Optional
+from typing import Callable
 
 from aiohttp import ClientSession
-from rich.prompt import Confirm
 
-from kmdr.core.constants import BookFormat
-
-from .console import emit, exception, info, log
+from .console import info
 from .context import (
     ConfigContext,
     CredentialPoolContext,
@@ -20,7 +15,7 @@ from .error import LoginError
 from .protocol import AsyncCtxManager
 from .registry import Registry
 from .structure import BookInfo, Credential, VolInfo
-from .utils import DownloadTracker, async_retry, construct_callback
+from .utils import async_retry
 
 
 class Configurer(ConfigContext, TerminalContext):
@@ -101,85 +96,16 @@ class Picker(TerminalContext):
 
 
 class Downloader(SessionContext, TerminalContext):
-    def __init__(self, dest: str = ".", format: str = "epub", callback: Optional[str] = None, retry: int = 3, num_workers: int = 8, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._dest: str = dest
-        self._format: BookFormat = BookFormat.from_name(format)
-        self._callback: Optional[Callable] = construct_callback(callback)
-        self._retry: int = retry
-        self._semaphore = asyncio.Semaphore(num_workers)
-
-    async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
-        if not volumes:
-            info("没有可下载的卷。", style="blue")
-            return
-
-        total_size = sum(v.size or 0 for v in volumes)
-        avai = self._avai_quota(cred)
-        if avai < total_size:
-            if self._console.is_interactive:
-                should_continue = Confirm.ask(
-                    f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
-                    default=False,
-                )
-
-                if not should_continue:
-                    info("用户取消下载。")
-                    return
-            else:
-                log(f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。[/red]")
-
-        tracker = DownloadTracker(len(volumes))
-        try:
-            with self._progress:
-                tasks = [
-                    self._download(cred, book, volume, progress_callback=partial(tracker, volume=volume.name, size_mb=volume.size))
-                    for volume in volumes
-                ]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            exceptions = [res for res in results if isinstance(res, Exception)]
-            if exceptions:
-                info(f"[red]下载过程中出现 {len(exceptions)} 个错误：[/red]")
-                for exc in exceptions:
-                    info(f"[red]- {exc}[/red]")
-                    exception(exc)
-
-        except asyncio.CancelledError:
-            await asyncio.sleep(0.01)
-            raise
-        finally:
-            # 工具调用模式下的最终汇总输出
-            emit(
-                book=book.name,
-                total=tracker.total,
-                completed=tracker.completed,
-                failed=tracker.failed,
-                skipped=tracker.skipped,
-            )
-
-    def _avai_quota(self, cred: Credential) -> float:
-        """计算并返回指定 Credential 的可用额度（单位：MB）"""
-        return cred.quota_remaining
-
     @abstractmethod
-    async def _download(
-        self,
-        cred: Credential,
-        book: BookInfo,
-        volume: VolInfo,
-        quota_deduct_callback: Optional[Callable[[bool], None]] = None,
-        progress_callback: Optional[Callable[..., None]] = None,
-    ):
+    async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]) -> None:
         """
-        供子类实现的实际下载方法。
-
-        :param cred: 用于下载的凭证
-        :param book: 要下载的书籍信息
-        :param volume: 要下载的卷信息
-        :param quota_deduct_callback: 可选的额度扣除回调函数，接受一个布尔值参数，表示额度是否被扣除
-        :param progress_callback: 可选的进度回调函数
+        供具体下载器实现的接口方法。
+        :param cred: 下载凭证
+        :param book: 书籍信息
+        :param volumes: 需要下载的卷列表
         """
         ...
 

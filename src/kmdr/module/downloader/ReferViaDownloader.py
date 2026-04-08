@@ -4,16 +4,18 @@ from typing import Callable, Optional
 
 import aiohttp
 
-from kmdr.core import DOWNLOADER, BookInfo, Downloader, VolInfo
+from kmdr.core import DOWNLOADER, BookInfo, VolInfo
 from kmdr.core.console import debug
 from kmdr.core.constants import API_ROUTE
 from kmdr.core.error import QuotaExceededError
 from kmdr.core.structure import Credential
 from kmdr.core.utils import async_retry
 
+from .base import BaseDownloader
 from .download_utils import (
     download_file,
     download_file_multipart,
+    format_filename,
     readable_safe_filename,
 )
 
@@ -23,7 +25,7 @@ DOWNLOAD_HEAD = {
 
 
 @DOWNLOADER.register(order=10)
-class ReferViaDownloader(Downloader):
+class ReferViaDownloader(BaseDownloader):
     def __init__(
         self,
         dest=".",
@@ -31,14 +33,13 @@ class ReferViaDownloader(Downloader):
         callback=None,
         retry=3,
         num_workers=8,
-        proxy=None,
         vip=False,
         disable_multi_part=False,
         try_multi_part=False,
         *args,
         **kwargs,
     ):
-        super().__init__(dest, format, callback, retry, num_workers, proxy, *args, **kwargs)
+        super().__init__(dest, format, callback, retry, num_workers, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
         self._try_multi_part = try_multi_part
@@ -71,7 +72,7 @@ class ReferViaDownloader(Downloader):
                     volume.id,
                 ),
                 download_path,
-                readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
+                format_filename(book.name, volume.name, self._format.name.lower()),
                 self._retry,
                 headers=DOWNLOAD_HEAD,
                 callback=lambda: self._callback(book, volume) if self._callback else None,
@@ -93,7 +94,7 @@ class ReferViaDownloader(Downloader):
                 volume.id,
             ),
             download_path,
-            readable_safe_filename(f"[Kmoe][{book.name}][{volume.name}].{self._format.name.lower()}"),
+            format_filename(book.name, volume.name, self._format.name.lower()),
             self._retry,
             headers=DOWNLOAD_HEAD,
             callback=lambda: self._callback(book, volume) if self._callback else None,
