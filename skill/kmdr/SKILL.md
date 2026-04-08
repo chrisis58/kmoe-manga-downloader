@@ -122,7 +122,7 @@ kmdr --mode toolcall config --clear
 
 可配置项：`dest`, `proxy`, `num_workers`, `retry`, `callback`, `format`
 
-**使用场景**：用户需要设置下载路径、配置代理、调整并发数。
+**使用场景**：用户需要设置下载路径、配置代理、调整并发数。在更新配置后，请使用 `config --list` 验证更改是否生效。
 
 ## 输出格式
 
