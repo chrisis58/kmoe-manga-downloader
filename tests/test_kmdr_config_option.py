@@ -4,6 +4,7 @@ import unittest
 from argparse import Namespace
 
 from kmdr.core.defaults import Configurer
+from kmdr.core.error import ValidationError
 from kmdr.main import main_sync as kmdr_main
 
 BASE_DIR = os.environ.get("KMDR_TEST_DIR", "./tests")
@@ -24,7 +25,7 @@ class TestKmdrConfigOption(unittest.TestCase):
         configurer.clear("option")
 
     def test_invalid_options(self):
-        kmdr_main(
+        self.assertRaises(ValidationError, lambda: kmdr_main(
             Namespace(
                 command="config",
                 set=[
@@ -34,7 +35,7 @@ class TestKmdrConfigOption(unittest.TestCase):
                     "retry=not_a_number",
                 ],
             )
-        )
+        ))
 
         self.assertIsNotNone(configurer.option, "No options should be set due to invalid values")
         self.assertNotIn("other_invalid_arg", configurer.option)
