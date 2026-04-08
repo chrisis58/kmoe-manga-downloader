@@ -28,6 +28,7 @@ class BaseDownloader(Downloader):
     async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
         if not volumes:
             info("没有可下载的卷。", style="blue")
+            emit(book=book.name, total=0, completed=0, failed=0, skipped=0)
             return
 
         if self._explain:

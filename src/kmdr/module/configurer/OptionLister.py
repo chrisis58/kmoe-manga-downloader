@@ -13,7 +13,7 @@ class OptionLister(Configurer):
     def _operate(self) -> None:
         if self._configurer.option is None and self._configurer.base_url is None:
             info("[blue]当前没有任何配置项。[/blue]")
-            emit("当前没有任何配置项。")
+            emit(option=None, base_url=None)
             return
 
         if in_toolcall_mode():
