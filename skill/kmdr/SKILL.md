@@ -58,11 +58,13 @@ kmdr login -u <username> [-p <password>]
 
 ## 调用方式
 
-所有命令都应使用 `--mode toolcall` 参数以获取结构化的 JSON 输出：
+你的所有命令都应使用 `--mode toolcall` 参数以获取结构化的 JSON 输出：
 
 ```bash
 kmdr --mode toolcall <command> [options]
 ```
+
+值得注意的是，当你向用户建议手动执行命令时，不要包含 `--mode toolcall` 参数，以便用户使用默认的交互式的输出格式。
 
 ## 主要命令
 
