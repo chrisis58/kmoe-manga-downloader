@@ -4,6 +4,7 @@ from typing import Optional
 from rich.prompt import Prompt
 
 from kmdr.core import AUTHENTICATOR, Authenticator, LoginError
+from kmdr.core.console import emit, is_interactive
 from kmdr.core.constants import API_ROUTE, LoginResponse
 from kmdr.core.error import NotInteractableError
 from kmdr.core.structure import Credential
@@ -26,8 +27,8 @@ class LoginAuthenticator(Authenticator):
         self._show_quota = show_quota
 
         if password is None:
-            if not self._console.is_interactive:
-                raise NotInteractableError("无法获取密码，请通过命令行参数提供密码。")
+            if not is_interactive():
+                raise NotInteractableError("无法获取密码，请通过 -p 命令行参数提供密码。")
             password = Prompt.ask("请输入密码", password=True, console=self._console)
 
         self._password = password
@@ -61,5 +62,6 @@ class LoginAuthenticator(Authenticator):
                 cookies=cookies,
                 show_quota=self._show_quota,
             )
+            emit(cred)
 
             return cred

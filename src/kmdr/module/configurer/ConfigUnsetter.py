@@ -1,5 +1,5 @@
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 
 from .option_validate import check_key
 
@@ -18,3 +18,4 @@ class ConfigUnsetter(Configurer):
         check_key(self._unset)
         self._configurer.unset_option(self._unset)
         info(f"[green]取消配置项: {self._unset}[/green]")
+        emit(unset=self._unset)

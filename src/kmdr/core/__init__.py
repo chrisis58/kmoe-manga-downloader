@@ -1,11 +1,13 @@
 from .bases import (
     AUTHENTICATOR,
+    CATALOGERS,
     CONFIGURER,
     DOWNLOADER,
     LISTERS,
     PICKERS,
     SESSION_MANAGER,
     Authenticator,
+    Cataloger,
     Configurer,
     Downloader,
     Lister,
@@ -37,11 +39,13 @@ __all__ = (
     "PICKERS",
     "DOWNLOADER",
     "CONFIGURER",
+    "CATALOGERS",
     "SessionManager",
     "Authenticator",
     "Lister",
     "Picker",
     "Configurer",
     "Downloader",
-    "KmdrSessionManager"
+    "Cataloger",
+    "KmdrSessionManager",
 )

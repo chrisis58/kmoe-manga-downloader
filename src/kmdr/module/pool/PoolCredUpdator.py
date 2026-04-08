@@ -1,7 +1,7 @@
 from typing import Optional
 
 from kmdr.core.bases import POOL_MANAGER, PoolManager
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 
 
 @POOL_MANAGER.register(hasvalues={"pool_command": "update"})
@@ -17,6 +17,7 @@ class PoolCredUpdator(PoolManager):
 
         if not cred:
             info(f"凭证池中不存在用户 '{self._username}' 。")
+            emit(f"凭证池中不存在用户 '{self._username}' 。")
             return
 
         if self._note is not None:
@@ -26,4 +27,5 @@ class PoolCredUpdator(PoolManager):
             cred.order = self._order
 
         self._configurer.update()
+        emit(username=self._username)
         info(f"已更新用户 '{self._username}' 的信息。")

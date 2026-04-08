@@ -1,0 +1,102 @@
+{
+  "description": "搜索漫画示例",
+  "command": "kmdr --mode toolcall --fast-auth search \"进击的巨人\" --minimal",
+  "output": [
+    {
+      "type": "result",
+      "code": 0,
+      "msg": "success",
+      "data": {
+        "total_pages": 2,
+        "page": 1,
+        "count": 21,
+        "books": [
+          {
+            "name": "進擊的巨人",
+            "url": "https://kxo.moe/c/10184.htm"
+          },
+          {
+            "name": "進撃の巨人",
+            "url": "https://kxo.moe/c/54706.htm"
+          },
+          {
+            "name": "進擊的巨人(彩色版)",
+            "url": "https://kxo.moe/c/19047.htm"
+          },
+          {
+            "name": "進擊的巨人(偽完全版)",
+            "url": "https://kxo.moe/c/26351.htm"
+          },
+          {
+            "name": "Attack on Titan",
+            "url": "https://kxo.moe/c/d662e7.htm"
+          },
+          {
+            "name": "進擊的巨人Before The Fall",
+            "url": "https://kxo.moe/c/10196.htm"
+          },
+          {
+            "name": " 進擊的巨人原畫集",
+            "url": "https://kxo.moe/c/19413.htm"
+          },
+          {
+            "name": "進擊的巨人 - 無悔的選擇",
+            "url": "https://kxo.moe/c/53349.htm"
+          },
+          {
+            "name": "進擊! 巨人中學校",
+            "url": "https://kxo.moe/c/10617.htm"
+          },
+          {
+            "name": "短劇的巨人",
+            "url": "https://kxo.moe/c/10061.htm"
+          },
+          {
+            "name": "進擊的巨人 LOST GIRLS",
+            "url": "https://kxo.moe/c/10910.htm"
+          },
+          {
+            "name": "約會大進擊DATE AST LIKE",
+            "url": "https://kxo.moe/c/53862.htm"
+          },
+          {
+            "name": "進擊的巨人 人物角色名鑑 FINAL",
+            "url": "https://kxo.moe/c/854364.htm"
+          },
+          {
+            "name": "刀劍神域 進擊篇 陰沉薄暮的詼諧曲",
+            "url": "https://kxo.moe/c/18192.htm"
+          },
+          {
+            "name": "刀劍神域進擊篇-黃金法則的卡農",
+            "url": "https://kxo.moe/c/504b99.htm"
+          },
+          {
+            "name": "進擊的巨人 - 無悔的選擇(彩色版)",
+            "url": "https://kxo.moe/c/25284.htm"
+          },
+          {
+            "name": "澀谷金魚",
+            "url": "https://kxo.moe/c/160a26.htm"
+          },
+          {
+            "name": "異端 進擊的哲學現場",
+            "url": "https://kxo.moe/c/d3f3f7.htm"
+          },
+          {
+            "name": "刀劍神域 進擊篇 稍縱即逝的泡影船歌",
+            "url": "https://kxo.moe/c/14767.htm"
+          },
+          {
+            "name": "進擊！巨人高校 ～青春！ 隔壁的瑪雷學園～",
+            "url": "https://kxo.moe/c/19152.htm"
+          },
+          {
+            "name": "Shibuya Goldfish",
+            "url": "https://kxo.moe/c/f86ccc.htm"
+          }
+        ]
+      }
+    }
+  ]
+}

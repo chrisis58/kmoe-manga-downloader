@@ -1,7 +1,7 @@
 from .BookUrlLister import BookUrlLister
-from .FollowedBookLister import FollowedBookLister
+from .CatalogGuidedLister import CatalogGuidedLister
 
 __all__ = [
     "BookUrlLister",
-    "FollowedBookLister",
+    "CatalogGuidedLister",
 ]

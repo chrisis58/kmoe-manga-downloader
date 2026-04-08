@@ -1,5 +1,5 @@
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 
 
 @CONFIGURER.register()
@@ -16,3 +16,4 @@ class ConfigClearer(Configurer):
             return
 
         info(f"[green]已清除: {self._clear}[/green]")
+        emit(clear=self._clear)

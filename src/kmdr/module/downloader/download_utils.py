@@ -13,7 +13,7 @@ from aiohttp.client_exceptions import ClientPayloadError
 from rich.progress import Progress
 from typing_extensions import deprecated
 
-from kmdr.core.console import debug, info, log
+from kmdr.core.console import debug, info, is_interactive, log
 from kmdr.core.error import QuotaExceededError, RangeNotSupportedError
 from kmdr.core.utils import async_retry, sanitize_headers
 
@@ -24,6 +24,7 @@ CONTENT_RANGE_PATTERN = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECAS
 
 BLOCK_SIZE_REDUCTION_FACTOR = 0.75
 MIN_BLOCK_SIZE = 2048
+EMIT_SIZE_INTERVAL = 10 * 1024 * 1024  # 10MB
 
 _HEAD_SEMAPHORE_VALUE = 3
 _HEAD_SEMAPHORE: Optional[asyncio.Semaphore] = None
@@ -53,6 +54,7 @@ async def download_file(
     task_id=None,
     resumable: bool = True,
     quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+    progress_callback: Optional[Callable[..., None]] = None,
 ):
     """
     下载文件
@@ -69,6 +71,7 @@ async def download_file(
     :param task_id: 进度条任务 ID，如果已经存在则更新该任务
     :param resumable: 是否启用断点续传
     :param quota_deduct_callback: 流量配额扣减回调函数,参数为是否实际扣减
+    :param progress_callback: 进度回调函数
     """
     if headers is None:
         headers = {}
@@ -82,12 +85,18 @@ async def download_file(
     if await aio_os.path.exists(file_path):
         info(f"[yellow]{filename} 已经存在[/yellow]")
         quota_deduct_callback(False) if quota_deduct_callback else None
+        if progress_callback:
+            progress_callback(status="skipped")
         return
 
     log("开始下载文件:", filename, "到路径:", dest_path)
 
     block_size = 8192
     attempts_left = retry_times + 1
+    last_emit_size = 0
+
+    if progress_callback:
+        progress_callback(status="downloading")
 
     while attempts_left > 0:
         attempts_left -= 1
@@ -130,6 +139,21 @@ async def download_file(
                             if chunk:
                                 await f.write(chunk)
                                 progress.update(task_id, advance=len(chunk))
+                                if not is_interactive() and total_size_in_bytes > 0:
+                                    # 获取当前进度条状态作为实际已下载字节数
+                                    # NOTE: rich.progress.Progress.tasks 返回 list[Task]，TaskID 作为索引使用。
+                                    # 若有 task 被 remove_task() 删除，list 长度减少可能导致 IndexError。
+                                    # 但当前下载函数的生命周期内不会 remove task，故安全。
+                                    task = progress.tasks[task_id] if task_id is not None else None
+                                    completed = task.completed if task else 0
+                                    if completed - last_emit_size > EMIT_SIZE_INTERVAL:
+                                        if progress_callback:
+                                            progress_callback(
+                                                status="downloading",
+                                                percentage=round(completed / total_size_in_bytes * 100, 1),
+                                            )
+                                        log(filename, "下载进度:", round(completed / total_size_in_bytes * 100, 1), "%")
+                                        last_emit_size = completed
 
             await aio_os.rename(filename_downloading, file_path)
             break
@@ -158,12 +182,17 @@ async def download_file(
             else:
                 if task_id is not None:
                     progress.update(task_id, status=STATUS.FAILED.value)
+                if progress_callback:
+                    progress_callback(status="failed")
                 raise e
 
         finally:
             if await aio_os.path.exists(file_path):
                 if task_id is not None:
                     progress.update(task_id, status=STATUS.COMPLETED.value)
+
+                if progress_callback:
+                    progress_callback(status="completed")
 
                 if callback:
                     callback()
@@ -182,6 +211,7 @@ async def download_file_multipart(
     headers: Optional[dict] = None,
     callback: Optional[Callable] = None,
     quota_deduct_callback: Optional[Callable[[bool], None]] = None,
+    progress_callback: Optional[Callable[..., None]] = None,
 ):
     """
     下载文件
@@ -197,6 +227,7 @@ async def download_file_multipart(
     :param cookies: 请求的 cookies
     :param callback: 下载完成后的回调函数
     :param quota_deduct_callback: 流量配额扣减回调函数,参数为是否实际扣减
+    :param progress_callback: 进度回调函数
     """
     if headers is None:
         headers = {}
@@ -210,9 +241,14 @@ async def download_file_multipart(
     if await aio_os.path.exists(file_path):
         quota_deduct_callback(False) if quota_deduct_callback else None
         info(f"[blue]{filename} 已经存在[/blue]")
+        if progress_callback:
+            progress_callback(status="skipped")
         return
 
     log("开始下载文件:", filename)
+    if progress_callback:
+        progress_callback(status="downloading")
+
     part_paths = []
     part_expected_sizes = []
     task_id = None
@@ -250,7 +286,7 @@ async def download_file_multipart(
             total=total_size,
             completed=resumed_size,
         )
-        state_manager = StateManager(progress=progress, task_id=task_id)
+        state_manager = StateManager(progress=progress, task_id=task_id, progress_callback=progress_callback)
 
         for i, start in enumerate(range(0, total_size, chunk_size)):
             end = min(start + chunk_size - 1, total_size - 1)
@@ -308,12 +344,16 @@ async def download_file_multipart(
             callback=callback,
             task_id=task_id,
             resumable=False,
+            progress_callback=progress_callback,
         )
 
     finally:
         if await aio_os.path.exists(file_path):
             if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.COMPLETED)
+                if progress_callback:
+                    # 故障转移时，state_manager 会被置为 None，避免了重复调用
+                    progress_callback(status="completed")
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
             if cleanup_tasks:
@@ -323,6 +363,9 @@ async def download_file_multipart(
         else:
             if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)
+                if progress_callback:
+                    # 故障转移时，state_manager 会被置为 None，避免了重复调用
+                    progress_callback(status="failed")
 
 
 @async_retry()
@@ -567,6 +610,10 @@ def safe_filename(name: str) -> str:
     替换非法文件名字符为下划线
     """
     return re.sub(r'[\\/:*?"<>|]', "_", name)
+
+
+def format_filename(book_name: str, volume_name: str, file_format: str) -> str:
+    return readable_safe_filename(f"[Kmoe][{book_name}][{volume_name}].{file_format}")
 
 
 async def fetch_url(

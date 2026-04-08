@@ -1,5 +1,5 @@
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 
 
 @CONFIGURER.register()
@@ -16,3 +16,4 @@ class BaseUrlUpdator(Configurer):
             return
 
         info(f"已设置基础 URL: {self._base_url}")
+        emit(base_url=self._base_url)

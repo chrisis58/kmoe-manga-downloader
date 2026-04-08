@@ -1,9 +1,64 @@
 import asyncio
+import subprocess
 from enum import Enum
+from typing import Callable, Optional
 
 from rich.progress import Progress, TaskID
 
-from kmdr.core.console import debug
+from kmdr.core.console import debug, emit_progress, in_toolcall_mode
+from kmdr.core.structure import BookInfo, VolInfo
+
+
+class DownloadTracker:
+    def __init__(self, total: int):
+        self._total = total
+        self._completed = 0
+        self._failed = 0
+        self._skipped = 0
+
+    @property
+    def total(self) -> int:
+        return self._total
+
+    @property
+    def completed(self) -> int:
+        return self._completed
+
+    @property
+    def failed(self) -> int:
+        return self._failed
+
+    @property
+    def skipped(self) -> int:
+        return self._skipped
+
+    def __call__(self, status: str, **kwargs):
+        if not in_toolcall_mode():
+            return
+
+        if status == "completed":
+            self._completed += 1
+        elif status == "failed":
+            self._failed += 1
+        elif status == "skipped":
+            self._skipped += 1
+
+        emit_progress(status=status, **kwargs)
+
+
+def construct_callback(callback: Optional[str]) -> Optional[Callable]:
+    if callback is None or not isinstance(callback, str) or not callback.strip():
+        return None
+
+    def _callback(book: BookInfo, volume: VolInfo) -> int:
+        nonlocal callback
+
+        assert callback, "Callback script cannot be empty"
+        formatted_callback = callback.strip().format(b=book, v=volume)
+
+        return subprocess.run(formatted_callback, shell=True, check=True).returncode
+
+    return _callback
 
 
 class STATUS(Enum):
@@ -37,11 +92,20 @@ class STATUS(Enum):
 
 
 class StateManager:
-    def __init__(self, progress: Progress, task_id: TaskID):
+    def __init__(
+        self,
+        progress: Progress,
+        task_id: TaskID,
+        progress_callback: Optional[Callable[..., None]] = None,
+        emit_interval: int = 10 * 1024 * 1024,
+    ):
         self._part_states: dict[int, STATUS] = {}
         self._progress = progress
         self._task_id = task_id
         self._current_status = STATUS.WAITING
+        self._progress_callback = progress_callback
+        self._emit_interval = emit_interval
+        self._last_emit_size = 0
 
         self._lock = asyncio.Lock()
 
@@ -49,6 +113,16 @@ class StateManager:
 
     def advance(self, advance: int):
         self._progress.update(self._task_id, advance=advance)
+        if self._progress_callback:
+            # NOTE: rich.progress.Progress.tasks 返回 list[Task]，TaskID 作为索引使用。
+            # 若有 task 被 remove_task() 删除，list 长度减少可能导致 IndexError。
+            # 但当前场景中 StateManager 的生命周期内不会 remove task，故安全。
+            task = self._progress.tasks[self._task_id]
+            total = task.total
+            if total is not None and total > 0:
+                if task.completed - self._last_emit_size > self._emit_interval:
+                    self._progress_callback(status="downloading", percentage=round(task.completed / total * 100, 1))
+                    self._last_emit_size = task.completed
 
     def _update_status(self):
         if not self._part_states:
@@ -74,3 +148,4 @@ class StateManager:
             debug("分片", part_id, "请求状态更新为", status)
             self._part_states[part_id] = status
             self._update_status()
+

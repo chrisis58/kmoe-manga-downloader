@@ -33,6 +33,7 @@ Seven global registries are defined in `bases.py`:
 |--------------------|------------------|----------------------------|
 | `SESSION_MANAGER`  | `SessionManager` | HTTP session lifecycle     |
 | `AUTHENTICATOR`    | `Authenticator`  | Login / cookie auth        |
+| `CATALOGERS`       | `Cataloger`      | Fetch book list collections|
 | `LISTERS`          | `Lister`         | Fetch book & volume info   |
 | `PICKERS`          | `Picker`         | Filter/select volumes      |
 | `DOWNLOADER`       | `Downloader`     | Download volumes           |
@@ -76,9 +77,13 @@ Concrete implementations registered to the core registries. Each subdirectory is
 - `CookieAuthenticator` — cookie-based auth (default fallback)
 - `utils.py` — `check_status()` parses user profile page for quota info
 
+#### `cataloger/`
+- `FollowedCataloger` — fetches user's followed books and returns a list of BookInfo
+- `SearchCataloger` — performs keyword search and returns a list of BookInfo
+
 #### `lister/`
 - `BookUrlLister` — fetches book info and volume list from a book URL
-- `FollowedBookLister` — lists followed books
+- `CatalogGuidedLister` — acts as a default fallback; delegates to a Cataloger to show a list, prompts user, and fetches volumes
 - `utils.py` — HTML parsing with BeautifulSoup
 
 #### `picker/`

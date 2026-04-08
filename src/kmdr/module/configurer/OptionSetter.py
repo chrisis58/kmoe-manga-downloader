@@ -1,5 +1,5 @@
 from kmdr.core import CONFIGURER, Configurer
-from kmdr.core.console import info
+from kmdr.core.console import emit, info
 
 from .option_validate import validate
 
@@ -21,8 +21,7 @@ class OptionSetter(Configurer):
             value = value.strip()
 
             validated_value = validate(key, value)
-            if validated_value is None:
-                continue
 
             self._configurer.set_option(key, validated_value)
             info(f"[green]已设置配置: {key} = {validated_value}[/green]")
+            emit(key=key)

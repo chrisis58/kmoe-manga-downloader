@@ -1,9 +1,7 @@
 import argparse
-import dataclasses
 import json
 import os
 from contextvars import ContextVar
-from enum import Enum
 from typing import Any, Optional
 
 from rich.progress import (
@@ -14,9 +12,11 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from .console import _update_verbose_setting
+from .console import OutputMode, _set_output_mode, _update_verbose_setting
 from .constants import BASE_URL
+from .encoder import KmdrJSONEncoder
 from .error import InitializationError
+from .patch import apply_argparse_patch
 from .structure import Config, Credential
 from .utils import singleton
 
@@ -52,10 +52,17 @@ def argument_parser():
     parser = argparse.ArgumentParser(description="Kmoe 漫画下载器")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="启用详细输出")
+    parser.add_argument("--mode", type=str, choices=["interactive", "log", "toolcall"], help="指定运行和输出模式: interactive (交互模式), log (日志模式), toolcall (工具调用)", default="interactive")
+    parser.add_argument("--fast-auth", action="store_true", help="跳过账户配额预检直接从本地读取缓存以加速响应")
 
     subparsers = parser.add_subparsers(title="可用的子命令", dest="command")
 
     subparsers.add_parser("version", help="显示当前版本信息")
+
+    search_parser = subparsers.add_parser("search", help="搜索指定的漫画")
+    search_parser.add_argument("keyword", type=str, help="要搜索的关键字")
+    search_parser.add_argument("-p", "--page", type=int, help="搜索结果的页码", required=False, default=1)
+    search_parser.add_argument("-m", "--minimal", action="store_true", help="只返回书名和链接 (仅在 toolcall 模式下生效)")
 
     download_parser = subparsers.add_parser("download", help="下载指定的漫画")
     download_parser.add_argument("-d", "--dest", type=str, help="指定下载文件的保存路径，默认为当前目录", required=False)
@@ -76,6 +83,7 @@ def argument_parser():
     download_parser.add_argument("--fake-ua", action="store_true", help="使用随机的 User-Agent 进行请求")
     download_parser.add_argument("-P", "--use-pool", action="store_true", help="启用凭证池进行下载")
     download_parser.add_argument("--per-cred-ratio", type=float, help="启用凭证池时生效，设定每个凭证的最大并发比例，默认为 1.0。如 `num_workers` 设定为 8，`per_cred_ratio` 设定为 0.5，则每个凭证最多使用 4 个并发任务。", required=False, default=1.0)
+    download_parser.add_argument("--explain", action="store_true", help="仅输出下载计划和预估信息，不执行实际下载")
 
     login_parser = subparsers.add_parser("login", help="登录到 Kmoe")
     login_parser.add_argument("-u", "--username", type=str, help="用户名", required=True)
@@ -116,6 +124,8 @@ def argument_parser():
     pool_update.add_argument("-n", "--note", type=str, help="更新备注信息")
     pool_update.add_argument("-o", "--order", type=int, help="更新账号优先级，数值越小优先级越高")
 
+    apply_argparse_patch(parser)
+
     return parser
 # fmt: on
 
@@ -132,17 +142,6 @@ def parse_args():
         parser.print_help()
 
     return args
-
-
-class KmdrJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o) and not isinstance(o, type):
-            return dataclasses.asdict(o)
-
-        if isinstance(o, Enum):
-            return o.value
-
-        return super().default(o)
 
 
 @singleton
@@ -273,3 +272,6 @@ base_url_var = ContextVar("base_url", default=Configurer().base_url)
 def post_init(args) -> None:
     _verbose = getattr(args, "verbose", False)
     _update_verbose_setting(_verbose)
+
+    _mode = getattr(args, "mode", "interactive")
+    _set_output_mode(OutputMode(_mode))

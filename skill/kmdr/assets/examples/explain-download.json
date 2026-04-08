@@ -1,0 +1,30 @@
+{
+  "description": "获取下载计划示例",
+  "command": "kmdr --mode toolcall download -l https://kxx.moe/c/13663.htm -v 1-2 --explain",
+  "output": [
+    {
+      "type": "result",
+      "code": 0,
+      "msg": "success",
+      "data": {
+        "book": "間諜家家酒",
+        "estimate_quota_usage_mb": 114.7,
+        "avai_quota_mb": 2930.7,
+        "format": "EPUB",
+        "target_path": "/path/to/destination",
+        "to_download": [
+          {
+            "name": "卷 02",
+            "size": 114.7
+          }
+        ],
+        "skipped": [
+          {
+            "name": "卷 01",
+            "size": 141.3
+          }
+        ]
+      }
+    }
+  ]
+}

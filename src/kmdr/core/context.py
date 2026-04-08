@@ -5,7 +5,7 @@ from rich.progress import Progress
 
 from kmdr.core.pool import CredentialPool
 
-from .console import _console
+from .console import _console, in_toolcall_mode, is_interactive
 from .defaults import (
     Configurer as InnerConfigurer,
 )
@@ -28,7 +28,12 @@ class TerminalContext:
     def _progress(self) -> Progress:
         global _lazy_progress
         if _lazy_progress is None:
-            _lazy_progress = Progress(*progress_definition, console=self._console, refresh_per_second=4)
+            _lazy_progress = Progress(
+                *progress_definition,
+                console=self._console,
+                refresh_per_second=4,
+                disable=in_toolcall_mode() or not is_interactive(),
+            )
         return _lazy_progress
 
 

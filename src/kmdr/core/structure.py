@@ -136,7 +136,7 @@ class Credential:
     账号用户名，用作唯一标识
     """
 
-    cookies: dict[str, str]
+    cookies: dict[str, str] = field(metadata={"sensitive": True})
 
     user_quota: QuotaInfo
 

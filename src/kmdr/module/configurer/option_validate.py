@@ -20,8 +20,7 @@ def validate(key: str, value: str) -> Optional[object]:
     if key in __OPTIONS_VALIDATOR:
         return __OPTIONS_VALIDATOR[key](value)
     else:
-        info(f"[red]不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}[/red]")
-        return None
+        raise ValidationError(f"不支持的配置项: {key}。可用配置项：{', '.join(__OPTIONS_VALIDATOR.keys())}", field=key)
 
 
 def check_key(key: str, raise_if_invalid: bool = True) -> None:
@@ -75,22 +74,18 @@ def validate_num_workers(value: str) -> Optional[int]:
             raise ValueError("必须是正值。")
         return num_workers
     except ValueError as e:
-        info(f"[red]无效的 num_workers 值: {value}。{str(e)}[/red]")
-        return None
+        raise ValidationError(f"无效的 num_workers 值: {value}。{str(e)}", field="num_workers") from e
 
 
 @register_validator("dest")
 def validate_dest(value: str) -> Optional[str]:
     if not value:
-        info("[red]目标目录不能为空。[/red]")
-        return None
+        raise ValidationError("目标目录不能为空。", field="dest")
     if not os.path.exists(value) or not os.path.isdir(value):
-        info(f"[red]目标目录不存在或不是目录: {value}[/red]")
-        return None
+        raise ValidationError(f"目标目录不存在或不是目录: {value}", field="dest")
 
     if not os.access(value, os.W_OK):
-        info(f"[red]目标目录不可写: {value}[/red]")
-        return None
+        raise ValidationError(f"目标目录不可写: {value}", field="dest")
 
     if not os.path.isabs(value):
         info(f"[yellow]目标目录最好是绝对路径: {value}[/yellow]")
@@ -106,23 +101,20 @@ def validate_retry(value: str) -> Optional[int]:
             raise ValueError("必须是正值。")
         return retry
     except ValueError as e:
-        info(f"[red]无效的 retry 值: {value}。{str(e)}[/red]")
-        return None
+        raise ValidationError(f"无效的 retry 值: {value}。{str(e)}", field="retry") from e
 
 
 @register_validator("callback")
 def validate_callback(value: str) -> Optional[str]:
     if not value:
-        info("[red]回调不能为空。[/red]")
-        return None
+        raise ValidationError("回调不能为空。", field="callback")
     return value
 
 
 @register_validator("proxy")
 def validate_proxy(value: str) -> Optional[str]:
     if not value:
-        info("[red]代理不能为空。[/red]")
-        return None
+        raise ValidationError("代理不能为空。", field="proxy")
     return value
 
 
@@ -131,7 +123,6 @@ def validate_format(value: str) -> Optional[str]:
     try:
         fmt = BookFormat.from_name(value)
         return fmt.name.lower()
-    except ValueError:
+    except ValueError as e:
         available_formats = ", ".join(fmt.name.lower() for fmt in BookFormat)
-        info(f"[red]无效的格式: {value}。可用格式：{available_formats}[/red]")
-        return None
+        raise ValidationError(f"无效的格式: {value}。可用格式：{available_formats}", field="format") from e
