@@ -114,6 +114,9 @@ class StateManager:
     def advance(self, advance: int):
         self._progress.update(self._task_id, advance=advance)
         if self._progress_callback:
+            # NOTE: rich.progress.Progress.tasks 返回 list[Task]，TaskID 作为索引使用。
+            # 若有 task 被 remove_task() 删除，list 长度减少可能导致 IndexError。
+            # 但当前场景中 StateManager 的生命周期内不会 remove task，故安全。
             task = self._progress.tasks[self._task_id]
             total = task.total
             if total is not None and total > 0:

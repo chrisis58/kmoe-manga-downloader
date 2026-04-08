@@ -141,6 +141,9 @@ async def download_file(
                                 progress.update(task_id, advance=len(chunk))
                                 if not is_interactive() and total_size_in_bytes > 0:
                                     # 获取当前进度条状态作为实际已下载字节数
+                                    # NOTE: rich.progress.Progress.tasks 返回 list[Task]，TaskID 作为索引使用。
+                                    # 若有 task 被 remove_task() 删除，list 长度减少可能导致 IndexError。
+                                    # 但当前下载函数的生命周期内不会 remove task，故安全。
                                     task = progress.tasks[task_id] if task_id is not None else None
                                     completed = task.completed if task else 0
                                     if completed - last_emit_size > EMIT_SIZE_INTERVAL:
