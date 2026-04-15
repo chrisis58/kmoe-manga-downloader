@@ -84,6 +84,7 @@ def argument_parser():
     download_parser.add_argument("-P", "--use-pool", action="store_true", help="启用凭证池进行下载")
     download_parser.add_argument("--per-cred-ratio", type=float, help="启用凭证池时生效，设定每个凭证的最大并发比例，默认为 1.0。如 `num_workers` 设定为 8，`per_cred_ratio` 设定为 0.5，则每个凭证最多使用 4 个并发任务。", required=False, default=1.0)
     download_parser.add_argument("--explain", action="store_true", help="仅输出下载计划和预估信息，不执行实际下载")
+    download_parser.add_argument("-b", "--background", action="store_true", help="后台运行下载任务，返回日志文件路径和进程 PID")
 
     login_parser = subparsers.add_parser("login", help="登录到 Kmoe")
     login_parser.add_argument("-u", "--username", type=str, help="用户名", required=True)
@@ -123,6 +124,9 @@ def argument_parser():
     pool_update.add_argument("username", type=str, help="要更新的用户名")
     pool_update.add_argument("-n", "--note", type=str, help="更新备注信息")
     pool_update.add_argument("-o", "--order", type=int, help="更新账号优先级，数值越小优先级越高")
+
+    query_parser = subparsers.add_parser("query", help="查询后台下载任务状态")
+    query_parser.add_argument("log_file", type=str, help="后台任务的日志文件路径")
 
     apply_argparse_patch(parser)
 
