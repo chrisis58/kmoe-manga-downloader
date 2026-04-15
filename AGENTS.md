@@ -27,7 +27,7 @@ Registry.get(args) → T  # resolves and instantiates the matching implementatio
 
 Matching logic: `{predicate} OR {hasvalues} AND ({hasattrs} OR {containattrs})`. Registrations are sorted by `order` (lower = higher priority).
 
-Seven global registries are defined in `bases.py`:
+Eight global registries are defined in `bases.py`:
 
 | Registry           | Base Class       | Purpose                    |
 |--------------------|------------------|----------------------------|
@@ -63,47 +63,49 @@ Base classes use cooperative multiple inheritance with context mixins:
 - **`defaults.py`** — `argparse` definitions, `Configurer` singleton (reads/writes `~/.kmdr` JSON), argument merging for persistent options
 - **`session.py`** — `KmdrSessionManager`: creates `aiohttp.ClientSession`, probes mirror URLs with priority sorting
 - **`pool.py`** — `CredentialPool` (tiered round-robin scheduling with sticky-preferred cred) and `PooledCredential` (quota reservation with transactional commit/rollback)
-- **`utils.py`** — `async_retry` decorator (exponential backoff, redirect handling), `PrioritySorter`, callback construction, UA rotation
-- **`console.py`** — `info()` / `debug()` / `log()` output functions, adapts between interactive (`print`) and non-interactive (`log`) modes
+- **`utils.py`** — `async_retry` decorator (exponential backoff, redirect handling), `PrioritySorter`, `SharedAwaitable` (for concurrent auth+catalog), callback construction, UA rotation
+- **`console.py`** — `info()` / `debug()` / `log()` output functions, adapts between interactive (`print`) and non-interactive (`log`) modes; **Tool Call Mode**: `emit()` for final result, `emit_progress()` for real-time NDJSON progress
+- **`encoder.py`** — `KmdrJSONEncoder` (standard JSON encoder for dataclasses) and `SafeJSONEncoder` (auto-desensitizes fields marked `sensitive=True`)
+- **`error.py`** — Exception hierarchy rooted at `KmdrError(RuntimeError)` with two-digit status codes; includes solution suggestions
 - **`patch.py`** — Monkey-patches `Console.status()` to support nested/stacked status contexts in async scenarios
-- **`error.py`** — Exception hierarchy rooted at `KmdrError(RuntimeError)` with solution suggestions
+
+#### Error Status Codes (`error.py`)
+
+Two-digit status codes categorized by domain: 0 (success), 1x (init/args), 2x (auth/cred), 3x (redirect), 4x (input), 5x (server/network). See `error.py` for details.
+
+#### Tool Call Mode
+
+When invoked with `--mode toolcall`, kmdr outputs structured NDJSON for AI agent consumption:
+
+- **Output format**: Each line is a JSON object; final line is `{"type": "result", "code": N, "msg": "...", "data": {...}}`
+- **Progress updates**: Download commands emit `{"type": "progress", ...}` lines during execution
+- **Desensitization**: `SafeJSONEncoder` automatically replaces sensitive fields (cookies, passwords) with `"***SENSITIVE***"`
+- **Fast Auth**: `--fast-auth` flag skips network validation, uses local credential pool directly via `LocalPoolAuthenticator`
 
 ### Modules (`src/kmdr/module/`)
 
 Concrete implementations registered to the core registries. Each subdirectory is a feature module.
 
-#### `authenticator/`
-- `LoginAuthenticator` — username/password login (registered when `command == "login"`)
-- `CookieAuthenticator` — cookie-based auth (default fallback)
-- `utils.py` — `check_status()` parses user profile page for quota info
-
 #### `cataloger/`
-- `FollowedCataloger` — fetches user's followed books and returns a list of BookInfo
-- `SearchCataloger` — performs keyword search and returns a list of BookInfo
+Provides book list fetching. `SearchCataloger` for keyword search, `FollowedCataloger` for followed books. Contains HTML parsing utilities.
+
+#### `authenticator/`
+Handles authentication. `LoginAuthenticator` for username/password login, `CookieAuthenticator` for cookie-based auth, `LocalPoolAuthenticator` for fast auth mode.
 
 #### `lister/`
-- `BookUrlLister` — fetches book info and volume list from a book URL
-- `CatalogGuidedLister` — acts as a default fallback; delegates to a Cataloger to show a list, prompts user, and fetches volumes
-- `utils.py` — HTML parsing with BeautifulSoup
+Fetches book info and volume list. `BookUrlLister` from direct URL, `CatalogGuidedLister` via interactive selection.
 
 #### `picker/`
-- `ArgsFilterPicker` — filters volumes by `-v` (index ranges) and `-t` (type)
-- `DefaultVolPicker` — interactive volume selection (when args not provided)
-- `utils.py` — volume range resolution (`1,2,3`, `1-5`, `all`)
+Filters/selects volumes. `ArgsFilterPicker` via CLI args, `DefaultVolPicker` via interactive selection.
 
 #### `downloader/`
-- `ReferViaDownloader` — method 1: gets download URL via `getdownurl.php` API, then downloads
-- `DirectDownloader` — method 2: direct download URL construction (registered when `method == 2`)
-- `FailoverDownloader` — credential pool failover wrapper (registered when `use_pool == True`, order=-99 for priority)
-- `download_utils.py` — core download logic: single-file, multipart (chunked parallel), resume, retry, progress tracking
-- `misc.py` — download status enum and `StateManager` for progress updates
+Downloads volumes. `ReferViaDownloader` (API-based), `DirectDownloader` (URL construction), `FailoverDownloader` (credential pool wrapper). Contains download utilities and progress tracking.
 
 #### `configurer/`
-- `OptionSetter`, `OptionLister`, `ConfigClearer`, `ConfigUnsetter`, `BaseUrlUpdator`
-- `option_validate.py` — validation for persistent option keys/values
+Manages persistent config operations: set, list, clear, unset options and base URL updates.
 
 #### `pool/`
-- `PoolInsertionHandler`, `PoolCredRemover`, `PoolCredSwitcher`, `PoolCredUpdator`, `PoolLister`
+Manages credential pool: add, remove, switch, update, list credentials.
 
 ## Command Flow
 
@@ -113,9 +115,20 @@ entry_point() → parse_args → main(args)
   ├─ "login"    → SESSION_MANAGER.get() → AUTHENTICATOR.get() → authenticate
   ├─ "status"   → SESSION_MANAGER.get() → AUTHENTICATOR.get() → show quota
   ├─ "config"   → CONFIGURER.get() → operate
+  ├─ "search"   → SESSION_MANAGER.get() → AUTHENTICATOR + CATALOGERS → return BookInfo list
   ├─ "download" → SESSION_MANAGER.get() → [AUTHENTICATOR + LISTERS] → PICKERS → DOWNLOADER
   └─ "pool"     → POOL_MANAGER.get() → operate
 ```
+
+## Skill Definition (`skill/kmdr/`)
+
+The `skill/kmdr/` directory contains a Agent skill definition for AI agent integration:
+
+- **`SKILL.md`** — Skill metadata and usage guide for AI agents to invoke kmdr
+- **`references/commands.md`** — Detailed command documentation with parameters and output examples
+- **`references/output-format.md`** — NDJSON output format specification for toolcall mode
+- **`references/error-codes.md`** — Complete error status code reference with recovery strategies
+- **`assets/examples/`** — Example JSON outputs for each command type
 
 ## Development
 
@@ -169,3 +182,6 @@ User config is stored at `~/.kmdr` as JSON, managed by the `Configurer` singleto
 4. **Async-first** — all I/O operations use `asyncio` + `aiohttp` + `aiofiles`; sync operations are delegated via `asyncio.to_thread()`
 5. **`ContextVar` for session state** — `session_var` and `base_url_var` allow implicit session sharing across the call stack
 6. **Quota management** — `PooledCredential` uses a reservation system (`reserve` → `commit`/`rollback`) to safely handle concurrent downloads across multiple credentials
+7. **Tool Call Mode output** — when `--mode toolcall` is set, use `emit()` for final results and `emit_progress()` for real-time progress; outputs NDJSON format
+8. **Sensitive data desensitization** — mark sensitive fields with `metadata={"sensitive": True}` in dataclass definitions; `SafeJSONEncoder` handles output
+9. **Explain mode** — `--explain` flag on download command outputs estimated quota consumption and download plan without executing actual downloads
