@@ -112,7 +112,7 @@ def entry_point():
                 info("[green]后台任务已启动[/green]")
                 info(f"任务 ID: {task_id}")
                 info(f"进程 PID: {pid}")
-                info(f"查询命令: kmdr query {task_id}")
+                info(f"查询命令: kmdr progress {task_id}")
             return
 
         main_coro = main(args, parser.print_help)

@@ -229,14 +229,14 @@ else:
 
 ---
 
-## query 输出格式
+## progress 输出格式
 
-query 命令返回 `progress` 或 `result` 类型，取决于任务状态。
+progress 命令返回 `progress` 或 `result` 类型，取决于任务状态。
 
 ### 任务进行中（progress 类型）
 
 ```json
-{"type": "progress", "is_finished": false, "volumes": {"第1卷": {"type": "progress", "status": "downloading", "volume": "第1卷", "size_mb": 50.0, "percentage": 45.2}}}
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"Vol. 01": {"type": "progress", "status": "downloading", "volume": "Vol. 01", "size_mb": 48.7, "percentage": 20.6}}}}
 ```
 
 | 字段 | 类型 | 说明 |
@@ -250,7 +250,7 @@ query 命令返回 `progress` 或 `result` 类型，取决于任务状态。
 直接返回日志文件中的最终 result：
 
 ```json
-{"type": "result", "code": 0, "msg": "success", "data": {"book": "漫画名", "total": 2, "completed": 2, "failed": 0, "skipped": 0}}
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": true, "book": "BookName", "total": 3, "completed": 3, "failed": 0, "skipped": 0}}
 ```
 
 与 download 命令的最终输出格式相同。
