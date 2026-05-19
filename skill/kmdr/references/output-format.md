@@ -201,3 +201,62 @@ else:
 ### 敏感数据处理
 
 `SafeJSONEncoder` 会自动脱敏标记为敏感的字段，无需额外处理。
+
+---
+
+## 后台下载输出格式
+
+### download --background 输出
+
+启动后台下载时立即返回：
+
+```json
+{
+  "type": "result",
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "task_id": "20260415_143000",
+    "pid": 12345
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `task_id` | string | 任务 ID（时间戳格式 `YYYYMMDD_HHMMSS`），用于查询任务状态 |
+| `pid` | int | 后台下载进程的 PID |
+
+---
+
+## query 输出格式
+
+query 命令返回 `progress` 或 `result` 类型，取决于任务状态。
+
+### 任务进行中（progress 类型）
+
+```json
+{"type": "progress", "is_finished": false, "volumes": {"第1卷": {"type": "progress", "status": "downloading", "volume": "第1卷", "size_mb": 50.0, "percentage": 45.2}}}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | string | 固定为 `"progress"` |
+| `is_finished` | bool | 固定为 `false` |
+| `volumes` | dict | 各卷的下载状态字典，key 为卷名 |
+
+### 任务完成（result 类型）
+
+直接返回日志文件中的最终 result：
+
+```json
+{"type": "result", "code": 0, "msg": "success", "data": {"book": "漫画名", "total": 2, "completed": 2, "failed": 0, "skipped": 0}}
+```
+
+与 download 命令的最终输出格式相同。
+
+### 任务不存在（result 类型，错误）
+
+```json
+{"type": "result", "code": 45, "msg": "未找到任务: 20260415_143000", "data": null}
+```

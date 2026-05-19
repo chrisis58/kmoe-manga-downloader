@@ -125,8 +125,9 @@ def argument_parser():
     pool_update.add_argument("-n", "--note", type=str, help="更新备注信息")
     pool_update.add_argument("-o", "--order", type=int, help="更新账号优先级，数值越小优先级越高")
 
-    query_parser = subparsers.add_parser("query", help="查询后台下载任务状态")
-    query_parser.add_argument("log_file", type=str, help="后台任务的日志文件路径")
+    progress_parser = subparsers.add_parser("progress", help="查询后台下载任务进度")
+    progress_parser.add_argument("task_id", type=str, help="后台任务的 ID（时间戳格式，如 20260415_143000）")
+    progress_parser.add_argument("--wait", type=int, default=0, choices=range(0, 61), metavar="SECONDS", help="阻塞等待时间（秒），任务完成则提前返回，默认 0（立即返回），最大 60 秒")
 
     apply_argparse_patch(parser)
 

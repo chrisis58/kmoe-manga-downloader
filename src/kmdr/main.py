@@ -28,9 +28,9 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
         info(f"[green]{__version__}[/green]")
         emit(version=__version__)
 
-    elif args.command == "query":
+    elif args.command == "progress":
         from kmdr.core.task_query import query_task_status
-        query_task_status(args.log_file)
+        query_task_status(args.task_id, args.wait)
 
     elif args.command == "config":
         CONFIGURER.get(args).operate()
@@ -90,7 +90,7 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
-    from kmdr.core.console import emit, exception, info, log
+    from kmdr.core.console import emit, exception, info, in_toolcall_mode, log
     from kmdr.core.defaults import argument_parser, post_init
     from kmdr.core.error import KmdrError
 
@@ -104,14 +104,15 @@ def entry_point():
 
             from kmdr.core.background import start_background
 
-            log_file, pid = start_background(sys.argv[1:])
+            task_id, pid = start_background(sys.argv[1:])
 
-            if getattr(args, "mode", "interactive") == "toolcall":
-                emit(log_file=log_file, pid=pid)
+            if in_toolcall_mode():
+                emit(task_id=task_id, pid=pid)
             else:
                 info("[green]后台任务已启动[/green]")
-                info(f"日志文件: {log_file}")
+                info(f"任务 ID: {task_id}")
                 info(f"进程 PID: {pid}")
+                info(f"查询命令: kmdr query {task_id}")
             return
 
         main_coro = main(args, parser.print_help)

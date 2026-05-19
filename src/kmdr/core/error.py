@@ -162,3 +162,13 @@ class ContentBlockedError(KmdrError):
 
     def __init__(self, message, solution: Optional[list[str]] = None):
         super().__init__(message, solution)
+
+
+class TaskNotFoundError(KmdrError):
+    """后台任务不存在错误"""
+
+    code: int = 45
+
+    def __init__(self, task_id: str):
+        super().__init__(f"未找到任务: {task_id}")
+        self.task_id = task_id

@@ -57,4 +57,6 @@ def spawn_background_process(args: list[str], log_file: str) -> int:
 def start_background(args: list[str]) -> tuple[str, int]:
     log_file = create_log_file()
     pid = spawn_background_process(args, log_file)
-    return log_file, pid
+    # 从 log_file 提取 task_id: kmdr_{YYYYMMDD_HHMMSS}.log -> {YYYYMMDD_HHMMSS}
+    task_id = os.path.basename(log_file).replace("kmdr_", "").replace(".log", "")
+    return task_id, pid

@@ -1,36 +1,58 @@
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 
 from .console import emit, in_toolcall_mode, info
+from .error import TaskNotFoundError, KmdrError
 
 
-def resolve_log_path(arg: str) -> str:
-    """解析参数为日志文件路径
+def query_task_status(task_id: str, wait: int = 0):
+    """读取并解析 NDJSON 日志，返回最新状态
 
-    支持两种形式:
-    - 完整路径: 直接使用
-    - task_id (时间戳): 自动拼接临时目录路径
+    :param task_id: 任务 ID（时间戳格式，如 20260415_143000）
+    :param wait: 阻塞等待时间（秒），任务完成则立即返回，默认 0（立即返回）
     """
-    if os.path.sep in arg or (os.path.altsep and os.path.altsep in arg):
-        return arg
-
     log_dir = os.path.join(tempfile.gettempdir(), "kmdr")
-    return os.path.join(log_dir, f"kmdr_{arg}.log")
-
-
-def query_task_status(log_path: str) -> dict:
-    """读取并解析 NDJSON 日志，按卷分组重建最新状态"""
-    log_path = resolve_log_path(log_path)
+    log_path = os.path.join(log_dir, f"kmdr_{task_id}.log")
 
     if not Path(log_path).exists():
-        result = {"type": "error", "code": 404, "msg": f"未找到日志文件: {log_path}"}
-        emit(type="result", code=404, msg=f"未找到日志文件: {log_path}")
-        if not in_toolcall_mode():
-            info(f"[red]错误: 未找到日志文件 {log_path}[/red]")
-        return result
+        raise TaskNotFoundError(task_id)
 
+    # 第一次读取日志
+    volumes_status, final_result = _parse_log_file(log_path)
+
+    if final_result is not None:
+        # 任务已完成，立即返回
+        _handle_result(final_result)
+        return
+
+    # 任务进行中
+    if wait <= 0:
+        # 不等待，立即返回当前进度
+        _handle_progress(volumes_status)
+        return
+
+    # 阻塞等待最多 wait 秒
+    start_time = time.time()
+    check_interval = 2  # 每 2 秒检查一次
+
+    while time.time() - start_time < wait:
+        time.sleep(check_interval)
+        volumes_status, final_result = _parse_log_file(log_path)
+
+        if final_result is not None:
+            # 任务完成，立即返回
+            _handle_result(final_result)
+            return
+
+    # 等待超时，返回当前进度
+    _handle_progress(volumes_status)
+
+
+def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
+    """解析日志文件，返回 volumes_status 和 final_result"""
     volumes_status = {}
     final_result = None
 
@@ -50,43 +72,46 @@ def query_task_status(log_path: str) -> dict:
                 except json.JSONDecodeError:
                     continue
     except Exception as e:
-        result = {"type": "error", "code": 500, "msg": f"读取日志异常: {str(e)}"}
-        emit(result)
-        if not in_toolcall_mode():
-            info(f"[red]错误: 读取日志异常 {str(e)}[/red]")
-        return result
+        raise RuntimeError(f"读取日志异常: {str(e)}")
 
-    result = {
-        "type": "task_status",
-        "is_finished": final_result is not None,
-        "volumes": volumes_status,
-        "final_result": final_result,
-    }
-    emit(result)
-    if not in_toolcall_mode():
-        _print_status_summary(result)
-    return result
+    return volumes_status, final_result
 
 
-def _print_status_summary(result: dict):
-    if result.get("is_finished"):
-        final_result = result.get("final_result")
-        if final_result and final_result.get("code", 0) == 0:
-            info("[green]下载任务已完成[/green]")
-        else:
-            msg = final_result.get("msg", "未知错误") if final_result else "未知错误"
-            info(f"[red]下载任务失败: {msg}[/red]")
+def _handle_result(final_result: dict):
+    """处理任务完成结果"""
+    if final_result.get("code", 0) == 0:
+        info("[green]下载任务已完成[/green]")
     else:
-        info("[yellow]下载任务进行中[/yellow]")
+        msg = final_result.get("msg", "未知错误")
+        info(f"[red]下载任务失败: {msg}[/red]")
+        raise KmdrError(f"下载任务失败 (code: {final_result.get('code', 'N/A')}): {msg}")
 
-    volumes = result.get("volumes", {})
-    if volumes:
-        for vol_name, vol_status in volumes.items():
-            status = vol_status.get("status", "unknown")
-            progress = vol_status.get("progress", 0)
-            if status == "completed":
-                info(f"  [green]✓ {vol_name}[/green]")
-            elif status == "downloading":
-                info(f"  [blue]→ {vol_name} ({progress:.1f}%)[/blue]")
-            else:
-                info(f"  {vol_name} ({status})")
+    if in_toolcall_mode():
+        emit(is_finished=True, **(final_result.get("data", {})))
+        return
+
+    data = final_result.get("data", {})
+    if data:
+        info(f"  漫画: {data.get('book', '未知')}")
+        info(f"  总卷数: {data.get('total', 0)}")
+        info(f"  成功: {data.get('completed', 0)}")
+        info(f"  失败: {data.get('failed', 0)}")
+        info(f"  跳过: {data.get('skipped', 0)}")
+
+
+def _handle_progress(volumes_status: dict):
+    """处理任务进行中进度"""
+    if in_toolcall_mode():
+        emit(is_finished=False, volumes=volumes_status)
+        return
+
+    info("[yellow]下载任务进行中[/yellow]")
+    for vol_name, vol_status in volumes_status.items():
+        status = vol_status.get("status", "unknown")
+        percentage = vol_status.get("percentage", 0)
+        if status == "completed":
+            info(f"  [green]✓ {vol_name}[/green]")
+        elif status == "downloading":
+            info(f"  [blue]→ {vol_name} ({percentage:.1f}%)[/blue]")
+        else:
+            info(f"  {vol_name} ({status})")
