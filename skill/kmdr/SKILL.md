@@ -16,7 +16,7 @@ kmdr 是一个用于从 [Kmoe](https://kxx.moe/) 网站下载漫画的命令行�
 ### 安装 kmdr
 
 ```bash
-pip install --pre "kmoe-manga-downloader>=1.4.0.a0,<2.0.0"
+pip install --pre "kmoe-manga-downloader>=1.4.0.a1,<2.0.0"
 ```
 
 验证安装：
