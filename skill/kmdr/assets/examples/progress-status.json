@@ -1,0 +1,14 @@
+{
+  "description": "查询后台任务进度示例",
+  "command": "kmdr --mode toolcall progress 20260415_143000 --wait 15",
+  "output_running": [
+    {"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"全一册": {"type": "progress", "status": "downloading", "volume": "全一册", "size_mb": 109.7, "percentage": 45.2}}}}
+  ],
+  "output_completed": [
+    {"type": "result", "code": 0, "msg": "success", "data": {"is_finished": true, "book": "命運之鳥", "total": 1, "completed": 1, "failed": 0, "skipped": 0}}
+  ],
+  "output_not_found": [
+    {"type": "result", "code": 45, "msg": "未找到任务: 20260415_143000", "data": null}
+  ],
+  "note": "智能体必须使用 --wait 15 或更大的值。命令会阻塞等待，任务完成则立即返回，否则等待指定时间后返回当前进度。"
+}

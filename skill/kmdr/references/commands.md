@@ -83,6 +83,7 @@ kmdr --mode toolcall [--fast-auth] download [options]
 | `-f, --format` | string | 否 | 文件格式：`mobi`/`eput`，默认为 `epub` |
 | `--num-workers` | int | 否 | 并发下载数，默认 8 |
 | `--explain` | flag | 否 | 仅输出下载计划和预估信息，不执行实际下载 |
+| `-b, --background` | flag | 否 | 后台运行下载任务，立即返回任务标识和进程 PID |
 
 ### 进度输出
 
@@ -303,6 +304,55 @@ kmdr --mode toolcall config --unset <key>
 ```bash
 kmdr --mode toolcall config --clear
 ```
+
+---
+
+## progress - 查询后台任务进度
+
+查询后台下载任务的进度和状态。
+
+### 语法
+
+```bash
+kmdr --mode toolcall progress <task_id> [--wait SECONDS]
+```
+
+### 参数
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `task_id` | string | 是 | 任务 ID（时间戳格式，如 `20260415_143000`） |
+| `--wait` | int | 否 | 阻塞等待时间（秒），默认 0（立即返回），最大 60 |
+
+### 阻塞行为
+
+- `--wait 0`：立即返回当前状态（默认）
+- `--wait 15`：阻塞等待最多 15 秒，任务完成则立即返回结果
+
+### 任务进行中时的输出
+
+```json
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"第1卷": {"type": "progress", "status": "downloading", "volume": "第1卷", "size_mb": 50.0, "percentage": 45.2}}}}
+```
+
+### 任务完成时的输出
+
+```json
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": true, "book": "漫画名", "total": 1, "completed": 1, "failed": 0, "skipped": 0}}
+```
+
+### 任务不存在时的输出
+
+```json
+{"type": "result", "code": 45, "msg": "未找到任务: 20260415_143000", "data": null}
+```
+
+### 使用建议
+
+- 仅在用户主动询问下载进度时使用，无需智能体主动轮询
+- 使用 `--wait 15` 或更大的值，阻塞等待以匹配"用户提问 → 等待 → 回答"的交互模型
+- 根据 `is_finished` 判断任务状态并报告
+- task_id 是查询进度的唯一凭证，智能体应在会话中保留；若丢失则提醒用户提供
 
 ---
 

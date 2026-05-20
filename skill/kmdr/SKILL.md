@@ -91,8 +91,10 @@ kmdr --mode toolcall [--fast-auth] download [options]
 - `-d, --dest <path>`: 下载保存路径，默认从配置中读取，如果没有配置则是当前目录
 - `-v, --volume`: 指定下载卷号（如 `1,2,3` 或 `1-5` 或 `all`）
 - `-P, --use-pool`: 启用凭证池自动故障转移
+- `-b, --background`: 后台下载，立即返回 task_id 和 PID，配合 `progress` 查询进度
+- `--explain`: 仅输出下载计划，不执行实际下载
 
-**使用场景**：用户想要下载指定漫画、批量下载多个卷。
+**使用场景**：用户想要下载指定漫画、批量下载多个卷。推荐使用 `--background` 后台启动，用户可随时通过 `progress` 查询进度。
 
 ### 登录和状态
 
@@ -150,7 +152,96 @@ kmdr --mode toolcall config --clear
 3. **获取详情** → 从搜索结果中获取 `url` 字段
 4. **预估下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --explain`
 5. **确认配额** → 根据预估消耗决定是否继续（若消耗较大需向用户确认）
-6. **下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> [-d <path>]`
+6. **启动后台下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --background`
+7. **响应用户查询** → 当用户询问下载进度（如"查询下载进度"）时，使用 `progress` 命令查询并报告
+8. **完成确认** → 下载完成后向用户报告最终结果
+
+## 后台下载模式
+
+下载任务通常耗时 1-2 分钟（大批量下载可能更长），统一使用后台下载模式，这样可以跟踪进度并向用户报告。
+
+### 工作流程
+
+#### 步骤 1：预估下载计划
+
+先用 `--explain` 获取下载计划：
+
+```bash
+kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --explain
+```
+
+返回信息包括：
+- `estimate_quota_usage_mb`: 预估配额消耗
+- `avai_quota_mb`: 当前可用配额
+- `to_download`: 待下载列表及各卷大小
+- `skipped`: 已存在文件列表
+
+#### 步骤 2：启动后台下载
+
+使用 `--background` 参数启动后台下载：
+
+```bash
+kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --background
+```
+
+立即返回：
+- `task_id`: 任务 ID（如 `20260415_143000`）
+- `pid`: 后台下载进程的 PID
+
+**task_id 格式**：`YYYYMMDD_HHMMSS`（时间戳），用于查询任务状态。
+
+将 `task_id` 返回给用户。告知用户："下载已启动，正在后台进行。您可以随时让我查询进度（例如'查询下载进度'或'查询进度 <task_id>'）。"
+
+⚠️ **task_id 是后续查询进度的唯一凭证**。智能体必须在当前会话中牢记 task_id，以便用户后续发起查询时能直接使用，无需用户再次提供。
+
+#### 步骤 3：响应用户的进度查询
+
+**本步骤仅为用户主动询问时触发**，无需智能体主动轮询。当用户提出"查询下载进度""下载完了吗"或类似请求时，使用 `progress` 命令：
+
+```bash
+kmdr --mode toolcall progress <task_id> --wait 15
+```
+
+⚠️ **重要**：必须使用 `--wait` 参数，值至少为 15。`--wait` 的阻塞行为天然适配"用户提问 → 阻塞等待 → 立即回答"的交互模型。
+
+参数：
+- `<task_id>`: `download --background` 返回的任务 ID。如果智能体从上下文中找不到 task_id，可提醒用户提供
+- `--wait`: 阻塞等待时间（秒），至少 15
+
+**阻塞行为**：
+- 命令会阻塞等待，任务完成则立即返回结果
+- 如果任务未完成，等待指定时间后返回当前进度
+
+**返回格式**：统一返回 `result` 类型：
+
+```json
+{"type": "result", "code": 0, "msg": "success", "data": {...}}
+```
+
+**判断方式**：通过 `data.is_finished` 判断任务状态：
+- `is_finished: false` → 任务进行中，检查 `data.volumes` 字段获取各卷进度，告知用户当前进度
+- `is_finished: true` → 任务完成，检查 `data` 字段获取最终结果（book、total、completed、failed、skipped）
+
+#### 步骤 4：完成确认
+
+当 `progress` 返回 `is_finished: true` 时：
+
+1. 向用户报告下载完成
+2. 展示 `data` 字段中的结果：
+   - `book`: 漫画名称
+   - `total`: 总卷数
+   - `completed`: 成功下载数
+   - `failed`: 失败数
+   - `skipped`: 跳过数
+3. 如果有失败，可读取日志文件查看详细错误信息
+
+### 注意事项
+
+- 后台下载进程独立运行，如果进程意外终止（崩溃、被系统杀掉），下载会中断
+- 日志文件存放在系统临时目录，会被系统定期清理
+- task_id 是关键信息，智能体应在会话上下文中始终保留；若丢失则提醒用户提供
+- 如果下载失败，可以查看日志文件了解详细错误信息
+- 智能体无需主动轮询进度，仅在用户询问时响应即可
 
 ## 注意事项
 
@@ -167,7 +258,8 @@ kmdr --mode toolcall config --clear
 |------|------|------|
 | `search` | 搜索漫画 | `kmdr --mode toolcall [--fast-auth] search "fate"` |
 | `download --explain` | 预估下载计划 | `kmdr --mode toolcall [--fast-auth] download -l <url> -v <volume> --explain` |
-| `download` | 下载漫画 | `kmdr --mode toolcall [--fast-auth] download -l <url>` |
+| `download --background` | 后台下载 | `kmdr --mode toolcall [--fast-auth] download -l <url> -v <volume> --background` |
+| `progress` | 查询后台任务进度 | `kmdr --mode toolcall progress <task_id> --wait 15` |
 | `login` | 登录账号 | `kmdr --mode toolcall login -u user -p pass` |
 | `status` | 查看配额 | `kmdr --mode toolcall status` |
 | `pool list` | 列出凭证 | `kmdr --mode toolcall pool list` |

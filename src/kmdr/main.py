@@ -7,9 +7,6 @@ from kmdr import __version__
 
 async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT IMPLEMENTED!")) -> None:
     from kmdr.core.console import _console, debug, emit, info, log
-    from kmdr.core.defaults import post_init
-
-    post_init(args)
 
     with _console.status("初始化中..."):
         import kmdr.module  # noqa: F401
@@ -30,6 +27,10 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
     if args.command == "version":
         info(f"[green]{__version__}[/green]")
         emit(version=__version__)
+
+    elif args.command == "progress":
+        from kmdr.core.task_query import query_task_status
+        query_task_status(args.task_id, args.wait)
 
     elif args.command == "config":
         CONFIGURER.get(args).operate()
@@ -89,13 +90,30 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
-    from kmdr.core.console import emit, exception, info, log
-    from kmdr.core.defaults import argument_parser
+    from kmdr.core.console import emit, exception, info, in_toolcall_mode, log
+    from kmdr.core.defaults import argument_parser, post_init
     from kmdr.core.error import KmdrError
 
     try:
         parser = argument_parser()
         args = parser.parse_args()
+        post_init(args)
+
+        if getattr(args, "background", False) and args.command == "download":
+            import sys
+
+            from kmdr.core.background import start_background
+
+            task_id, pid = start_background(sys.argv[1:])
+
+            if in_toolcall_mode():
+                emit(task_id=task_id, pid=pid)
+            else:
+                info("[green]后台任务已启动[/green]")
+                info(f"任务 ID: {task_id}")
+                info(f"进程 PID: {pid}")
+                info(f"查询命令: kmdr progress {task_id}")
+            return
 
         main_coro = main(args, parser.print_help)
         asyncio.run(main_coro)

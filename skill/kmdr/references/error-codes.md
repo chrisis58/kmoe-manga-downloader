@@ -94,18 +94,21 @@
 | 42 | EmptyResultError | 查询结果为空 |
 | 43 | NotInteractableError | 无法交互操作 |
 | 44 | ContentBlockedError | 内容被屏蔽 |
+| 45 | TaskNotFoundError | 后台任务不存在 |
 
 **常见原因**：
 - 配置值无效（如目录不存在）
 - 搜索无结果
 - 非交互模式下需要用户输入
 - 内容需要特定网络环境访问
+- 后台任务 ID 无效或任务已结束
 
 **处理建议**：
 - 检查输入参数
 - 尝试不同的搜索关键字
 - 配置代理：`kmdr config --set proxy=<proxy_url>`
 - 在交互模式下操作
+- 确认 task_id 正确（从 `download --background` 返回）
 
 ---
 

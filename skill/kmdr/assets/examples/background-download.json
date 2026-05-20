@@ -1,0 +1,16 @@
+{
+  "description": "后台下载示例",
+  "command": "kmdr --mode toolcall --fast-auth download -l https://kxo.moe/c/10798.htm -v 1 --background",
+  "output": [
+    {
+      "type": "result",
+      "code": 0,
+      "msg": "success",
+      "data": {
+        "task_id": "20260415_143000",
+        "pid": 12345
+      }
+    }
+  ],
+  "note": "启动后台下载后立即返回 task_id 和 pid。task_id 格式为 YYYYMMDD_HHMMSS，用于后续查询任务状态。"
+}
