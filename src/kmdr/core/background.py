@@ -39,7 +39,7 @@ def spawn_background_process(args: list[str], log_file: str) -> int:
 
     creationflags = 0
     if sys.platform == "win32":
-        creationflags = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+        creationflags = subprocess.DETACHED_PROCESS
 
     with open(log_file, "w", encoding="utf-8") as log_f:
         process = subprocess.Popen(
