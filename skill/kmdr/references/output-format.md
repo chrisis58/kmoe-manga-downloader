@@ -62,9 +62,9 @@ kmdr 输出两种类型的 JSON：
 
 ---
 
-## Progress 格式
+## 下载进度输出
 
-进度更新在下载过程中实时输出：
+下载过程中实时输出的进度行（NDJSON）：
 
 ```json
 {"type": "progress", "status": "downloading", "percentage": 45.2, "volume": "第1卷", "size_mb": 50.0}
@@ -229,11 +229,11 @@ else:
 
 ---
 
-## progress 输出格式
+## progress 命令输出格式
 
-progress 命令返回 `progress` 或 `result` 类型，取决于任务状态。
+`progress` 命令的输出格式，返回 `result` 类型，通过 `data.is_finished` 区分任务是否完成。
 
-### 任务进行中（progress 类型）
+### 任务进行中
 
 ```json
 {"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"Vol. 01": {"type": "progress", "status": "downloading", "volume": "Vol. 01", "size_mb": 48.7, "percentage": 20.6}}}}
@@ -241,11 +241,11 @@ progress 命令返回 `progress` 或 `result` 类型，取决于任务状态。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `type` | string | 固定为 `"progress"` |
+| `type` | string | 固定为 `"result"` |
 | `is_finished` | bool | 固定为 `false` |
 | `volumes` | dict | 各卷的下载状态字典，key 为卷名 |
 
-### 任务完成（result 类型）
+### 任务完成
 
 直接返回日志文件中的最终 result：
 
@@ -255,7 +255,7 @@ progress 命令返回 `progress` 或 `result` 类型，取决于任务状态。
 
 与 download 命令的最终输出格式相同。
 
-### 任务不存在（result 类型，错误）
+### 任务不存在（错误）
 
 ```json
 {"type": "result", "code": 45, "msg": "未找到任务: 20260415_143000", "data": null}
