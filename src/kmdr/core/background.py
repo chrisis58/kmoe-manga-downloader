@@ -12,7 +12,7 @@ def get_log_dir() -> str:
 
 
 def create_log_file() -> str:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     log_dir = get_log_dir()
     log_path = os.path.join(log_dir, f"kmdr_{timestamp}.log")
     return log_path

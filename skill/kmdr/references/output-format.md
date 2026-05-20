@@ -224,7 +224,7 @@ else:
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `task_id` | string | 任务 ID（时间戳格式 `YYYYMMDD_HHMMSS`），用于查询任务状态 |
+| `task_id` | string | 任务 ID（时间戳格式 `YYYYMMDD_HHMMSS_ffffff`），用于查询任务状态 |
 | `pid` | int | 后台下载进程的 PID |
 
 ---
