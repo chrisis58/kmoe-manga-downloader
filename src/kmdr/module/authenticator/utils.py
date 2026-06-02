@@ -141,8 +141,7 @@ def _extract_int(pattern: str, text: str, default: int = 0) -> int:
     match = re.search(pattern, text)
     if match:
         return int(match.group(1))
-    info(f"[yellow]解析整数失败，如果重复出现请提交 issue[/yellow]")
-    debug("无法匹配整数，pattern=", pattern)
+    info(f"[yellow]解析整数失败 (pattern={pattern})，如果重复出现请提交 issue[/yellow]")
     return default
 
 
@@ -150,16 +149,14 @@ def _extract_float(pattern: str, text: str, default: float = 0.0) -> float:
     match = re.search(pattern, text)
     if match:
         return float(match.group(1))
-    info(f"[yellow]解析浮点数失败，如果重复出现请提交 issue[/yellow]")
-    debug("无法匹配浮点数，pattern=", pattern)
+    info(f"[yellow]解析浮点数失败 (pattern={pattern})，如果重复出现请提交 issue[/yellow]")
     return default
 
 
 def _extract_text_by_selector(soup: BeautifulSoup, selector: str) -> str:
     tag = soup.select_one(selector)
     if not isinstance(tag, Tag):
-        info(f"[yellow]解析文本失败，如果重复出现请提交 issue[/yellow]")
-        debug("无法根据选择器解析到文本，selector=", selector)
+        info(f"[yellow]解析文本失败 (selector={selector})，如果重复出现请提交 issue[/yellow]")
         return NOT_APPLICABLE
 
     return tag.text.strip().replace("\xa0", "")
