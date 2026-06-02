@@ -14,6 +14,9 @@ from kmdr.core.utils import async_retry, extract_cookies
 
 NICKNAME_ID = "div_nickname_display"
 
+NOT_APPLICABLE = "N/A"
+UNLIMITED_QUOTA = 1e12 # 这里不用 inf 以免序列化时出现问题
+
 VIP_ID = "div_user_vip"
 NOR_ID = "div_user_nor"
 LV1_ID = "div_user_lv1"
@@ -63,8 +66,8 @@ async def check_status(
             is_vip = None
             user_level = None
 
-        nickname = soup.find("div", id=NICKNAME_ID).text.strip().split(" ")[0].replace("\xa0", "")
-        raw_quota = soup.find("div", id=__resolve_quota_id(is_vip, user_level)).text.strip().replace("\xa0", "")
+        nickname = _extract_text_by_selector(soup, f"tr#{NICKNAME_ID} td:nth-of-type(2)")
+        raw_quota = _extract_text_by_selector(soup, f"div#{__resolve_quota_id(is_vip, user_level)}")
 
         if show_quota:
             if console.is_interactive:
@@ -119,7 +122,7 @@ def extract_quota(soup: BeautifulSoup) -> tuple[QuotaInfo, Union[QuotaInfo, None
 
     user_quota = QuotaInfo(
         reset_day=_extract_int(PATTERN_USER_RESET, raw_text, default=1),
-        total=_extract_float(PATTERN_USER_TOTAL, raw_text, default=0.0),
+        total=_extract_float(PATTERN_USER_TOTAL, raw_text, default=UNLIMITED_QUOTA),
         used=_extract_float(PATTERN_USER_USED, raw_text, default=0.0),
     )
 
@@ -127,7 +130,7 @@ def extract_quota(soup: BeautifulSoup) -> tuple[QuotaInfo, Union[QuotaInfo, None
     if is_vip:
         vip_quota = QuotaInfo(
             reset_day=_extract_int(PATTERN_VIP_RESET, raw_text, default=1),
-            total=_extract_float(PATTERN_VIP_TOTAL, raw_text, default=0.0),
+            total=_extract_float(PATTERN_VIP_TOTAL, raw_text, default=UNLIMITED_QUOTA),
             used=_extract_float(PATTERN_VIP_USED, raw_text, default=0.0),
         )
 
@@ -136,12 +139,27 @@ def extract_quota(soup: BeautifulSoup) -> tuple[QuotaInfo, Union[QuotaInfo, None
 
 def _extract_int(pattern: str, text: str, default: int = 0) -> int:
     match = re.search(pattern, text)
-    return int(match.group(1)) if match else default
+    if match:
+        return int(match.group(1))
+    info(f"[yellow]解析整数失败 (pattern={pattern})，如果重复出现请提交 issue[/yellow]")
+    return default
 
 
 def _extract_float(pattern: str, text: str, default: float = 0.0) -> float:
     match = re.search(pattern, text)
-    return float(match.group(1)) if match else default
+    if match:
+        return float(match.group(1))
+    info(f"[yellow]解析浮点数失败 (pattern={pattern})，如果重复出现请提交 issue[/yellow]")
+    return default
+
+
+def _extract_text_by_selector(soup: BeautifulSoup, selector: str) -> str:
+    tag = soup.select_one(selector)
+    if not isinstance(tag, Tag):
+        info(f"[yellow]解析文本失败 (selector={selector})，如果重复出现请提交 issue[/yellow]")
+        return NOT_APPLICABLE
+
+    return tag.text.strip().replace("\xa0", "")
 
 
 def __resolve_quota_id(is_vip: Optional[int] = None, user_level: Optional[int] = None):
