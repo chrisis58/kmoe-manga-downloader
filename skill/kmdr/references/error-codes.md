@@ -147,51 +147,6 @@
 
 ---
 
-## 错误处理示例
-
-### Python 示例
-
-```python
-import subprocess
-import json
-
-def run_kmdr(args):
-    result = subprocess.run(
-        ["kmdr", "--mode", "toolcall"] + args,
-        capture_output=True,
-        text=True
-    )
-    
-    # 获取最后一行作为结果
-    lines = result.stdout.strip().split("\n")
-    final_result = json.loads(lines[-1])
-    
-    if final_result["code"] == 0:
-        return final_result["data"]
-    elif final_result["code"] == 22:
-        raise QuotaExceededError("配额不足，请更换账号或等待重置")
-    elif final_result["code"] == 21:
-        raise AuthenticationError("登录失败，请检查凭证")
-    else:
-        raise KmdrError(final_result["msg"])
-```
-
-### Shell 示例
-
-```bash
-# 检查状态码
-output=$(kmdr --mode toolcall search "test")
-code=$(echo "$output" | tail -1 | jq -r '.code')
-
-if [ "$code" -eq 0 ]; then
-    echo "成功"
-else
-    echo "失败: $(echo "$output" | tail -1 | jq -r '.msg')"
-fi
-```
-
----
-
 ## 错误恢复策略
 
 | 状态码范围 | 恢复策略 |
@@ -201,3 +156,4 @@ fi
 | 3x | 更新 base_url |
 | 4x | 检查输入，配置代理，使用交互模式 |
 | 5x | 检查网络，配置代理，增加重试 |
+| 50 | 重试一次；若仍失败，报告用户错误消息并建议提交 issue |

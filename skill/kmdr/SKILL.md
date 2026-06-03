@@ -36,7 +36,7 @@ kmdr --mode toolcall status
 ```
 
 - 返回 `code: 0` → 已登录，可继续操作
-- 返回 `code: 21` 或 `code: 23` → 未登录或凭证失效，需配置凭证
+- 返回非 0 → 根据 [错误码文档](./references/error-codes.md) 确定恢复策略，不可自行猜测处理方式
 
 #### 配置凭证
 
@@ -139,7 +139,7 @@ kmdr --mode toolcall config --clear
 
 ### 错误处理
 
-错误通过 `code` 字段表示，详细状态码请参阅 [./references/error-codes.md](./references/error-codes.md)。
+错误通过 `code` 字段表示。**遇到非 0 的 code 时，必须查阅 [./references/error-codes.md](./references/error-codes.md) 获取对应恢复策略，不可自行猜测处理方式。**
 
 ## 示例场景
 
