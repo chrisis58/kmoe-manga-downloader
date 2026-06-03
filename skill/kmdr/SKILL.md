@@ -26,6 +26,7 @@ kmdr --mode toolcall version
 ```
 
 如果命令不存在，说明 kmdr 未安装或未添加到 PATH。
+如果报错 `invalid choice: 'toolcall'`，说明版本低于 1.4.0，执行 `pip install --upgrade --pre "kmoe-manga-downloader>=1.4.0.a1,<2.0.0"` 升级。
 
 ### 登录配置
 
@@ -65,6 +66,8 @@ kmdr --mode toolcall <command> [options]
 ```
 
 值得注意的是，当你向用户建议手动执行命令时，不要包含 `--mode toolcall` 参数，以便用户使用默认的交互式的输出格式。
+
+`--fast-auth` 跳过联网同步凭证步骤，加快命令执行。由于每次命令调用间隔很短，智能体应在**所有读操作**（search、download --explain、status、progress、config --list、pool list）中使用 `--fast-auth`；**写操作**（login、pool add/remove/use、config --set）和 download（不使用 --explain 时）不使用，以确保配额数据最新。
 
 ## 主要命令
 
