@@ -223,7 +223,7 @@ kmdr --mode toolcall progress <task_id> --wait 15
 
 **判断方式**：通过 `data.is_finished` 判断任务状态：
 - `is_finished: false` → 任务进行中，检查 `data.volumes` 字段获取各卷进度，告知用户当前进度
-- `is_finished: true` → 任务完成，检查 `data` 字段获取最终结果（book、total、completed、failed、skipped）
+- `is_finished: true` → 任务完成，检查 `data` 字段获取最终结果（book、total、completed、failed、skipped），以及 `data.volumes` 字段获取各卷的最终状态
 
 #### 步骤 4：完成确认
 
@@ -236,7 +236,9 @@ kmdr --mode toolcall progress <task_id> --wait 15
    - `completed`: 成功下载数
    - `failed`: 失败数
    - `skipped`: 跳过数
-3. 如果有失败，可读取日志文件查看详细错误信息
+   - `volumes`: 各卷最终状态字典（key 为卷名，value 含 status/percentage 等字段）
+3. 如果有失败卷，从 `data.volumes` 中检查 `status: "failed"` 的卷，告知用户具体哪些卷失败
+4. 如有需要，可读取日志文件查看详细错误信息
 
 ### 注意事项
 
