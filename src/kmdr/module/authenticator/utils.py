@@ -15,7 +15,7 @@ from kmdr.core.utils import async_retry, extract_cookies
 NICKNAME_ID = "div_nickname_display"
 
 NOT_APPLICABLE = "N/A"
-UNLIMITED_QUOTA = 1e12 # 这里不用 inf 以免序列化时出现问题
+UNLIMITED_QUOTA = 1e12  # 这里不用 inf 以免序列化时出现问题
 
 VIP_ID = "div_user_vip"
 NOR_ID = "div_user_nor"
