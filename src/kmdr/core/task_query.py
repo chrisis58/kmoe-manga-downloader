@@ -68,6 +68,7 @@ def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
                     if data.get("type") == "result":
                         final_result = data
                     elif data.get("type") == "progress" and "volume" in data:
+                        data.pop("type", None)
                         volumes_status[data["volume"]] = data
                 except json.JSONDecodeError:
                     continue
