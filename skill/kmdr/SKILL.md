@@ -67,7 +67,12 @@ kmdr --mode toolcall <command> [options]
 
 值得注意的是，当你向用户建议手动执行命令时，不要包含 `--mode toolcall` 参数，以便用户使用默认的交互式的输出格式。
 
-`--fast-auth` 跳过联网同步凭证步骤，加快命令执行。由于每次命令调用间隔很短，智能体应在**所有读操作**（search、download --explain、status、progress、config --list、pool list）中使用 `--fast-auth`；**写操作**（login、pool add/remove/use、config --set）和 download（不使用 --explain 时）不使用，以确保配额数据最新。
+`--fast-auth` 跳过联网同步凭证步骤，加快命令执行。**会话中只需首次命令联网同步一次**，后续所有读操作均可使用 `--fast-auth`。
+
+- **会话首次命令**（无论 search / download --explain）→ 不加 `--fast-auth`，完成一次联网同步
+- **后续读操作**（search、download --explain、progress、config --list、pool list）→ 加 `--fast-auth`
+- **status、login** → `--fast-auth` 无效，始终联网
+- **写操作**（pool add/remove/use、config --set）和 download（实际下载）→ 不加 `--fast-auth`，确保配额最新
 
 ## 主要命令
 
@@ -151,13 +156,15 @@ kmdr --mode toolcall config --clear
 ### 典型工作流
 
 1. **检查环境** → 确认已安装并登录（参见"环境准备"）
-2. **搜索** → `kmdr --mode toolcall --fast-auth search "漫画名称"`
+2. **搜索** → `kmdr --mode toolcall search "漫画名称"`（会话首次命令，不加 `--fast-auth`，完成联网同步）
 3. **获取详情** → 从搜索结果中获取 `url` 字段
 4. **预估下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --explain`
-5. **确认配额** → 根据预估消耗决定是否继续（若消耗较大需向用户确认）
+5. **确认配额** → `kmdr --mode toolcall --fast-auth status`，根据预估消耗决定是否继续
 6. **启动后台下载** → `kmdr --mode toolcall --fast-auth download -l <url> -v <volume> --background`
 7. **响应用户查询** → 当用户询问下载进度（如"查询下载进度"）时，使用 `progress` 命令查询并报告
 8. **完成确认** → 下载完成后向用户报告最终结果
+
+> 以上为典型流程。若实际执行顺序不同，遵循"首次命令联网，后续加 `--fast-auth`"原则即可。
 
 ## 后台下载模式
 

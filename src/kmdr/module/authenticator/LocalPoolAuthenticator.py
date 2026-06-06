@@ -5,7 +5,7 @@ from kmdr.core.structure import Credential, CredentialStatus
 
 @AUTHENTICATOR.register(
     hasvalues={"fast_auth": True},
-    predicate=lambda args: False if args.command == "status" else None,
+    predicate=lambda args: False if args.command in ("status", "login") else None,
     order=-10,
 )
 class LocalPoolAuthenticator(Authenticator):
