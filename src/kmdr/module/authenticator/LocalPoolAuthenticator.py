@@ -3,7 +3,11 @@ from kmdr.core.console import emit
 from kmdr.core.structure import Credential, CredentialStatus
 
 
-@AUTHENTICATOR.register(hasvalues={"fast_auth": True}, order=-10)
+@AUTHENTICATOR.register(
+    hasvalues={"fast_auth": True},
+    predicate=lambda args: False if args.command == "status" else None,
+    order=-10,
+)
 class LocalPoolAuthenticator(Authenticator):
     """
     当启用 --fast-auth 参数时接管鉴权逻辑
