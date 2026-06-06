@@ -236,7 +236,7 @@ else:
 ### 任务进行中
 
 ```json
-{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"Vol. 01": {"status": "downloading", "volume": "Vol. 01", "size_mb": 48.7, "percentage": 20.6}}}}
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"Vol. 01": {"status": "downloading", "size_mb": 48.7, "percentage": 20.6}}}}
 ```
 
 | 字段 | 类型 | 说明 |
@@ -250,7 +250,7 @@ else:
 直接返回日志文件中的最终 result：
 
 ```json
-{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": true, "volumes": {"Vol. 01": {"status": "completed", "volume": "Vol. 01", "size_mb": 48.7, "percentage": 100.0}, "Vol. 02": {"status": "completed", "volume": "Vol. 02", "size_mb": 52.3, "percentage": 100.0}}, "book": "BookName", "total": 2, "completed": 2, "failed": 0, "skipped": 0}}
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": true, "volumes": {"Vol. 01": {"status": "completed", "size_mb": 48.7, "percentage": 100.0}, "Vol. 02": {"status": "completed", "size_mb": 52.3, "percentage": 100.0}}, "book": "BookName", "total": 2, "completed": 2, "failed": 0, "skipped": 0}}
 ```
 
 与 download 命令的最终输出格式相同。`volumes` 字段格式与"任务进行中"一致，各卷的 `status` 为终端值（`completed`/`failed`/`skipped`）。

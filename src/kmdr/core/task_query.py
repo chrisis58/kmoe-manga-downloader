@@ -69,7 +69,7 @@ def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
                         final_result = data
                     elif data.get("type") == "progress" and "volume" in data:
                         data.pop("type", None)
-                        volumes_status[data["volume"]] = data
+                        volumes_status[data.pop("volume")] = data
                 except json.JSONDecodeError:
                     continue
     except Exception as e:

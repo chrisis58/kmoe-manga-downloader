@@ -332,7 +332,7 @@ kmdr --mode toolcall progress <task_id> [--wait SECONDS]
 ### 任务进行中时的输出
 
 ```json
-{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"第1卷": {"status": "downloading", "volume": "第1卷", "size_mb": 50.0, "percentage": 45.2}}}}
+{"type": "result", "code": 0, "msg": "success", "data": {"is_finished": false, "volumes": {"第1卷": {"status": "downloading", "size_mb": 50.0, "percentage": 45.2}}}}
 ```
 
 ### 任务完成时的输出
