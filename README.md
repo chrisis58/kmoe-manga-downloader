@@ -45,7 +45,7 @@
 - **AI 智能体操作**: 不懂命令行也没关系——通过 [Claw](https://openclaw.ai/) 等智能体，用自然语言描述你想看的内容，搜索、下载全自动完成，例如：
 
   ```
-  从 ClawHub 安装这个 SKILL https://clawhub.ai/chrisis58/skills/kmdr
+  从 ClawHub 安装 SKILL https://clawhub.ai/chrisis58/skills/kmdr
   然后帮我下载川柳少女的前三卷
   ```
 
