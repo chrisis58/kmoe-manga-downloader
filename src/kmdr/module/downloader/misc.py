@@ -148,4 +148,3 @@ class StateManager:
             debug("分片", part_id, "请求状态更新为", status)
             self._part_states[part_id] = status
             self._update_status()
-

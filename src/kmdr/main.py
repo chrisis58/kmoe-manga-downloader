@@ -30,6 +30,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
 
     elif args.command == "progress":
         from kmdr.core.task_query import query_task_status
+
         query_task_status(args.task_id, args.wait)
 
     elif args.command == "config":

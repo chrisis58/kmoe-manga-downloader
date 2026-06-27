@@ -19,18 +19,22 @@ class Registry(Generic[T]):
         hasattrs: frozenset[str] = frozenset(),
         containattrs: frozenset[str] = frozenset(),
         hasvalues: dict[str, object] = dict(),
-        predicate: Optional[Callable[[Namespace], bool]] = None,
+        predicate: Optional[Callable[[Namespace], Optional[bool]]] = None,
         order: int = 0,
         name: Optional[str] = None,
     ):
         """
         注册一个模块到注册表中。
-        总体的匹配逻辑: `{predicate} or {hasvalues} and ({hasattrs} or {containattrs})`
+
+        匹配逻辑（优先级从高到低）：
+        1. predicate 返回 True  → 立即匹配
+        2. predicate 返回 False → 立即跳过
+        3. predicate 返回 None  → 交由 hasvalues 判断：`{hasvalues} and ({hasattrs} or {containattrs})`
 
         :param hasattrs: 模块处理的参数集合，必须全部匹配。如果未提供，则从类的 __init__ 方法中获取不可缺省的参数
         :param containattrs: 模块处理的可选参数集合，只要满足其中一个即可。
         :param hasvalues: 模块处理的属性值集合，必须全部满足。
-        :param predicate: 可以提供预定义以外的条件，只要满足该条件就视为匹配。
+        :param predicate: 可选谓词，返回 True 强制匹配、False 强制跳过、None 交由 hasvalues 判断。
         :param order: 模块的优先级，数字越小优先级越高。
         :param name: 模块的名称，如果未提供，则使用类名。
         """
@@ -89,9 +93,11 @@ class Registry(Generic[T]):
             return self._modules[0].cls(**self._filter_nonone_args(condition))
 
         for module in self._modules:
-            if (
-                (module.predicate is not None and module.predicate(condition))
-                or all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items())
+            # 三态谓词: True=强制匹配, False=强制跳过, None=交由 hasvalues 判断
+            pred_result = module.predicate(condition) if module.predicate is not None else None
+            if pred_result is True or (
+                pred_result is None
+                and all(hasattr(condition, attr) and getattr(condition, attr) == value for attr, value in module.hasvalues.items())
                 and (
                     all(hasattr(condition, attr) and getattr(condition, attr) is not None for attr in module.hasattrs)
                     or any(hasattr(condition, attr) for attr in module.containattrs)
@@ -116,7 +122,7 @@ class Predication:
     hasattrs: frozenset[str] = frozenset({})
     containattrs: frozenset[str] = frozenset({})
     hasvalues: dict[str, object] = field(default_factory=dict)
-    predicate: Optional[Callable[[Namespace], bool]] = None
+    predicate: Optional[Callable[[Namespace], Optional[bool]]] = None
 
     order: int = 0
 

@@ -15,7 +15,17 @@ from .misc import DownloadTracker, construct_callback
 
 
 class BaseDownloader(Downloader):
-    def __init__(self, dest: str = ".", format: str = "epub", callback: Optional[str] = None, retry: int = 3, num_workers: int = 8, explain: bool = False, *args, **kwargs):
+    def __init__(
+        self,
+        dest: str = ".",
+        format: str = "epub",
+        callback: Optional[str] = None,
+        retry: int = 3,
+        num_workers: int = 8,
+        explain: bool = False,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
 
         self._dest: str = dest
@@ -132,15 +142,8 @@ class BaseDownloader(Downloader):
             summary_grid.add_column(ratio=1)
             summary_grid.add_column(ratio=1)
 
-            col1_md = (
-                f"- **下载格式**: `{self._format.name}`\n"
-                f"- **需要下载**: `{len(to_download)}` 卷\n"
-                f"- **跳过现存**: `{len(skipped)}` 卷"
-            )
-            col2_md = (
-                f"- **预估消耗**: `{estimate_size:.2f} MB`\n"
-                f"- **剩余配额**: `{self._avai_quota(cred):.2f} MB`"
-            )
+            col1_md = f"- **下载格式**: `{self._format.name}`\n- **需要下载**: `{len(to_download)}` 卷\n- **跳过现存**: `{len(skipped)}` 卷"
+            col2_md = f"- **预估消耗**: `{estimate_size:.2f} MB`\n- **剩余配额**: `{self._avai_quota(cred):.2f} MB`"
 
             summary_grid.add_row(Markdown(col1_md), Markdown(col2_md))
             self._console.print(summary_grid)
@@ -168,7 +171,6 @@ class BaseDownloader(Downloader):
                 grid.add_row(*renderables)
                 self._console.print(grid)
                 self._console.print()
-
 
     @abstractmethod
     async def _download(

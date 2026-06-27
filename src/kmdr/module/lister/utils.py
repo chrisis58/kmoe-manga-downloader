@@ -78,6 +78,35 @@ async def __do_extract(
         return extracted_book_info, volumes
 
 
+# 书籍详情页中的标签图标 id → 显示名称 映射
+_TAG_ID_MAP = {
+    "logo_r15": "R15",
+    "logo_r18": "R18",
+    "logo_jpn": "日文",
+    "logo_eng": "英文",
+    "logo_hd": "HD",
+    "logo_color2": "全彩",
+    "logo_color": "彩色",
+    "logo_rtl": "點左翻頁",
+}
+
+
+def __extract_tags(book_page: BeautifulSoup) -> tuple[str, ...]:
+    """从书籍详情页 HTML 中提取活跃的标签列表。"""
+    tags: list[str] = []
+
+    # 图片类标签：.author 下的直接 img 子元素
+    for img in book_page.select(".author > img"):
+        style = str(img.get("style") or "")
+        if "display:none" not in style:
+            tag_id = str(img.get("id") or "")
+            tag = _TAG_ID_MAP.get(tag_id)
+            if tag:
+                tags.append(tag)
+
+    return tuple(tags)
+
+
 def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[BookInfo]) -> BookInfo:
     book_name = book_page.find("font", class_="text_bglight_big").text
 
@@ -96,6 +125,7 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
         author=book_info.author if book_info else "",
         status=book_info.status if book_info else "",
         last_update=book_info.last_update if book_info else "",
+        tags=__extract_tags(book_page),
     )
 
 

@@ -25,7 +25,7 @@ def query_task_status(task_id: str, wait: int = 0):
 
     if final_result is not None:
         # 任务已完成，立即返回
-        _handle_result(final_result)
+        _handle_result(final_result, volumes_status)
         return
 
     # 任务进行中
@@ -44,7 +44,7 @@ def query_task_status(task_id: str, wait: int = 0):
 
         if final_result is not None:
             # 任务完成，立即返回
-            _handle_result(final_result)
+            _handle_result(final_result, volumes_status)
             return
 
     # 等待超时，返回当前进度
@@ -68,7 +68,8 @@ def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
                     if data.get("type") == "result":
                         final_result = data
                     elif data.get("type") == "progress" and "volume" in data:
-                        volumes_status[data["volume"]] = data
+                        data.pop("type", None)
+                        volumes_status[data.pop("volume")] = data
                 except json.JSONDecodeError:
                     continue
     except Exception as e:
@@ -77,7 +78,7 @@ def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
     return volumes_status, final_result
 
 
-def _handle_result(final_result: dict):
+def _handle_result(final_result: dict, volumes_status: dict):
     """处理任务完成结果"""
     if final_result.get("code", 0) == 0:
         info("[green]下载任务已完成[/green]")
@@ -87,7 +88,7 @@ def _handle_result(final_result: dict):
         raise KmdrError(f"下载任务失败 (code: {final_result.get('code', 'N/A')}): {msg}")
 
     if in_toolcall_mode():
-        emit(is_finished=True, **(final_result.get("data", {})))
+        emit(is_finished=True, volumes=volumes_status, **(final_result.get("data", {})))
         return
 
     data = final_result.get("data", {})
@@ -97,6 +98,18 @@ def _handle_result(final_result: dict):
         info(f"  成功: {data.get('completed', 0)}")
         info(f"  失败: {data.get('failed', 0)}")
         info(f"  跳过: {data.get('skipped', 0)}")
+        if volumes_status:
+            info("  各卷状态:")
+            for vol_name, vol_status in volumes_status.items():
+                status = vol_status.get("status", "unknown")
+                if status == "completed":
+                    info(f"    [green][OK] {vol_name}[/green]")
+                elif status == "failed":
+                    info(f"    [red][FAIL] {vol_name}[/red]")
+                elif status == "skipped":
+                    info(f"    [yellow][SKIP] {vol_name}[/yellow]")
+                else:
+                    info(f"    {vol_name} ({status})")
 
 
 def _handle_progress(volumes_status: dict):
@@ -110,8 +123,8 @@ def _handle_progress(volumes_status: dict):
         status = vol_status.get("status", "unknown")
         percentage = vol_status.get("percentage", 0)
         if status == "completed":
-            info(f"  [green]✓ {vol_name}[/green]")
+            info(f"  [green][OK] {vol_name}[/green]")
         elif status == "downloading":
-            info(f"  [blue]→ {vol_name} ({percentage:.1f}%)[/blue]")
+            info(f"  [blue]--> {vol_name} ({percentage:.1f}%)[/blue]")
         else:
             info(f"  {vol_name} ({status})")

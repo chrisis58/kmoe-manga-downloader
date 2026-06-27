@@ -16,9 +16,7 @@ from .download_utils import (
 
 @DOWNLOADER.register(hasvalues={"method": 2})
 class DirectDownloader(BaseDownloader):
-    def __init__(
-        self, dest=".", format="epub", callback=None, retry=3, num_workers=8, vip=False, disable_multi_part=False, *args, **kwargs
-    ):
+    def __init__(self, dest=".", format="epub", callback=None, retry=3, num_workers=8, vip=False, disable_multi_part=False, *args, **kwargs):
         super().__init__(dest, format, callback, retry, num_workers, *args, **kwargs)
         self._use_vip = vip
         self._disable_multi_part = disable_multi_part
