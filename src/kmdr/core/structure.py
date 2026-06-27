@@ -54,6 +54,7 @@ class BookInfo:
     author: str
     status: str
     last_update: str
+    tags: tuple[str, ...] = ()
 
 
 @dataclass
