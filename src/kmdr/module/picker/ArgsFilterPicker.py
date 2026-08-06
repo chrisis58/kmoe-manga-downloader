@@ -16,8 +16,10 @@ class ArgsFilterPicker(Picker):
     """
     通过命令行参数过滤卷信息的选择器。
 
-    支持按卷索引（-v/--volume）和卷 ID（--vol-ids）两种筛选方式。
-    两种方式均为可选，但至少需要提供一个；同时提供时取交集。
+    支持两种筛选模式（至少需要提供一个）：
+    - --vol-ids：精准 ID 匹配（提供时忽略 vol_type 和 volume 范围）
+    - -v/--volume：按卷索引范围 + 类型过滤（仅在未提供 vol_ids 时生效）
+    --max-size / --limit 在两种模式下均生效。
     """
 
     def __init__(
@@ -31,9 +33,12 @@ class ArgsFilterPicker(Picker):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self._volume = volume
         self._vol_ids: Optional[set[str]] = set(vol_ids.split(",")) if vol_ids else None
-        self._vol_type = self.__get_volume_type(vol_type)
+
+        # 如果提供了 vol_ids，则忽略 vol_type 和 volume 范围
+        self._volume = volume if volume is not None else None
+        self._vol_type = self.__get_volume_type(vol_type) if vol_ids is None else None
+
         self._max_size: Optional[float] = max_size
         self._limit: Optional[int] = limit
 
