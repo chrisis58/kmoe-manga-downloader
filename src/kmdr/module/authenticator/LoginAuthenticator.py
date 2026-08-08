@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 
 from rich.prompt import Prompt
@@ -39,15 +38,19 @@ class LoginAuthenticator(Authenticator):
         async with self._session.post(
             url=API_ROUTE.LOGIN_DO,
             data={"email": self._username, "passwd": self._password, "keepalive": "on"},
+            headers={"Referer": API_ROUTE.LOGIN},
         ) as response:
             response.raise_for_status()
 
-            match = re.search(r'"\w+"', await response.text())
-
-            if not match:
+            try:
+                result = await response.json(content_type=None)
+            except ValueError:
                 raise LoginError("无法解析登录响应。")
 
-            code = match.group(0).split('"')[1]
+            code = result.get("msgid", "")
+
+            if not code:
+                raise LoginError("无法解析登录响应。")
 
             login_response = LoginResponse.from_code(code)
             if not LoginResponse.ok(login_response):
