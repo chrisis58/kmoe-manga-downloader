@@ -10,17 +10,17 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Create install directory
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-# Build Go native host
-Write-Host "Building native host..." -ForegroundColor Cyan
-Push-Location $ScriptDir
-$goResult = & go build -o "$InstallDir\native_host.exe" native_host.go 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Go build failed:" -ForegroundColor Red
-    Write-Host $goResult
-    exit 1
-}
-Pop-Location
-Write-Host "  OK: $InstallDir\native_host.exe" -ForegroundColor Green
+# Build Python native host (copy script + create .bat wrapper)
+Write-Host "Installing native host..." -ForegroundColor Cyan
+Copy-Item "$ScriptDir\native_host.py" "$InstallDir\native_host.py" -Force
+# Create a .bat wrapper so Chrome can launch it as a native messaging host
+$batPath = "$InstallDir\native_host.bat"
+@"
+@echo off
+pythonw.exe "$InstallDir\native_host.py"
+"@ | Out-File -FilePath $batPath -Encoding ASCII
+Write-Host "  OK: $InstallDir\native_host.py" -ForegroundColor Green
+Write-Host "  OK: $batPath" -ForegroundColor Green
 
 # Determine extension ID — use parameter, or check manifest, or prompt
 if (-not $ExtId) {
@@ -45,7 +45,7 @@ while (-not $ExtId -or $ExtId.Length -ne 32) {
 $manifest = @{
     name = "com.kmdr.host"
     description = "Kmoe Manga Downloader Native Messaging Host"
-    path = "$InstallDir\native_host.exe"
+    path = "$InstallDir\native_host.bat"
     type = "stdio"
     allowed_origins = @("chrome-extension://$ExtId")
 }

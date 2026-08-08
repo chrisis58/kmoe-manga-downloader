@@ -68,6 +68,40 @@ def build_kmdr_command(action: str, params: dict) -> list[str]:
     return cmd
 
 
+def _parse_kmdr_output(action: str, stdout: str) -> dict:
+    """Find the last {"type":"result",...} line in kmdr's NDJSON output."""
+    for line in reversed(stdout.strip().splitlines()):
+        if not line.startswith("{"):
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if parsed.get("type") == "result":
+            return {
+                "code": parsed.get("code", 0),
+                "msg": parsed.get("msg", "success"),
+                "action": action,
+                "data": parsed.get("data"),
+            }
+    # Fallback: return raw output
+    if stdout.strip():
+        return {
+            "code": 0,
+            "msg": "success",
+            "action": action,
+            "data": {"raw": stdout.strip()},
+        }
+    return {"code": 0, "msg": "success", "action": action, "data": None}
+
+
+def _attach_command(data, command: list[str]) -> dict | None:
+    """Append the executed command to response data for diagnostics."""
+    if isinstance(data, dict):
+        data["_cmd"] = " ".join(command)
+    return data
+
+
 def run_local(command: list[str], timeout: int = 30) -> dict:
     """Run kmdr locally via subprocess."""
     try:
@@ -77,54 +111,22 @@ def run_local(command: list[str], timeout: int = 30) -> dict:
             text=True,
             timeout=timeout,
         )
-        stdout = result.stdout.strip()
-
         if result.returncode != 0:
             return {
                 "code": result.returncode,
                 "msg": result.stderr.strip() or f"kmdr exited with code {result.returncode}",
-                "action": command[2],  # subcommand name
+                "action": command[2],
                 "data": None,
             }
 
-        # Parse kmdr's structured output (last NDJSON line with "type":"result")
-        for line in reversed(stdout.splitlines()):
-            if not line.startswith("{"):
-                continue
-            try:
-                parsed = json.loads(line)
-                if parsed.get("type") == "result":
-                    return {
-                        "code": parsed.get("code", 0),
-                        "msg": parsed.get("msg", "success"),
-                        "action": command[2],
-                        "data": parsed.get("data"),
-                    }
-            except json.JSONDecodeError:
-                continue
-
-        # Fallback: return raw output
-        return {
-            "code": 0,
-            "msg": "success",
-            "action": command[2],
-            "data": {"raw": stdout} if stdout else None,
-        }
+        resp = _parse_kmdr_output(command[2], result.stdout)
+        resp["data"] = _attach_command(resp["data"], command)
+        return resp
 
     except subprocess.TimeoutExpired:
-        return {
-            "code": 100,
-            "msg": "命令执行超时",
-            "action": command[2],
-            "data": None,
-        }
+        return {"code": 100, "msg": "命令执行超时", "action": command[2], "data": None}
     except FileNotFoundError:
-        return {
-            "code": 101,
-            "msg": "kmdr 未找到，请确认已安装 kmoe-manga-downloader",
-            "action": command[2],
-            "data": None,
-        }
+        return {"code": 101, "msg": "kmdr 未找到，请确认已安装 kmoe-manga-downloader", "action": command[2], "data": None}
 
 
 def run_ssh(ssh_config: dict, command: list[str], timeout: int = 30) -> dict:
@@ -169,34 +171,16 @@ def run_ssh(ssh_config: dict, command: list[str], timeout: int = 30) -> dict:
             else:
                 hint = ""
             return {
-                "code": result.returncode,
+                "code": 102,
                 "msg": f"SSH 连接失败: {stderr}{hint}" if stderr else f"SSH 退出码 {result.returncode}",
                 "action": command[2],
                 "data": None,
             }
 
         # Parse kmdr output (same as local)
-        for line in reversed(stdout.splitlines()):
-            if not line.startswith("{"):
-                continue
-            try:
-                parsed = json.loads(line)
-                if parsed.get("type") == "result":
-                    return {
-                        "code": parsed.get("code", 0),
-                        "msg": parsed.get("msg", "success"),
-                        "action": command[2],
-                        "data": parsed.get("data"),
-                    }
-            except json.JSONDecodeError:
-                continue
-
-        return {
-            "code": 0,
-            "msg": "success",
-            "action": command[2],
-            "data": {"raw": stdout} if stdout else None,
-        }
+        resp = _parse_kmdr_output(command[2], stdout)
+        resp["data"] = _attach_command(resp["data"], command)
+        return resp
 
     except subprocess.TimeoutExpired:
         return {"code": 100, "msg": "SSH 命令执行超时", "action": command[2], "data": None}

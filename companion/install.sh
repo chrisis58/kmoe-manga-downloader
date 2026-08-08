@@ -20,7 +20,6 @@ case "$(uname -s)" in
         else
             MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
         fi
-        GOOS="linux"
         ;;
     Darwin*)
         MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
@@ -28,7 +27,6 @@ case "$(uname -s)" in
         if [ -d "$HOME/Library/Application Support/Microsoft Edge" ]; then
             MANIFEST_DIR="$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
         fi
-        GOOS="darwin"
         ;;
     *)
         echo "Unsupported OS: $(uname -s)"
@@ -36,24 +34,13 @@ case "$(uname -s)" in
         ;;
 esac
 
-# Detect architecture
-ARCH=$(uname -m)
-case "$ARCH" in
-    x86_64|amd64)  GOARCH="amd64" ;;
-    aarch64|arm64) GOARCH="arm64" ;;
-    *)
-        echo "Unsupported architecture: $ARCH"
-        exit 1
-        ;;
-esac
-
 # Create install directory
 mkdir -p "$INSTALL_DIR"
 
-# Build Go native host
-echo "Building native host (${GOOS}/${GOARCH})..."
-cd "$SCRIPT_DIR"
-GOOS="$GOOS" GOARCH="$GOARCH" go build -o "$HOST_BIN" native_host.go
+# Install Python native host
+echo "Installing native host..."
+cp "$SCRIPT_DIR/native_host.py" "$HOST_BIN"
+chmod +x "$HOST_BIN"
 echo "  OK: $HOST_BIN"
 
 # Create manifest directory
