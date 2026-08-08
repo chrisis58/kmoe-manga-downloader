@@ -1,0 +1,7 @@
+{
+  "name": "com.kmdr.host",
+  "description": "Kmoe Manga Downloader Native Messaging Host",
+  "path": "NATIVE_HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://nhoopgfjhdholjmgklgbijmofpgbifhf"]
+}

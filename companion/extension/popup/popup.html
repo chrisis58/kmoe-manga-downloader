@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 380px;
+    min-height: 400px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    background: #1a1a2e;
+    color: #e0e0e0;
+  }
+  /* Tabs */
+  #tabs { display: flex; background: #16213e; border-bottom: 1px solid #333; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px; cursor: pointer;
+    font-size: 13px; color: #888; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab:hover { color: #ccc; }
+  .tab.active { color: #4CAF50; border-bottom-color: #4CAF50; }
+  /* Panels */
+  .panel { display: none; padding: 12px; max-height: 420px; overflow-y: auto; }
+  .panel.active { display: block; }
+  /* Download tab */
+  .task-item {
+    background: #16213e; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+  }
+  .task-header { display: flex; align-items: center; gap: 6px; }
+  .task-book { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task-status { font-size: 14px; }
+  .task-vols { font-size: 11px; color: #999; margin-top: 2px; }
+  .task-progress { margin-top: 4px; }
+  .progress-row { display: flex; align-items: center; gap: 4px; font-size: 10px; margin-top: 2px; }
+  .progress-bar { flex: 1; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #4CAF50; border-radius: 2px; }
+  .empty { text-align: center; color: #888; padding: 30px 0; font-size: 13px; }
+  /* Settings tab */
+  .setting-group { margin-bottom: 14px; }
+  .setting-label { font-size: 11px; color: #999; margin-bottom: 4px; }
+  .setting-group select, .setting-group input {
+    width: 100%; padding: 6px 8px; background: #0f0f23; color: #e0e0e0;
+    border: 1px solid #444; border-radius: 4px; font-size: 12px;
+  }
+  .ssh-fields { display: none; margin-top: 8px; }
+  .ssh-fields.show { display: block; }
+  .ssh-fields label { display: block; margin-bottom: 6px; font-size: 11px; color: #aaa; }
+  .ssh-fields input { margin-top: 2px; }
+  .btn {
+    padding: 6px 14px; background: #4CAF50; color: #fff; border: none;
+    border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;
+  }
+  .btn:hover { background: #43A047; }
+  .btn-secondary {
+    background: #333; color: #ccc;
+  }
+  .btn-secondary:hover { background: #444; }
+  .setting-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .status-msg { font-size: 11px; color: #4CAF50; }
+  .status-msg.error { color: #f44336; }
+  .toggle-label {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+    color: #aaa; cursor: pointer;
+  }
+  .toggle-label input[type="checkbox"] { accent-color: #4CAF50; }
+  /* Log tab */
+  .log-entry { padding: 6px 0; border-bottom: 1px solid #222; font-size: 11px; }
+  .log-time { color: #666; margin-right: 6px; font-family: monospace; font-size: 11px; min-width: 70px; }
+  .log-level { font-weight: 600; margin-right: 8px; }
+  .log-level.error { color: #f44336; }
+  .log-level.info { color: #4CAF50; }
+  .log-msg { color: #ccc; word-break: break-all; flex: 1; }
+  .log-entry { display: flex; padding: 4px 0; border-bottom: 1px solid #2a2a3e; }
+  .log-entry.log-error { background: rgba(244,67,54,0.05); }
+  .log-entry.log-response .log-msg { color: #81C784; }
+  .log-entry.log-request .log-msg { color: #64B5F6; }
+</style>
+</head>
+<body>
+
+<div id="tabs">
+  <div class="tab active" data-tab="downloads">下载</div>
+  <div class="tab" data-tab="settings">设置</div>
+  <div class="tab" data-tab="logs">日志</div>
+</div>
+
+<!-- Downloads panel -->
+<div id="panel-downloads" class="panel active">
+  <div id="task-list"><div class="empty">暂无下载任务</div></div>
+</div>
+
+<!-- Settings panel -->
+<div id="panel-settings" class="panel">
+  <div class="setting-group">
+    <div class="setting-label">连接目标</div>
+    <select id="conn-mode">
+      <option value="local">本机</option>
+      <option value="ssh">SSH 远程服务器</option>
+    </select>
+  </div>
+  <div id="ssh-fields" class="ssh-fields">
+    <label>主机地址 <input id="ssh-host" type="text" placeholder="192.168.1.100" /></label>
+    <label>用户名 <input id="ssh-user" type="text" placeholder="nas" /></label>
+    <label>端口 <input id="ssh-port" type="number" value="22" /></label>
+  </div>
+  <div class="setting-group">
+    <div class="setting-label">页面按钮劫持</div>
+    <label class="toggle-label">
+      <input id="hijack-enabled" type="checkbox" checked />
+      <span>在漫画详情页将「下載一/二」替换为 kmdr 下载按钮</span>
+    </label>
+  </div>
+  <div class="setting-actions">
+    <button id="btn-save" class="btn">保存</button>
+    <button id="btn-test" class="btn btn-secondary">测试连接</button>
+    <span id="status-msg" class="status-msg"></span>
+  </div>
+</div>
+
+<!-- Logs panel -->
+<div id="panel-logs" class="panel">
+  <div id="log-list"><div class="empty">暂无日志</div></div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
