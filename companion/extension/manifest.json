@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "kmdr Companion",
+  "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoAaO8bGZ+CVAKxi2sfxwE6wKOmpOwk1UEc/07OA1gPC7R4tTQzPh4IoRcLSH6cgnb/4D9J+7orHMEZBcZzEo9lfyNqusA56qcM4x8RFvlOTmDplgbcZObREtU1nHja7yVLglDxHg7v6NjCyOVv5Xe1Z9/oEuodeqdJybkcV5B0ddO0I2NEEKj06oIT08qrtusLiaIB8E6trx4jRzOBT0HmEySyullmoXjcnh/FDkCzuyQB5Img5WrPQx2z5yBrpa3N1BugNleoyORt08u4hZpcSMSZ7TOkMdmeVNDIBUNZGc2V/GgldK2jrLUZzQmo9hnv1CNtP1p3EqzT2dTHQFPwIDAQAB",
+  "description": "在 kxx.moe 页面直接提交下载到 kmdr CLI",
+  "permissions": [
+    "nativeMessaging",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://kxx.moe/*",
+    "https://mox.moe/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://kxx.moe/c/*.htm*",
+        "https://mox.moe/c/*.htm*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "kmdr Companion"
+  }
+}
