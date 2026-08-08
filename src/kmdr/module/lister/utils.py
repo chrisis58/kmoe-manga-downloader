@@ -100,35 +100,35 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
 
 
 async def __extract_volumes(session: Session, book_page: BeautifulSoup, cookies: dict[str, str]) -> list[VolInfo]:
-    script = book_page.find_all("script", language="javascript")[-1].text
+    pattern = re.compile(r'data_book\(\s*"(\w+)"\s*\)')
+    match = None
+    for script in book_page.find_all("script"):
+        match = pattern.search(script.text)
+        if match:
+            break
+    if not match:
+        return []
+    book_hash = match.group(1)
 
-    pattern = re.compile(r"/book_data.php\?h=\w+")
-    book_data_url = pattern.search(script).group(0)
-
-    async with session.get(url=book_data_url, cookies=cookies) as response:
+    async with session.get(url=f"/data_book.php?h={book_hash}", cookies=cookies) as response:
         response.raise_for_status()
 
-        book_data = (await response.text()).split("\n")
-        book_data = filter(lambda x: "volinfo" in x, book_data)
-        book_data = map(lambda x: x.split('"')[1], book_data)
-        book_data = map(lambda x: x[8:].split(","), book_data)
+        result = await response.json(content_type=None)
+        voldata = result.get("voldata", [])
 
-        volume_data = list(
-            map(
-                lambda x: VolInfo(
-                    id=x[0],
-                    extra_info=__extract_extra_info(x[1]),
-                    is_last=x[2] == "1",
-                    vol_type=__extract_volume_type(x[3]),
-                    index=int(x[4]),
-                    pages=int(x[6]),
-                    name=x[5],
-                    size=float(x[11]),
-                ),
-                book_data,
+        volume_data = [
+            VolInfo(
+                id=x[0],
+                extra_info=__extract_extra_info(x[1]),
+                is_last=x[2] == "1",
+                vol_type=__extract_volume_type(x[3]),
+                index=int(x[4]),
+                pages=int(x[6]),
+                name=x[5],
+                size=float(x[11]),
             )
-        )
-        volume_data: list[VolInfo] = volume_data
+            for x in voldata
+        ]
 
         return volume_data
 
