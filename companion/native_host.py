@@ -7,12 +7,56 @@ Supports local execution and SSH remote execution.
 """
 
 import json
-import os
+import re
+import shlex
 import struct
 import subprocess
 import sys
-import time
-from pathlib import Path
+from urllib.parse import urlparse
+
+# --- Input validation ---
+
+_VALID_ACTIONS = {"download", "status", "progress"}
+_SAFE_SCHEMES = {"https", "http"}
+_VOL_IDS_RE = re.compile(r"^[\d,]+$")
+_SAFE_NAME_RE = re.compile(r"^[\w.-]+$")
+
+
+def _validate(action: str, params: dict) -> None:
+    """Security-only validation — prevent injection; argparse handles the rest.
+
+    Type/choice checks (format, vol_type) are left to kmdr's argparse so we
+    don't duplicate validation rules across two codebases.
+    """
+    if action not in _VALID_ACTIONS:
+        raise ValueError(f"Unknown action: {action}")
+
+    if action == "download":
+        # Prevent file:// and other non-http schemes
+        url = params.get("book_url", "")
+        parsed = urlparse(url)
+        if parsed.scheme not in _SAFE_SCHEMES or not parsed.netloc:
+            raise ValueError(f"Invalid book_url: {url}")
+
+        # Prevent flag injection through vol_ids value
+        if not _VOL_IDS_RE.match(params.get("vol_ids", "")):
+            raise ValueError(f"Invalid vol_ids: {params.get('vol_ids', '')}")
+
+        # Prevent flag injection and path traversal through dest
+        if "dest" in params:
+            dest = params["dest"]
+            if not dest or dest.startswith("-") or ".." in dest:
+                raise ValueError(f"Invalid dest: {dest}")
+
+    elif action == "progress":
+        # Prevent injection through task_id
+        if not _SAFE_NAME_RE.match(params.get("task_id", "")):
+            raise ValueError(f"Invalid task_id: {params.get('task_id', '')}")
+        try:
+            int(params.get("wait", 0))
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid wait: {params.get('wait')}")
+
 
 # --- Native Messaging protocol ---
 
@@ -139,7 +183,7 @@ def run_ssh(ssh_config: dict, command: list[str], timeout: int = 30) -> dict:
         return {"code": 102, "msg": "SSH 目标主机未配置", "action": command[2], "data": None}
 
     target = f"{user}@{host}" if user else host
-    quoted_cmd = " ".join(command)  # kmdr --mode toolcall download ...
+    quoted_cmd = shlex.join(command)  # safe shell escaping
     ssh_cmd = [
         "ssh",
         "-p", str(port),
@@ -200,6 +244,7 @@ def main() -> None:
         target = request.get("target", "local")
 
         try:
+            _validate(action, params)
             command = build_kmdr_command(action, params)
         except ValueError as e:
             send_message({"code": 103, "msg": str(e), "action": action, "data": None})
