@@ -36,7 +36,7 @@ class _ApiRoute:
     LOGIN: str = "/login.php"
     """登录页面"""
 
-    LOGIN_DO: str = "/login_do.php"
+    LOGIN_DO: str = "/login_act.php"
     """登录接口"""
 
     MY_FOLLOW: str = "/myfollow.php"
