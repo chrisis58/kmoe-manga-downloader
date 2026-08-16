@@ -6,6 +6,7 @@ from .bases import (
     LISTERS,
     PICKERS,
     SESSION_MANAGER,
+    TASK_MANAGER,
     Authenticator,
     Cataloger,
     Configurer,
@@ -13,6 +14,7 @@ from .bases import (
     Lister,
     Picker,
     SessionManager,
+    TaskManager,
 )
 from .console import debug, exception, info, log
 from .defaults import argument_parser, post_init
@@ -34,6 +36,7 @@ __all__ = (
     "argument_parser",
     "post_init",
     "SESSION_MANAGER",
+    "TASK_MANAGER",
     "AUTHENTICATOR",
     "LISTERS",
     "PICKERS",
@@ -41,6 +44,7 @@ __all__ = (
     "CONFIGURER",
     "CATALOGERS",
     "SessionManager",
+    "TaskManager",
     "Authenticator",
     "Lister",
     "Picker",

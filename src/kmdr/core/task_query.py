@@ -3,9 +3,10 @@ import os
 import tempfile
 import time
 from pathlib import Path
+from typing import Optional
 
 from .console import emit, in_toolcall_mode, info
-from .error import TaskNotFoundError, KmdrError
+from .error import KmdrError, TaskNotFoundError
 
 
 def query_task_status(task_id: str, wait: int = 0):
@@ -51,7 +52,7 @@ def query_task_status(task_id: str, wait: int = 0):
     _handle_progress(volumes_status)
 
 
-def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
+def _parse_log_file(log_path: str) -> tuple[dict, Optional[dict]]:
     """解析日志文件，返回 volumes_status 和 final_result"""
     volumes_status = {}
     final_result = None
@@ -73,25 +74,30 @@ def _parse_log_file(log_path: str) -> tuple[dict, dict | None]:
                 except json.JSONDecodeError:
                     continue
     except Exception as e:
-        raise RuntimeError(f"读取日志异常: {str(e)}")
+        raise RuntimeError(f"读取日志异常: {str(e)}") from e
 
     return volumes_status, final_result
 
 
 def _handle_result(final_result: dict, volumes_status: dict):
     """处理任务完成结果"""
+    data = dict(final_result.get("data") or {})
+    state = data.get("state", "completed" if final_result.get("code", 0) == 0 else "failed")
     if final_result.get("code", 0) == 0:
-        info("[green]下载任务已完成[/green]")
+        if state == "cancelled":
+            info("[yellow]下载任务已取消[/yellow]")
+        else:
+            info("[green]下载任务已完成[/green]")
     else:
         msg = final_result.get("msg", "未知错误")
         info(f"[red]下载任务失败: {msg}[/red]")
         raise KmdrError(f"下载任务失败 (code: {final_result.get('code', 'N/A')}): {msg}")
 
     if in_toolcall_mode():
-        emit(is_finished=True, volumes=volumes_status, **(final_result.get("data", {})))
+        data.pop("state", None)
+        emit(is_finished=True, state=state, volumes=volumes_status, **data)
         return
 
-    data = final_result.get("data", {})
     if data:
         info(f"  漫画: {data.get('book', '未知')}")
         info(f"  总卷数: {data.get('total', 0)}")
@@ -115,7 +121,7 @@ def _handle_result(final_result: dict, volumes_status: dict):
 def _handle_progress(volumes_status: dict):
     """处理任务进行中进度"""
     if in_toolcall_mode():
-        emit(is_finished=False, volumes=volumes_status)
+        emit(is_finished=False, state="running", volumes=volumes_status)
         return
 
     info("[yellow]下载任务进行中[/yellow]")
