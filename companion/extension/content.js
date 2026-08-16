@@ -1,730 +1,383 @@
-// kmdr Companion — Content Script
-// Injects kmdr download UI into kxx.moe manga detail pages
+// kmdr Companion — page integration and floating control center
 
 (async function () {
   "use strict";
-  console.log("[kmdr] content script starting...");
 
-  // ── Extract book info ──────────────────────────────────────────
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const state = { view: "tasks", tasks: [], config: null, hijackEnabled: true, batchTableId: null };
 
-  function extractBookInfo() {
-    const nameEl = document.querySelector("font.text_bglight_big");
-    const bookName = nameEl?.textContent?.trim()
-      || document.title?.split(" -")[0]?.trim()
-      || "Unknown";
-    // bookid appears in multiple hidden inputs on the page
-    const idEl = document.querySelector("input[name='bookid']");
-    const bookId = idEl?.value || "";
+  function escapeHtml(value) {
+    const el = document.createElement("div");
+    el.textContent = String(value ?? "");
+    return el.innerHTML;
+  }
+
+  function formatTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }).format(date);
+  }
+
+  async function send(message, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await chrome.runtime.sendMessage(message);
+      } catch (error) {
+        const invalidated = error.message?.toLowerCase().includes("context invalidated");
+        if (!invalidated || attempt === retries) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    }
+  }
+
+  function toast(message, type = "info") {
+    const el = document.createElement("div");
+    el.className = `kmdr-toast kmdr-toast-${type}`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("kmdr-toast-show"));
+    setTimeout(() => {
+      el.classList.remove("kmdr-toast-show");
+      setTimeout(() => el.remove(), 200);
+    }, 3200);
+  }
+
+  function extractBook() {
     return {
-      name: bookName,
-      id: bookId,
+      name: $("font.text_bglight_big")?.textContent?.trim() || document.title.split(" -")[0].trim() || "Unknown",
       url: window.location.href,
     };
   }
 
-  const bookInfo = extractBookInfo();
-  console.log("[kmdr] book info:", bookInfo);
-
-  // ── Extract volumes from the rendered DOM table ────────────────
-
-  function extractVolumesFromDOM() {
+  function extractVolumes() {
     const volumes = [];
-    const table = document.getElementById("div_tabdata");
-    if (!table) {
-      console.log("[kmdr] #div_tabdata not found");
-      return volumes;
-    }
-
-    const rows = table.querySelectorAll("tr");
-    for (const row of rows) {
-      const checkbox = row.querySelector("input[name='checkbox_vol']");
-      if (!checkbox?.value) continue;
-
-      const volId = checkbox.value.trim();
-
-      // Volume name from <b> tag
-      const bTag = row.querySelector("b");
-      const rawName = bTag ? bTag.textContent.replace(/\s+/g, " ").trim() : `ID:${volId}`;
-      // Strip leading dots/spaces (e.g. "  卷 01" → "卷 01")
-      const name = rawName.replace(/^[.\s]+/, "");
-
-      // Determine vol_type from the section header row
-      let volType = "unknown";
-      let current = row;
-      for (let i = 0; i < 30; i++) {
-        current = current.previousElementSibling;
-        if (!current) break;
-        const headerText = (current.textContent || "").trim();
-        if (headerText.includes("單行本")) { volType = "tankoubon"; break; }
-        if (headerText.includes("連載話") || headerText.includes("连载话")) { volType = "serial"; break; }
-      }
-
-      // Size from <font class="filesize">
-      const sizeEl = row.querySelector("font.filesize");
-      let size = 0;
-      if (sizeEl) {
-        const sizeMatch = sizeEl.textContent.match(/([\d.]+)\s*M/);
-        if (sizeMatch) size = parseFloat(sizeMatch[1]);
-      }
-
-      // Page count from <font class="filesize"> (e.g. "179.3M (203頁)")
-      let pages = 0;
-      if (sizeEl) {
-        const pageMatch = sizeEl.textContent.match(/(\d+)\s*頁/);
-        if (pageMatch) pages = parseInt(pageMatch[1], 10);
-      }
-
-      volumes.push({ id: volId, name, vol_type: volType, size, pages, index: 0 });
-    }
+    $$("#div_tabdata input[name='checkbox_vol']").forEach((checkbox) => {
+      if (!checkbox.value) return;
+      const controls = checkbox.closest("td");
+      const nameCell = controls?.previousElementSibling;
+      const rawName = nameCell?.querySelector("b")?.textContent?.replace(/\s+/g, " ").trim();
+      volumes.push({ id: checkbox.value.trim(), name: rawName?.replace(/^[.\s]+/, "") || `ID:${checkbox.value}` });
+    });
     return volumes;
   }
 
-  // ── Reliable messaging to background ────────────────────────────
-
-  async function sendToBackground(message, retries = 2) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        return await chrome.runtime.sendMessage(message);
-      } catch (e) {
-        const isContextInvalidated =
-          e.message?.includes("context invalidated") ||
-          e.message?.includes("Extension context invalidated");
-        if (isContextInvalidated && attempt < retries) {
-          // Service worker may have been terminated — wait and retry
-          console.log("[kmdr] context invalidated, retrying in 500ms...");
-          await new Promise((r) => setTimeout(r, 500));
-          continue;
-        }
-        throw e;
-      }
-    }
+  function activeFormat() {
+    const formats = [
+      { format: "epub", tab: "#nav_epub", table: "#div_epub" },
+      { format: "mobi", tab: "#nav_mobi", table: "#div_mobi" },
+    ];
+    return formats.find(({ tab }) => $(tab)?.classList.contains("tab_check"))?.format
+      || formats.find(({ table }) => { const el = $(table); return el && el.offsetParent !== null; })?.format
+      || undefined;
   }
 
-  // ── Toast notification ──────────────────────────────────────────
+  // ── Floating control center ────────────────────────────────────
 
-  function showToast(message, type = "info") {
-    const toast = document.createElement("div");
-    toast.className = `kmdr-toast kmdr-toast-${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add("kmdr-toast-show"));
-    setTimeout(() => {
-      toast.classList.remove("kmdr-toast-show");
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  }
+  const launcher = document.createElement("button");
+  launcher.id = "kmdr-launcher";
+  launcher.type = "button";
+  launcher.title = "打开 kmdr Companion";
+  launcher.innerHTML = '<span class="kmdr-launcher-icon">↓</span><span id="kmdr-badge"></span>';
 
-  // ── Floating ball (always visible) ─────────────────────────────
-
-  const floatingBall = document.createElement("div");
-  floatingBall.id = "kmdr-floating-ball";
-  floatingBall.innerHTML = `<span id="kmdr-ball-badge">0</span>`;
-  floatingBall.title = "kmdr Companion — 下载任务";
-  document.body.appendChild(floatingBall);
-  console.log("[kmdr] floating ball appended to body");
-
-  function updateBallBadge(count) {
-    const badge = document.getElementById("kmdr-ball-badge");
-    if (badge) {
-      badge.textContent = count;
-      badge.style.display = count > 0 ? "flex" : "none";
-    }
-  }
-
-  // ── Download panel (always visible) ────────────────────────────
-
-  const panel = document.createElement("div");
+  const panel = document.createElement("section");
   panel.id = "kmdr-panel";
+  panel.setAttribute("aria-label", "kmdr Companion");
   panel.innerHTML = `
-    <div id="kmdr-panel-header">
-      <span>kmdr 下载</span>
-      <button id="kmdr-panel-close">&times;</button>
-    </div>
-    <div id="kmdr-panel-list"></div>
-  `;
-  document.body.appendChild(panel);
+    <header class="kmdr-panel-header">
+      <button class="kmdr-back" type="button" aria-label="返回">‹</button>
+      <div class="kmdr-title"><span class="kmdr-logo">k</span><div><strong>kmdr</strong><small id="kmdr-subtitle">最近任务</small></div></div>
+      <div class="kmdr-header-actions">
+        <button class="kmdr-icon-button kmdr-open-settings" type="button" title="设置">⚙</button>
+        <button class="kmdr-icon-button kmdr-close" type="button" title="关闭">×</button>
+      </div>
+    </header>
+    <div class="kmdr-panel-body">
+      <div class="kmdr-view kmdr-view-tasks" data-view="tasks"><div class="kmdr-loading">正在读取任务…</div></div>
+      <div class="kmdr-view kmdr-view-settings" data-view="settings"></div>
+      <div class="kmdr-view kmdr-view-logs" data-view="logs"></div>
+    </div>`;
+  document.body.append(launcher, panel);
 
-  floatingBall.addEventListener("click", () => {
-    panel.classList.toggle("kmdr-panel-open");
-  });
-  document.getElementById("kmdr-panel-close").addEventListener("click", () => {
-    panel.classList.remove("kmdr-panel-open");
-  });
+  function setOpen(open) {
+    panel.classList.toggle("kmdr-panel-open", open);
+    launcher.classList.toggle("kmdr-launcher-hidden", open);
+    if (open) showView("tasks");
+  }
 
-  // ── Panel rendering ─────────────────────────────────────────────
+  function showView(view) {
+    state.view = view;
+    $$(".kmdr-view", panel).forEach((el) => el.classList.toggle("kmdr-view-active", el.dataset.view === view));
+    $(".kmdr-back", panel).classList.toggle("kmdr-visible", view !== "tasks");
+    $(".kmdr-open-settings", panel).style.visibility = view === "tasks" ? "visible" : "hidden";
+    $("#kmdr-subtitle", panel).textContent = { tasks: "最近任务", settings: "连接与偏好", logs: "诊断日志" }[view];
+    if (view === "tasks") refreshTasks();
+    if (view === "settings") renderSettings();
+    if (view === "logs") refreshLogs();
+  }
 
-  async function refreshPanel() {
-    const list = document.getElementById("kmdr-panel-list");
-    let tasks = [];
-    try {
-      const result = await sendToBackground({ type: "GET_TASKS" });
-      tasks = result?.data?.tasks || [];
-    } catch (e) {
-      // Background may not be ready yet
-    }
+  launcher.addEventListener("click", () => setOpen(true));
+  $(".kmdr-close", panel).addEventListener("click", () => setOpen(false));
+  $(".kmdr-back", panel).addEventListener("click", () => showView("tasks"));
+  $(".kmdr-open-settings", panel).addEventListener("click", () => showView("settings"));
 
-    if (!tasks.length) {
-      list.innerHTML = '<div class="kmdr-panel-empty">暂无下载任务</div>';
-      updateBallBadge(0);
+  function taskSummary(task) {
+    const volumes = Object.entries(task.progress?.volumes || {}).map(([name, info]) => ({ name, ...info }));
+    const total = task.progress?.total || task.volumes?.length || volumes.length;
+    const completed = task.progress?.completed ?? volumes.filter((v) => v.status === "completed").length;
+    const active = volumes.filter((v) => ["downloading", "retrying"].includes(v.status));
+    const pct = active.length
+      ? active.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / active.length
+      : total ? (completed / total) * 100 : 0;
+    return { total, completed, active, pct: Math.max(0, Math.min(100, pct)) };
+  }
+
+  function renderTasks() {
+    const root = $(".kmdr-view-tasks", panel);
+    const recent = state.tasks.slice(0, 8);
+    const running = state.tasks.filter((task) => task.status === "running").length;
+    const badge = $("#kmdr-badge");
+    badge.textContent = running || "";
+    badge.classList.toggle("kmdr-badge-visible", running > 0);
+
+    if (!recent.length) {
+      root.innerHTML = `<div class="kmdr-empty"><span>↓</span><strong>还没有下载任务</strong><p>在页面中勾选卷，然后点击“kmdr 批量下载”。</p></div>`;
       return;
     }
 
-    const active = tasks.filter((t) => t.status === "running").length;
-    updateBallBadge(active);
-
-    list.innerHTML = tasks
-      .map((task) => {
-        const statusIcon =
-          task.status === "completed"
-            ? "✅"
-            : task.status === "failed"
-              ? "❌"
-              : "⏳";
-        const progressHtml = buildProgressHtml(task);
-        return `
-          <div class="kmdr-task-item" data-task-id="${task.task_id}">
-            <div class="kmdr-task-main">
-              <span class="kmdr-task-status">${statusIcon}</span>
-              <div class="kmdr-task-info">
-                <div class="kmdr-task-book">${escapeHtml(task.book_name)}</div>
-                <div class="kmdr-task-vols">${escapeHtml((task.volumes || []).join(", "))}</div>
-                ${progressHtml}
-              </div>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
+    root.innerHTML = `<div class="kmdr-task-overview"><span>${running ? `${running} 个任务进行中` : "最近下载"}</span><small>显示最近 ${recent.length} 项</small></div>
+      <div class="kmdr-task-list">${recent.map((task) => {
+        const summary = taskSummary(task);
+        const status = task.status === "completed" ? "completed" : task.status === "failed" ? "failed" : "running";
+        const label = status === "completed" ? "已完成" : status === "failed" ? "失败" : `${summary.completed}/${summary.total} 卷`;
+        const volumeDetail = summary.active.slice(0, 2).map((info) =>
+          `<div class="kmdr-volume-row"><span>${escapeHtml(info.volume || info.name || "正在下载")}</span><b>${Number(info.percentage || 0).toFixed(0)}%</b></div>`
+        ).join("");
+        return `<article class="kmdr-task kmdr-task-${status}">
+          <div class="kmdr-task-top"><span class="kmdr-status-dot"></span><strong title="${escapeHtml(task.book_name)}">${escapeHtml(task.book_name)}</strong><time>${formatTime(task.created_at)}</time></div>
+          <div class="kmdr-task-meta"><span>${label}</span><span>${escapeHtml((task.volumes || []).slice(0, 2).join("、"))}${task.volumes?.length > 2 ? ` 等 ${task.volumes.length} 卷` : ""}</span></div>
+          ${status === "running" ? `<div class="kmdr-progress-track"><i style="width:${summary.pct}%"></i></div>${volumeDetail}` : ""}
+          ${status === "failed" ? `<p class="kmdr-task-error">${escapeHtml(task.progress?.msg || "下载任务失败")}</p>` : ""}
+        </article>`;
+      }).join("")}</div>`;
   }
 
-  function buildProgressHtml(task) {
-    if (task.status === "running" && task.progress?.volumes) {
-      return Object.entries(task.progress.volumes)
-        .map(([name, info]) => {
-          const pct = info.percentage || 0;
-          return `<div class="kmdr-progress">
-            <span class="kmdr-progress-name">${escapeHtml(name)}</span>
-            <div class="kmdr-progress-bar"><div class="kmdr-progress-fill" style="width:${pct}%"></div></div>
-            <span class="kmdr-progress-pct">${pct.toFixed(0)}%</span>
-          </div>`;
-        })
-        .join("");
+  async function refreshTasks() {
+    try {
+      const result = await send({ type: "GET_TASKS" });
+      state.tasks = result?.data?.tasks || [];
+      renderTasks();
+    } catch (error) {
+      $(".kmdr-view-tasks", panel).innerHTML = `<div class="kmdr-empty"><strong>任务读取失败</strong><p>${escapeHtml(error.message)}</p></div>`;
     }
-    if (task.status === "completed") {
-      const completed = task.progress?.completed || task.volumes?.length || 0;
-      const total = task.progress?.total || task.volumes?.length || 0;
-      return `<div class="kmdr-task-status-text">已完成 ${completed}/${total}</div>`;
+  }
+
+  function readConnectionForm() {
+    const mode = $("#kmdr-connection-mode", panel).value;
+    const connection = { mode };
+    if (mode === "ssh") {
+      connection.ssh = {
+        host: $("#kmdr-ssh-host", panel).value.trim(),
+        user: $("#kmdr-ssh-user", panel).value.trim(),
+        port: parseInt($("#kmdr-ssh-port", panel).value, 10) || 22,
+        keyFile: $("#kmdr-ssh-key", panel).value.trim() || undefined,
+        kmdrPath: $("#kmdr-ssh-path", panel).value.trim() || undefined,
+      };
     }
-    if (task.status === "failed") {
-      return `<div class="kmdr-task-status-text kmdr-failed">${task.progress?.msg || "下载失败"}</div>`;
+    return connection;
+  }
+
+  async function renderSettings() {
+    const root = $(".kmdr-view-settings", panel);
+    root.innerHTML = '<div class="kmdr-loading">正在读取设置…</div>';
+    try {
+      const result = await send({ type: "GET_CONFIG" });
+      state.config = result?.data || { connection: { mode: "local" }, hijackEnabled: true };
+      const connection = state.config.connection || { mode: "local" };
+      const ssh = connection.ssh || {};
+      root.innerHTML = `<div class="kmdr-settings-section">
+        <h3>运行位置</h3>
+        <div class="kmdr-segmented">
+          <label><input type="radio" name="kmdr-mode" value="local" ${connection.mode !== "ssh" ? "checked" : ""}><span>本机</span></label>
+          <label><input type="radio" name="kmdr-mode" value="ssh" ${connection.mode === "ssh" ? "checked" : ""}><span>SSH</span></label>
+        </div>
+        <select id="kmdr-connection-mode" hidden><option value="local">local</option><option value="ssh">ssh</option></select>
+        <div class="kmdr-ssh-fields ${connection.mode === "ssh" ? "kmdr-visible" : ""}">
+          <div class="kmdr-field-row"><label>主机<input id="kmdr-ssh-host" value="${escapeHtml(ssh.host)}" placeholder="example.com"></label><label class="kmdr-port">端口<input id="kmdr-ssh-port" type="number" value="${ssh.port || 22}"></label></div>
+          <label>用户名<input id="kmdr-ssh-user" value="${escapeHtml(ssh.user)}" placeholder="可选"></label>
+          <label>密钥文件<input id="kmdr-ssh-key" value="${escapeHtml(ssh.keyFile)}" placeholder="可选，建议配合 ssh-agent"></label>
+          <label>kmdr 路径<input id="kmdr-ssh-path" value="${escapeHtml(ssh.kmdrPath)}" placeholder="留空时使用 PATH"></label>
+        </div>
+      </div>
+      <div class="kmdr-settings-section"><h3>页面集成</h3><label class="kmdr-switch-row"><span><strong>批量下载按钮</strong><small>显示在网站原生批量按钮旁</small></span><input id="kmdr-hijack-enabled" type="checkbox" ${state.config.hijackEnabled !== false ? "checked" : ""}><i></i></label></div>
+      <div class="kmdr-settings-actions"><button class="kmdr-button kmdr-button-secondary" id="kmdr-test">测试连接</button><button class="kmdr-button kmdr-button-primary" id="kmdr-save">保存设置</button></div>
+      <div class="kmdr-setting-status" id="kmdr-setting-status"></div>
+      <button class="kmdr-diagnostics-link" type="button">查看诊断日志 <span>›</span></button>`;
+
+      $("#kmdr-connection-mode", panel).value = connection.mode;
+      $$("input[name='kmdr-mode']", panel).forEach((radio) => radio.addEventListener("change", () => {
+        $("#kmdr-connection-mode", panel).value = radio.value;
+        $(".kmdr-ssh-fields", panel).classList.toggle("kmdr-visible", radio.value === "ssh");
+      }));
+      $(".kmdr-diagnostics-link", panel).addEventListener("click", () => showView("logs"));
+      $("#kmdr-save", panel).addEventListener("click", saveSettings);
+      $("#kmdr-test", panel).addEventListener("click", testConnection);
+    } catch (error) {
+      root.innerHTML = `<div class="kmdr-empty"><strong>设置读取失败</strong><p>${escapeHtml(error.message)}</p></div>`;
     }
-    return '<div class="kmdr-task-status-text">排队中...</div>';
   }
 
-  function formatTime(iso) {
-    if (!iso) return "";
-    const d = new Date(iso);
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  async function saveSettings() {
+    const status = $("#kmdr-setting-status", panel);
+    const connection = readConnectionForm();
+    const hijackEnabled = $("#kmdr-hijack-enabled", panel).checked;
+    status.textContent = "保存中…";
+    try {
+      const result = await send({ type: "SAVE_CONFIG", payload: { connection, hijackEnabled } });
+      if (result?.code !== 0) throw new Error(result?.msg || "保存失败");
+      state.hijackEnabled = hijackEnabled;
+      applyHijackSetting();
+      status.textContent = "设置已保存";
+      status.className = "kmdr-setting-status kmdr-success";
+    } catch (error) {
+      status.textContent = `保存失败：${error.message}`;
+      status.className = "kmdr-setting-status kmdr-error";
+    }
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = String(str);
-    return div.innerHTML;
+  async function testConnection() {
+    const status = $("#kmdr-setting-status", panel);
+    const button = $("#kmdr-test", panel);
+    status.textContent = "正在连接…";
+    button.disabled = true;
+    const started = performance.now();
+    try {
+      const result = await send({ type: "TEST_CONNECTION", payload: { connection: readConnectionForm() } });
+      if (result?.code !== 0) throw new Error(result?.msg || `错误码 ${result?.code}`);
+      status.textContent = `连接正常 · ${Math.round(performance.now() - started)} ms`;
+      status.className = "kmdr-setting-status kmdr-success";
+    } catch (error) {
+      status.textContent = `连接失败：${error.message}`;
+      status.className = "kmdr-setting-status kmdr-error";
+    } finally {
+      button.disabled = false;
+    }
   }
 
-  // ── Poll panel periodically ─────────────────────────────────────
+  async function refreshLogs() {
+    const root = $(".kmdr-view-logs", panel);
+    root.innerHTML = '<div class="kmdr-loading">正在读取日志…</div>';
+    try {
+      const result = await send({ type: "GET_LOGS" });
+      const logs = result?.data?.logs || [];
+      root.innerHTML = `<div class="kmdr-log-toolbar"><span>最近 ${logs.length} 条</span><button type="button" class="kmdr-clear-logs">清空</button></div>
+        <div class="kmdr-log-list">${logs.length ? logs.map((entry) => `<div class="kmdr-log kmdr-log-${entry.level}"><time>${formatTime(entry.time)}</time><p>${escapeHtml(entry.message)}</p></div>`).join("") : '<div class="kmdr-empty"><strong>没有诊断日志</strong></div>'}</div>`;
+      $(".kmdr-clear-logs", panel).addEventListener("click", async () => {
+        await send({ type: "CLEAR_LOGS" });
+        refreshLogs();
+      });
+    } catch (error) {
+      root.innerHTML = `<div class="kmdr-empty"><strong>日志读取失败</strong><p>${escapeHtml(error.message)}</p></div>`;
+    }
+  }
 
-  setInterval(refreshPanel, 10000);
-  refreshPanel();
+  // ── Page batch download integration ───────────────────────────
 
-  // ── Listen for task updates ─────────────────────────────────────
+  function applyHijackSetting() {
+    if (!state.hijackEnabled) {
+      $$(".kmdr-batch-btn, .kmdr-batch-sep").forEach((el) => el.remove());
+      state.batchTableId = null;
+      return;
+    }
+    injectBatchButton(extractVolumes());
+  }
+
+  function injectBatchButton(volumes) {
+    if (!state.hijackEnabled || !volumes.length) return;
+    const visible = ["div_epub", "div_mobi"].map((id) => ({ id, el: document.getElementById(id) })).find(({ el }) => el && el.offsetParent !== null);
+    if (!visible || state.batchTableId === visible.id) return;
+    $$(".kmdr-batch-btn, .kmdr-batch-sep").forEach((el) => el.remove());
+    const original = $("button[id*='bt_down_all']", visible.el);
+    if (!original) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `${original.className} kmdr-batch-btn`;
+    button.style.cssText = original.style.cssText;
+    button.textContent = "↓ kmdr 批量下载";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openBatchConfirm(extractVolumes());
+    });
+    const separator = document.createElement("span");
+    separator.className = "kmdr-batch-sep";
+    separator.textContent = " | ";
+    original.parentElement.insertBefore(separator, original);
+    original.parentElement.insertBefore(button, separator);
+    state.batchTableId = visible.id;
+  }
+
+  function openBatchConfirm(volumes) {
+    const checked = new Set($$("#div_tabdata input[name='checkbox_vol']:checked").map((el) => el.value.trim()));
+    const selected = volumes.filter((volume) => checked.has(volume.id));
+    if (!selected.length) return toast("请先勾选要下载的卷", "error");
+    const format = activeFormat();
+    $$(".kmdr-batch-confirm").forEach((el) => el.remove());
+    const confirm = document.createElement("div");
+    confirm.className = "kmdr-batch-confirm";
+    confirm.innerHTML = `<div class="kmdr-confirm-icon">↓</div><div class="kmdr-confirm-content"><strong>下载 ${selected.length} 卷</strong><p>${format ? format.toUpperCase() : "默认格式"} · ${escapeHtml(selected.slice(0, 2).map((v) => v.name).join("、"))}${selected.length > 2 ? "…" : ""}</p></div><button class="kmdr-confirm-cancel" type="button">取消</button><button class="kmdr-confirm-submit" type="button">提交</button>`;
+    document.body.appendChild(confirm);
+    requestAnimationFrame(() => confirm.classList.add("kmdr-confirm-visible"));
+    $(".kmdr-confirm-cancel", confirm).addEventListener("click", () => confirm.remove());
+    $(".kmdr-confirm-submit", confirm).addEventListener("click", async () => {
+      const button = $(".kmdr-confirm-submit", confirm);
+      button.disabled = true;
+      button.textContent = "提交中…";
+      try {
+        const book = extractBook();
+        const result = await send({ type: "DOWNLOAD", payload: {
+          book_url: book.url, book_name: book.name,
+          vol_ids: selected.map((v) => v.id).join(","), volume_names: selected.map((v) => v.name), format,
+        }});
+        if (result?.code !== 0) throw new Error(result?.msg || "下载提交失败");
+        toast(`${selected.length} 卷已加入下载`, "success");
+        setOpen(true);
+      } catch (error) {
+        toast(`提交失败：${error.message}`, "error");
+      } finally {
+        confirm.remove();
+      }
+    });
+  }
 
   chrome.runtime.onMessage.addListener((request) => {
-    if (request.type === "TASKS_UPDATED") {
-      refreshPanel();
-    }
+    if (request.type === "TASKS_UPDATED") refreshTasks();
     if (request.type === "SET_HIJACK") {
-      hijackEnabled = request.payload.enabled;
-      console.log("[kmdr] hijack toggled:", hijackEnabled);
-      if (hijackEnabled && !hijackDone) {
-        const vols = extractVolumesFromDOM();
-        hijackDownloadButtons(vols);
-      } else if (!hijackEnabled) {
-        // Hide kmdr buttons, restore originals
-        document.querySelectorAll("a.kmdr-btn-hijacked").forEach((btn) => btn.remove());
-        document.querySelectorAll("a[onclick*='down_geturl'], a[onclick*='captcha_show']").forEach((link) => {
-          link.style.display = "";
-        });
-        hijackDone = false;
-      }
+      state.hijackEnabled = request.payload.enabled;
+      applyHijackSetting();
     }
   });
 
-  // ── Detect active format tab on kxx.moe page ──────────────────
-
-  let activeFormat = null; // "epub", "mobi", or null
-
-  function detectActiveFormat() {
-    // kxx.moe format tabs: #nav_mobi, #nav_epub
-    // Active tab has class "tab_check", inactive has "tab_unchk"
-    const formatTabs = [
-      { id: "nav_mobi", format: "mobi" },
-      { id: "nav_epub", format: "epub" },
-    ];
-    for (const { id, format } of formatTabs) {
-      const tab = document.getElementById(id);
-      if (tab && tab.classList.contains("tab_check")) {
-        if (activeFormat !== format) {
-          console.log("[kmdr] detected active format:", format);
-          activeFormat = format;
-        }
-        return format;
-      }
-    }
-    // No tab_check found — format tab may not be visible
-    // Keep the last known activeFormat
-    return activeFormat;
-  }
-
-  // ── Button hijacking ───────────────────────────────────────────
-
-  let hijackDone = false;
-  let hijackEnabled = true; // default on, will be updated from storage
-
-  // Load hijack setting from storage
   try {
-    const config = await sendToBackground({ type: "GET_CONFIG" });
-    if (config?.data?.hijackEnabled !== undefined) {
-      hijackEnabled = config.data.hijackEnabled;
-    }
-    console.log("[kmdr] hijack enabled:", hijackEnabled);
-  } catch (e) {
-    // use default
+    const result = await send({ type: "GET_CONFIG" });
+    state.hijackEnabled = result?.data?.hijackEnabled !== false;
+  } catch (error) {
+    console.warn("[kmdr] config unavailable:", error);
   }
 
-  function hijackDownloadButtons(pageVolumes) {
-    if (hijackDone) return 0;
-    if (!hijackEnabled) {
-      console.log("[kmdr] hijack disabled by user setting");
-      return 0;
-    }
-    if (!pageVolumes.length) {
-      console.log("[kmdr] No volumes to hijack");
-      return 0;
-    }
-
-    // Find all <a> tags with onclick containing 'down_geturl'
-    const allLinks = document.querySelectorAll("a[onclick*='down_geturl']");
-    console.log("[kmdr] found download links:", allLinks.length);
-
-    const processedRows = new Set();
-    let hijackCount = 0;
-
-    for (const link of allLinks) {
-      const row = link.closest("tr");
-      if (!row || processedRows.has(row)) continue;
-
-      const volId = extractVolIdFromRow(row, pageVolumes);
-      if (!volId) {
-        console.log("[kmdr] could not extract vol_id from row");
-        continue;
-      }
-
-      processedRows.add(row);
-
-      // Find all download links in this row
-      const downloadLinks = row.querySelectorAll("a[onclick*='down_geturl'], a[onclick*='captcha_show']");
-      for (const dlLink of downloadLinks) {
-        const kmdrBtn = document.createElement("a");
-        kmdrBtn.href = "#";
-        kmdrBtn.className = dlLink.className;
-        kmdrBtn.textContent = "📥 kmdr 下载";
-        kmdrBtn.title = "通过 kmdr 下载";
-        kmdrBtn.style.cssText = dlLink.style.cssText;
-        kmdrBtn.classList.add("kmdr-btn-hijacked");
-        kmdrBtn.style.cursor = "pointer";
-        kmdrBtn.style.color = "#4CAF50";
-        kmdrBtn.style.fontWeight = "bold";
-        kmdrBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDownloadClick(volId, pageVolumes, row);
-        });
-
-        dlLink.style.display = "none";
-        dlLink.insertAdjacentElement("afterend", kmdrBtn);
-        hijackCount++;
-      }
-    }
-
-    if (hijackCount > 0) {
-      hijackDone = true;
-    }
-    console.log("[kmdr] hijacked", hijackCount, "links in", processedRows.size, "rows");
-    return hijackCount;
-  }
-
-  // ── Batch download button (top of format table) ────────────────
-
-  let batchBtnTableId = null; // track which format table has the batch button
-
-  function hijackBatchButtons(pageVolumes) {
-    if (!hijackEnabled || pageVolumes.length === 0) return;
-
-    // Find the currently visible format-specific table
-    const formatTables = [
-      { tableId: "div_epub" },
-      { tableId: "div_mobi" },
-    ];
-
-    let visibleTable = null;
-    for (const { tableId } of formatTables) {
-      const table = document.getElementById(tableId);
-      if (table && table.offsetParent !== null) { // visible
-        visibleTable = { table, tableId };
-        break;
-      }
-    }
-
-    // Already added to the correct table
-    if (visibleTable && batchBtnTableId === visibleTable.tableId) return;
-
-    // Remove any existing batch buttons (from hidden tables)
-    document.querySelectorAll(".kmdr-batch-btn, .kmdr-batch-sep").forEach((el) => el.remove());
-    if (!visibleTable) {
-      batchBtnTableId = null;
-      return;
-    }
-
-    // Find container with existing batch download buttons
-    const existingBatchBtn = visibleTable.table.querySelector("button[id*='bt_down_all']");
-    if (!existingBatchBtn) {
-      console.log("[kmdr] no batch download buttons found in", visibleTable.tableId);
-      return;
-    }
-
-    const container = existingBatchBtn.parentElement;
-
-    // Add separator
-    const sep = document.createElement("span");
-    sep.className = "kmdr-batch-sep";
-    sep.innerHTML = "&nbsp;|&nbsp;";
-    container.appendChild(sep);
-
-    // Create kmdr batch download button
-    const kmdrBatchBtn = document.createElement("button");
-    kmdrBatchBtn.type = "button";
-    kmdrBatchBtn.className = existingBatchBtn.className + " kmdr-batch-btn";
-    kmdrBatchBtn.textContent = "📥 kmdr 批量下载";
-    kmdrBatchBtn.style.cssText = existingBatchBtn.style.cssText;
-    kmdrBatchBtn.style.color = "#4CAF50";
-    kmdrBatchBtn.style.fontWeight = "bold";
-    kmdrBatchBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleBatchDownloadClick(pageVolumes);
-    });
-
-    container.appendChild(kmdrBatchBtn);
-    batchBtnTableId = visibleTable.tableId;
-    console.log("[kmdr] batch download button added to", visibleTable.tableId);
-  }
-
-  function getCheckedVolIds() {
-    const ids = new Set();
-    const table = document.getElementById("div_tabdata");
-    if (!table) return ids;
-    const checkboxes = table.querySelectorAll("input[name='checkbox_vol']:checked");
-    for (const cb of checkboxes) {
-      if (cb.value) ids.add(cb.value.trim());
-    }
-    return ids;
-  }
-
-  async function handleBatchDownloadClick(pageVolumes) {
-    // Only include volumes with checked checkboxes
-    const checkedIds = getCheckedVolIds();
-    const selected = pageVolumes.filter((v) => checkedIds.has(v.id));
-
-    if (selected.length === 0) {
-      showToast("请先勾选要下载的卷", "error");
-      return;
-    }
-
-    // Remove any existing config panels
-    document.querySelectorAll(".kmdr-inline-config").forEach((el) => el.remove());
-
-    const batchBtn = document.querySelector(".kmdr-batch-btn");
-    const defaultFormat = activeFormat || "";
-    const volIds = selected.map((v) => v.id).join(",");
-    const volNames = selected.map((v) => v.name);
-
-    const fmtOptions = [
-      { value: "", label: "默认" },
-      { value: "epub", label: "EPUB" },
-      { value: "mobi", label: "MOBI" },
-    ].map((opt) => `<option value="${opt.value}"${opt.value === defaultFormat ? " selected" : ""}>${opt.label}</option>`).join("");
-
-    const panel = document.createElement("div");
-    panel.className = "kmdr-inline-config kmdr-batch-config";
-    panel.innerHTML = `
-      <div class="kmdr-inline-config-title">批量下载: ${selected.length} / ${pageVolumes.length} 卷${defaultFormat ? ` (格式: ${defaultFormat.toUpperCase()})` : ""}</div>
-      <label>格式: <select class="kmdr-cfg-format">${fmtOptions}</select></label>
-      <label>路径: <input type="text" class="kmdr-cfg-dest" placeholder="留空=kmdr默认" /></label>
-      <div class="kmdr-inline-config-actions">
-        <button class="kmdr-btn-cancel">取消</button>
-        <button class="kmdr-btn-confirm">提交已选 ${selected.length} 卷</button>
-      </div>
-    `;
-
-    document.body.appendChild(panel);
-
-    if (batchBtn) {
-      const rect = batchBtn.getBoundingClientRect();
-      panel.style.top = Math.min(rect.bottom + window.scrollY + 4, window.innerHeight + window.scrollY - 200) + "px";
-      panel.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 260) + "px";
-    }
-    panel.classList.add("kmdr-config-show");
-
-    panel.querySelector(".kmdr-btn-cancel").addEventListener("click", () => panel.remove());
-
-    panel.querySelector(".kmdr-btn-confirm").addEventListener("click", async () => {
-      const fmt = panel.querySelector(".kmdr-cfg-format").value || undefined;
-      const dest = panel.querySelector(".kmdr-cfg-dest").value || undefined;
-
-      const btn = panel.querySelector(".kmdr-btn-confirm");
-      btn.textContent = "提交中...";
-      btn.disabled = true;
-
-      try {
-        const result = await sendToBackground({
-          type: "DOWNLOAD",
-          payload: {
-            book_url: bookInfo.url,
-            book_name: bookInfo.name,
-            vol_ids: volIds,
-            volume_names: volNames,
-            format: fmt,
-            dest: dest,
-          },
-        });
-
-        if (result.code === 0) {
-          showToast(`${bookInfo.name} — 批量下载 ${selected.length} 卷已提交`, "success");
-          refreshPanel();
-        } else {
-          showToast(`下载提交失败: ${result.msg}`, "error");
-        }
-      } catch (e) {
-        if (e.message?.includes("context invalidated")) {
-          showToast("扩展已更新，请刷新页面后重试", "error");
-        } else {
-          showToast(`通信失败: ${e.message}`, "error");
-        }
-      }
-
-      panel.remove();
-    });
-
-    // Click outside to close
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target) && !e.target.classList.contains("kmdr-batch-btn")) {
-        panel.remove();
-        document.removeEventListener("click", closeHandler);
-      }
-    };
-    setTimeout(() => document.addEventListener("click", closeHandler), 0);
-  }
-
-  function extractVolIdFromRow(row, pageVolumes) {
-    // Method 1: checkbox value (most reliable)
-    const checkbox = row.querySelector("input[name='checkbox_vol']");
-    if (checkbox?.value) {
-      const val = checkbox.value.trim();
-      if (pageVolumes.some((v) => v.id === val)) return val;
-    }
-
-    // Method 2: parse down_geturl(bookid, volid, ...) from onclick
-    const links = row.querySelectorAll("a[onclick*='down_geturl']");
-    for (const link of links) {
-      const onclick = link.getAttribute("onclick") || "";
-      const match = onclick.match(/down_geturl\(\s*\d+\s*,\s*(\d+)/);
-      if (match) {
-        const candidate = match[1];
-        if (pageVolumes.some((v) => v.id === candidate)) return candidate;
-      }
-    }
-
-    // Method 3: extract from hidden input name (size_down_1001 → 1001)
-    const hiddenInputs = row.querySelectorAll("input[type='hidden']");
-    for (const input of hiddenInputs) {
-      const name = input.getAttribute("name") || "";
-      const m = name.match(/size_(?:down|push)_(\d+)/);
-      if (m) {
-        const candidate = m[1];
-        if (pageVolumes.some((v) => v.id === candidate)) return candidate;
-      }
-    }
-
-    // Method 4: match volume name from <b> tag
-    if (pageVolumes.length > 0) {
-      const bTag = row.querySelector("b");
-      const rowText = bTag ? bTag.textContent.replace(/\s+/g, " ").trim() : "";
-      for (const vol of pageVolumes) {
-        if (vol.name && rowText.includes(vol.name)) return vol.id;
-      }
-    }
-
-    return null;
-  }
-
-  async function handleDownloadClick(volId, pageVolumes, row) {
-    const vol = pageVolumes.find((v) => v.id === volId);
-    const volName = vol ? vol.name : volId;
-
-    // Remove any existing config panels
-    document.querySelectorAll(".kmdr-inline-config").forEach((el) => el.remove());
-
-    const configPanel = createInlineConfig(row, volId, volName);
-    document.body.appendChild(configPanel);
-
-    const rowRect = row.getBoundingClientRect();
-    configPanel.style.top = Math.min(rowRect.bottom + window.scrollY + 4, window.innerHeight + window.scrollY - 200) + "px";
-    configPanel.style.left = Math.min(rowRect.left + window.scrollX, window.innerWidth - 260) + "px";
-    configPanel.classList.add("kmdr-config-show");
-  }
-
-  function createInlineConfig(row, volId, volName) {
-    const defaultFormat = activeFormat || ""; // auto-detect from kxx.moe tab
-    const panel = document.createElement("div");
-    panel.className = "kmdr-inline-config";
-    const fmtOptions = [
-      { value: "", label: "默认" },
-      { value: "epub", label: "EPUB" },
-      { value: "mobi", label: "MOBI" },
-    ];
-    const fmtSelectHtml = fmtOptions
-      .map((opt) => `<option value="${opt.value}"${opt.value === defaultFormat ? " selected" : ""}>${opt.label}</option>`)
-      .join("");
-    panel.innerHTML = `
-      <div class="kmdr-inline-config-title">下载: ${escapeHtml(volName)}${defaultFormat ? ` (格式: ${defaultFormat.toUpperCase()})` : ""}</div>
-      <label>格式: <select class="kmdr-cfg-format">
-        ${fmtSelectHtml}
-      </select></label>
-      <label>路径: <input type="text" class="kmdr-cfg-dest" placeholder="留空=kmdr默认" /></label>
-      <div class="kmdr-inline-config-actions">
-        <button class="kmdr-btn-cancel">取消</button>
-        <button class="kmdr-btn-confirm">提交下载</button>
-      </div>
-    `;
-
-    panel.querySelector(".kmdr-btn-cancel").addEventListener("click", () => panel.remove());
-
-    panel.querySelector(".kmdr-btn-confirm").addEventListener("click", async () => {
-      const fmt = panel.querySelector(".kmdr-cfg-format").value || undefined;
-      const dest = panel.querySelector(".kmdr-cfg-dest").value || undefined;
-
-      const btn = panel.querySelector(".kmdr-btn-confirm");
-      btn.textContent = "提交中...";
-      btn.disabled = true;
-
-      try {
-        const result = await sendToBackground({
-          type: "DOWNLOAD",
-          payload: {
-            book_url: bookInfo.url,
-            book_name: bookInfo.name,
-            vol_ids: volId,
-            volume_names: [volName],
-            format: fmt,
-            dest: dest,
-          },
-        });
-
-        if (result.code === 0) {
-          showToast(`${bookInfo.name} — ${volName} 已提交下载`, "success");
-          refreshPanel();
-        } else {
-          showToast(`下载提交失败: ${result.msg}`, "error");
-        }
-      } catch (e) {
-        if (e.message?.includes("context invalidated")) {
-          showToast("扩展已更新，请刷新页面后重试", "error");
-        } else {
-          showToast(`通信失败: ${e.message}`, "error");
-        }
-      }
-
-      panel.remove();
-    });
-
-    // Click outside to close
-    const closeHandler = (e) => {
-      if (!panel.contains(e.target)) {
-        panel.remove();
-        document.removeEventListener("click", closeHandler);
-      }
-    };
-    setTimeout(() => document.addEventListener("click", closeHandler), 0);
-
-    return panel;
-  }
-
-  // ── Wait for download table to appear, then hijack ──────────────
-
-  function tryHijack() {
-    // Detect active format from kxx.moe format tabs
-    detectActiveFormat();
-
-    // Detect table replacement (e.g. switching format tabs)
-    // If our buttons are gone but the table has content, re-hijack
-    if (hijackDone && !document.querySelector(".kmdr-btn-hijacked")) {
-      console.log("[kmdr] hijacked buttons gone — table was replaced, re-hijacking");
-      hijackDone = false;
-    }
-
-    const pageVolumes = extractVolumesFromDOM();
-    console.log("[kmdr] tryHijack — volumes:", pageVolumes.length, "hijackDone:", hijackDone);
-    if (pageVolumes.length > 0) {
-      hijackDownloadButtons(pageVolumes);
-      hijackBatchButtons(pageVolumes);
-      return true;
-    }
-    return false;
-  }
-
-  // Try immediately (in case the table is already rendered, e.g. from cache)
-  tryHijack();
-
-  // Watch for the table being populated/changed via AJAX (tab switches, etc.)
-  const tabdata = document.getElementById("div_tabdata");
-  if (tabdata) {
-    console.log("[kmdr] watching #div_tabdata for changes...");
-    const observer = new MutationObserver(() => tryHijack());
-    observer.observe(tabdata, { childList: true, subtree: true });
-  } else {
-    console.log("[kmdr] #div_tabdata not found — page may not be a manga detail page");
-  }
-
-  // Watch format tables for visibility changes (tab switches)
-  for (const tableId of ["div_mobi", "div_epub"]) {
-    const table = document.getElementById(tableId);
-    if (table) {
-      console.log("[kmdr] watching #" + tableId + " for visibility changes...");
-      const fmtObserver = new MutationObserver(() => {
-        const pageVolumes = extractVolumesFromDOM();
-        if (pageVolumes.length > 0) {
-          detectActiveFormat();
-          hijackBatchButtons(pageVolumes);
-        }
-      });
-      fmtObserver.observe(table, { attributes: true, attributeFilter: ["style", "class"] });
-    }
-  }
-
-  console.log("[kmdr] content script ready — floating ball injected");
-})().catch((err) => {
-  console.error("[kmdr] content script error:", err);
-});
+  const refreshIntegration = () => injectBatchButton(extractVolumes());
+  refreshIntegration();
+  const target = $("#div_tabdata");
+  if (target) new MutationObserver(refreshIntegration).observe(target, { childList: true, subtree: true });
+  ["#div_epub", "#div_mobi"].forEach((selector) => {
+    const el = $(selector);
+    if (el) new MutationObserver(() => {
+      state.batchTableId = null;
+      refreshIntegration();
+    }).observe(el, { attributes: true, attributeFilter: ["style", "class"] });
+  });
+  setInterval(refreshTasks, 30000);
+  refreshTasks();
+})().catch((error) => console.error("[kmdr] content script failed:", error));

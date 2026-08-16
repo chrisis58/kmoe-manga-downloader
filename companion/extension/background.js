@@ -101,6 +101,10 @@ async function updateTask(taskId, updates) {
 }
 
 function updateBadge(tasks) {
+  // The Companion UI lives in the page's floating panel. When the manifest
+  // does not declare a toolbar action, chrome.action is unavailable.
+  if (!chrome.action) return;
+
   const active = tasks.filter((t) => t.status === "running").length;
   if (active > 0) {
     chrome.action.setBadgeText({ text: String(active) });
@@ -158,6 +162,13 @@ async function handleRequest(request) {
       }
       addLog("info", `连接配置已更新: ${payload.connection.mode}`);
       return { code: 0, msg: "ok" };
+    } else if (type === "TEST_CONNECTION") {
+      const connection = payload?.connection || { mode: "local" };
+      const target = connection.mode === "ssh" ? connection.ssh : "local";
+      return await sendToHost({ action: "status", params: {}, target });
+    } else if (type === "CLEAR_LOGS") {
+      await setStored("logs", []);
+      return { code: 0, msg: "ok" };
     }
   } catch (e) {
     addLog("error", `${type} 处理失败: ${e.message}`);
@@ -202,8 +213,8 @@ async function handleDownload(payload) {
     });
     addLog("info", `下载已启动: ${payload.book_name} (${payload.volume_names?.join(", ")}) — task_id: ${result.data.task_id}`);
 
-    // Start polling for this task
-    await chrome.alarms.create(`poll_${result.data.task_id}`, { periodInMinutes: 0.17 }); // ~10s
+    // Start polling with a fast initial check, then adapt to latency
+    await schedulePoll(result.data.task_id, 3000); // ~3s initial
   } else {
     addLog("error", `下载提交失败: ${result.msg}`);
   }
@@ -229,12 +240,41 @@ async function handleProgress(payload) {
   });
 }
 
+// ── Adaptive polling ────────────────────────────────────────────────
+
+// Per-task latency tracking for adaptive poll intervals
+const pollLatency = {};
+
+function adaptiveDelay(lastLatencyMs) {
+  // Map observed latency to next poll delay
+  if (lastLatencyMs < 500)  return 2000 + Math.random() * 1000; // 2–3s  for fast local
+  if (lastLatencyMs < 2000) return 5000;                         // 5s    for moderate
+  return 10000;                                                   // 10s   for slow/remote
+}
+
+async function schedulePoll(taskId, delayMs) {
+  await chrome.alarms.create(`poll_${taskId}`, {
+    delayInMinutes: Math.max(1, delayMs) / 60000,
+  });
+}
+
+async function notifyContentScripts() {
+  const tabs = await chrome.tabs.query({
+    url: ["https://kxx.moe/*", "https://mox.moe/*", "https://kxo.moe/*", "https://kzo.moe/*"],
+  });
+  for (const tab of tabs) {
+    chrome.tabs.sendMessage(tab.id, { type: "TASKS_UPDATED" }).catch(() => {});
+  }
+}
+
 // ── Alarm: poll progress ───────────────────────────────────────────
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (!alarm.name.startsWith("poll_")) return;
   const taskId = alarm.name.slice(5); // remove "poll_" prefix
+  const startTime = Date.now();
 
+  let ok = false;
   try {
     const result = await handleProgress({ task_id: taskId, wait: 0 });
 
@@ -244,19 +284,27 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
           status: "completed",
           progress: result.data,
         });
-        await chrome.alarms.clear(alarm.name);
+        notifyContentScripts();
         addLog("info", `下载完成: task_id ${taskId}`);
+        return; // No more polling
       } else {
         await updateTask(taskId, {
           status: "running",
           progress: result.data,
         });
+        ok = true;
       }
     }
   } catch (e) {
-    // Silently retry next poll
     console.warn(`Poll failed for ${taskId}: ${e.message}`);
   }
+
+  // Re-schedule with adaptive delay
+  const elapsed = Date.now() - startTime;
+  pollLatency[taskId] = elapsed;
+  const delayMs = ok ? adaptiveDelay(elapsed) : 15000; // back off on error
+  await schedulePoll(taskId, delayMs);
+  if (ok) notifyContentScripts();
 });
 
 // ── Init: restore badge ────────────────────────────────────────────
@@ -268,7 +316,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   // Re-arm alarms for active tasks
   for (const task of tasks) {
     if (task.status === "running") {
-      await chrome.alarms.create(`poll_${task.task_id}`, { periodInMinutes: 0.17 });
+      await schedulePoll(task.task_id, 5000);
     }
   }
 })();

@@ -11,7 +11,9 @@
   ],
   "host_permissions": [
     "https://kxx.moe/*",
-    "https://mox.moe/*"
+    "https://mox.moe/*",
+    "https://kxo.moe/*",
+    "https://kzo.moe/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,15 +22,13 @@
     {
       "matches": [
         "https://kxx.moe/c/*.htm*",
-        "https://mox.moe/c/*.htm*"
+        "https://mox.moe/c/*.htm*",
+        "https://kxo.moe/c/*.htm*",
+        "https://kzo.moe/c/*.htm*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_end"
     }
-  ],
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_title": "kmdr Companion"
-  }
+  ]
 }

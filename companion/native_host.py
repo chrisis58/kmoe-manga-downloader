@@ -182,16 +182,26 @@ def run_ssh(ssh_config: dict, command: list[str], timeout: int = 30) -> dict:
     if not host:
         return {"code": 102, "msg": "SSH 目标主机未配置", "action": command[2], "data": None}
 
+    kmdr_path = ssh_config.get("kmdrPath", "")
+    key_file = ssh_config.get("keyFile", "")
     target = f"{user}@{host}" if user else host
-    quoted_cmd = shlex.join(command)  # safe shell escaping
+
+    if kmdr_path:
+        # User provided explicit path — use it directly
+        remote_cmd = shlex.join([kmdr_path if a == "kmdr" else a for a in command])
+    else:
+        # Non-interactive SSH doesn't source .profile — use bash -lc
+        remote_cmd = f"bash -lc {shlex.quote(shlex.join(command))}"
+
     ssh_cmd = [
         "ssh",
         "-p", str(port),
         "-o", "ConnectTimeout=10",
         "-o", "BatchMode=yes",
-        target,
-        quoted_cmd,
     ]
+    if key_file:
+        ssh_cmd.extend(["-i", key_file, "-o", "IdentitiesOnly=yes"])
+    ssh_cmd.extend([target, remote_cmd])
 
     try:
         result = subprocess.run(
@@ -205,7 +215,11 @@ def run_ssh(ssh_config: dict, command: list[str], timeout: int = 30) -> dict:
         if result.returncode != 0:
             stderr = result.stderr.strip()
             if "Permission denied" in stderr:
-                hint = " (请确认 SSH key 已配置)"
+                hint = (" (SSH 认证失败。如果密钥有密码保护，请先用 ssh-agent 加载密钥：\n"
+                        "   Windows: 启动 OpenSSH Authentication Agent 服务，然后 ssh-add <密钥路径>\n"
+                        "   macOS:   ssh-add --apple-use-keychain <密钥路径>\n"
+                        "   Linux:   ssh-add <密钥路径>\n"
+                        "   或在扩展设置中指定密钥文件路径)")
             elif "Could not resolve" in stderr or "Name or service not known" in stderr:
                 hint = " (无法解析主机名)"
             elif "Connection refused" in stderr:
