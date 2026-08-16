@@ -1,341 +1,179 @@
-/* kmdr Companion — Injected UI styles */
+/* kmdr Companion — compact floating control center */
 
-/* ── Floating ball ─────────────────────────────────────────── */
+:root {
+  --kmdr-bg: #111827;
+  --kmdr-surface: #182235;
+  --kmdr-surface-hover: #202d43;
+  --kmdr-border: rgba(255, 255, 255, 0.09);
+  --kmdr-text: #eef2f7;
+  --kmdr-muted: #93a0b4;
+  --kmdr-accent: #49c987;
+  --kmdr-accent-dark: #2f9d69;
+  --kmdr-danger: #fb7185;
+  --kmdr-font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
 
-#kmdr-floating-ball {
+#kmdr-launcher, #kmdr-panel, .kmdr-toast, .kmdr-batch-confirm {
+  font-family: var(--kmdr-font);
+  box-sizing: border-box;
+}
+
+#kmdr-launcher {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  background: #1a1a2e;
-  border: 2px solid #4CAF50;
-  border-radius: 50%;
+  right: 22px;
+  bottom: 22px;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #24334a, #101827);
+  color: white;
   cursor: pointer;
-  z-index: 99990;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  transition: transform 0.2s;
+  z-index: 2147483600;
+  box-shadow: 0 14px 36px rgba(7, 12, 22, 0.38), inset 0 1px rgba(255, 255, 255, 0.08);
+  transition: transform .18s ease, opacity .18s ease;
 }
-#kmdr-floating-ball:hover {
-  transform: scale(1.1);
+#kmdr-launcher:hover { transform: translateY(-3px); }
+#kmdr-launcher.kmdr-launcher-hidden { opacity: 0; pointer-events: none; transform: translateY(8px); }
+.kmdr-launcher-icon { font-size: 27px; font-weight: 300; line-height: 1; color: var(--kmdr-accent); }
+#kmdr-badge {
+  position: absolute; right: -5px; top: -5px; display: none; min-width: 19px; height: 19px;
+  align-items: center; justify-content: center; padding: 0 5px; border: 2px solid var(--kmdr-bg);
+  border-radius: 10px; background: var(--kmdr-accent); color: #07150f; font-size: 10px; font-weight: 800;
 }
-#kmdr-floating-ball::before {
-  content: "📥";
-  font-size: 20px;
-}
-#kmdr-ball-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #4CAF50;
-  color: #fff;
-  font-size: 11px;
-  font-weight: bold;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-family: Arial, sans-serif;
-}
-
-/* ── Download panel ────────────────────────────────────────── */
+#kmdr-badge.kmdr-badge-visible { display: flex; }
 
 #kmdr-panel {
   position: fixed;
-  top: 0;
-  right: -380px;
-  width: 360px;
-  height: 100vh;
-  background: #1a1a2e;
-  color: #e0e0e0;
-  z-index: 99991;
-  transition: right 0.3s ease;
-  box-shadow: -4px 0 16px rgba(0,0,0,0.4);
+  right: 22px;
+  bottom: 22px;
+  width: min(390px, calc(100vw - 28px));
+  height: min(570px, calc(100vh - 44px));
+  max-height: 76vh;
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  font-size: 13px;
-}
-#kmdr-panel.kmdr-panel-open {
-  right: 0;
-}
-#kmdr-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  background: #16213e;
-  border-bottom: 1px solid #333;
-  font-size: 15px;
-  font-weight: 600;
-}
-#kmdr-panel-close {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 22px;
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-}
-#kmdr-panel-close:hover {
-  color: #fff;
-}
-#kmdr-panel-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-.kmdr-panel-empty {
-  color: #888;
-  text-align: center;
-  padding: 40px 16px;
-  font-size: 14px;
-}
-
-/* ── Task items ────────────────────────────────────────────── */
-
-.kmdr-task-item {
-  background: #16213e;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-}
-.kmdr-task-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  cursor: pointer;
-}
-.kmdr-task-status {
-  font-size: 18px;
-  line-height: 1.2;
-  flex-shrink: 0;
-}
-.kmdr-task-info {
-  flex: 1;
-  min-width: 0;
-}
-.kmdr-task-book {
-  font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  color: #e0e0e0;
-}
-.kmdr-task-vols {
-  font-size: 11px;
-  color: #999;
-  margin-top: 2px;
-}
-.kmdr-task-time {
-  font-size: 10px;
-  color: #666;
-  flex-shrink: 0;
-}
-.kmdr-task-status-text {
-  font-size: 11px;
-  color: #aaa;
-  margin-top: 4px;
-}
-.kmdr-task-status-text.kmdr-failed {
-  color: #f44336;
-}
-
-/* ── Progress bars ─────────────────────────────────────────── */
-
-.kmdr-progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-.kmdr-progress-name {
-  font-size: 10px;
-  color: #aaa;
-  min-width: 60px;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.kmdr-progress-bar {
-  flex: 1;
-  height: 4px;
-  background: #333;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.kmdr-progress-fill {
-  height: 100%;
-  background: #4CAF50;
-  border-radius: 2px;
-  transition: width 0.3s;
-}
-.kmdr-progress-pct {
-  font-size: 10px;
-  color: #4CAF50;
-  min-width: 28px;
-  text-align: right;
-}
-
-/* ── Task config collapse ──────────────────────────────────── */
-
-.kmdr-task-config {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #333;
-}
-.kmdr-task-config label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 11px;
-  color: #999;
-}
-.kmdr-task-config select,
-.kmdr-task-config input {
-  width: 100%;
-  padding: 4px 6px;
-  background: #0f0f23;
-  color: #e0e0e0;
-  border: 1px solid #444;
-  border-radius: 4px;
-  font-size: 12px;
-  box-sizing: border-box;
-}
-
-/* ── Toast ─────────────────────────────────────────────────── */
-
-.kmdr-toast {
-  position: fixed;
-  bottom: 84px;
-  right: 24px;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  font-size: 13px;
-  color: #fff;
-  z-index: 99995;
+  color: var(--kmdr-text);
+  background: rgba(17, 24, 39, .98);
+  border: 1px solid var(--kmdr-border);
+  border-radius: 20px;
+  z-index: 2147483601;
+  box-shadow: 0 28px 70px rgba(3, 8, 18, .48), inset 0 1px rgba(255, 255, 255, .04);
   opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.3s, transform 0.3s;
-  max-width: 360px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-.kmdr-toast-show {
-  opacity: 1;
-  transform: translateY(0);
-}
-.kmdr-toast-success {
-  background: #2e7d32;
-}
-.kmdr-toast-error {
-  background: #c62828;
-}
-.kmdr-toast-info {
-  background: #1565c0;
-}
-
-/* ── Inline config popup ───────────────────────────────────── */
-
-.kmdr-inline-config {
-  position: absolute;
-  background: #1a1a2e;
-  border: 1px solid #4CAF50;
-  border-radius: 8px;
-  padding: 12px;
-  z-index: 99992;
-  min-width: 240px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  pointer-events: none;
+  transform: translateY(12px) scale(.97);
+  transform-origin: bottom right;
+  transition: opacity .2s ease, transform .2s ease;
   font-size: 13px;
-  color: #e0e0e0;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.2s, transform 0.2s;
+  line-height: 1.45;
 }
-.kmdr-inline-config.kmdr-config-show {
-  opacity: 1;
-  transform: translateY(0);
-}
-.kmdr-inline-config-title {
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #4CAF50;
-}
-.kmdr-inline-config label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #aaa;
-}
-.kmdr-inline-config select,
-.kmdr-inline-config input {
-  width: 100%;
-  padding: 5px 8px;
-  background: #0f0f23;
-  color: #e0e0e0;
-  border: 1px solid #444;
-  border-radius: 4px;
-  font-size: 12px;
-  box-sizing: border-box;
-  margin-top: 2px;
-}
-.kmdr-inline-config-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  justify-content: flex-end;
-}
-.kmdr-btn-cancel {
-  padding: 5px 12px;
-  background: #333;
-  color: #ccc;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.kmdr-btn-cancel:hover {
-  background: #444;
-}
-.kmdr-btn-confirm {
-  padding: 5px 12px;
-  background: #4CAF50;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-}
-.kmdr-btn-confirm:hover {
-  background: #43A047;
-}
-.kmdr-btn-confirm:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+#kmdr-panel.kmdr-panel-open { opacity: 1; pointer-events: auto; transform: none; }
+.kmdr-panel-header { height: 68px; flex: 0 0 68px; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--kmdr-border); }
+.kmdr-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.kmdr-title > div { display: flex; flex-direction: column; }
+.kmdr-title strong { color: var(--kmdr-text); font-size: 15px; line-height: 18px; letter-spacing: .02em; }
+.kmdr-title small { color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-logo { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: rgba(73, 201, 135, .13); color: var(--kmdr-accent); font: 700 18px Georgia, serif; }
+.kmdr-header-actions { display: flex; gap: 2px; }
+.kmdr-icon-button, .kmdr-back { width: 32px; height: 32px; border: 0; border-radius: 9px; background: transparent; color: var(--kmdr-muted); cursor: pointer; font-size: 17px; }
+.kmdr-icon-button:hover, .kmdr-back:hover { color: var(--kmdr-text); background: rgba(255,255,255,.06); }
+.kmdr-back { display: none; margin-right: 4px; font-size: 26px; line-height: 25px; }
+.kmdr-back.kmdr-visible { display: block; }
+.kmdr-panel-body { flex: 1; min-height: 0; position: relative; }
+.kmdr-view { display: none; height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #37445a transparent; }
+.kmdr-view.kmdr-view-active { display: block; }
+.kmdr-loading { color: var(--kmdr-muted); padding: 48px 20px; text-align: center; }
 
-/* ── Hijacked button breathing glow ─────────────────────────── */
+.kmdr-task-overview { display: flex; justify-content: space-between; align-items: baseline; padding: 15px 17px 8px; }
+.kmdr-task-overview span { color: var(--kmdr-text); font-size: 12px; font-weight: 650; }
+.kmdr-task-overview small { color: #6f7c90; font-size: 10px; }
+.kmdr-task-list { padding: 0 10px 12px; }
+.kmdr-task { margin-bottom: 7px; padding: 11px 12px; border: 1px solid transparent; border-radius: 13px; background: var(--kmdr-surface); }
+.kmdr-task:hover { border-color: var(--kmdr-border); background: var(--kmdr-surface-hover); }
+.kmdr-task-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.kmdr-task-top strong { flex: 1; overflow: hidden; color: var(--kmdr-text); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.kmdr-task-top time { color: #647086; font-size: 9px; white-space: nowrap; }
+.kmdr-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--kmdr-accent); box-shadow: 0 0 0 4px rgba(73,201,135,.1); }
+.kmdr-task-running .kmdr-status-dot { animation: kmdr-pulse 3s linear infinite; }
+.kmdr-task-completed .kmdr-status-dot { background: #718096; box-shadow: none; }
+.kmdr-task-failed .kmdr-status-dot { background: var(--kmdr-danger); box-shadow: 0 0 0 4px rgba(251,113,133,.1); }
+.kmdr-task-meta { display: flex; gap: 8px; margin: 5px 0 0 15px; color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-task-meta span:last-child { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.kmdr-progress-track { height: 4px; margin: 9px 0 2px 15px; overflow: hidden; border-radius: 3px; background: #29364a; }
+.kmdr-progress-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--kmdr-accent-dark), var(--kmdr-accent)); transition: width .4s ease; }
+.kmdr-volume-row { display: flex; justify-content: space-between; gap: 12px; margin: 5px 0 0 15px; color: #7f8da2; font-size: 9px; }
+.kmdr-volume-row span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.kmdr-volume-row b { color: var(--kmdr-accent); font-weight: 600; }
+.kmdr-task-error { margin: 6px 0 0 15px; color: var(--kmdr-danger); font-size: 10px; }
+.kmdr-empty { display: flex; flex-direction: column; align-items: center; padding: 70px 28px; color: var(--kmdr-muted); text-align: center; }
+.kmdr-empty > span { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 12px; border-radius: 14px; background: rgba(73,201,135,.1); color: var(--kmdr-accent); font-size: 25px; }
+.kmdr-empty strong { color: #cbd4e1; font-size: 13px; }
+.kmdr-empty p { max-width: 250px; margin: 7px 0 0; color: #718096; font-size: 11px; }
 
-a.kmdr-btn-hijacked {
-  animation: kmdr-breathe 3s ease-in-out infinite;
+.kmdr-settings-section { padding: 17px; border-bottom: 1px solid var(--kmdr-border); }
+.kmdr-settings-section h3 { margin: 0 0 12px; color: #aeb9c9; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.kmdr-segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 10px; background: #0c1320; }
+.kmdr-segmented label { cursor: pointer; }
+.kmdr-segmented input { position: absolute; opacity: 0; }
+.kmdr-segmented span { display: block; padding: 7px; border-radius: 8px; color: var(--kmdr-muted); text-align: center; font-size: 11px; }
+.kmdr-segmented input:checked + span { background: #25334a; color: var(--kmdr-text); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+.kmdr-ssh-fields { display: none; margin-top: 13px; }
+.kmdr-ssh-fields.kmdr-visible { display: block; }
+.kmdr-ssh-fields label { display: block; margin-top: 9px; color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-ssh-fields input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 9px; border: 1px solid var(--kmdr-border); border-radius: 8px; outline: none; background: #0d1523; color: var(--kmdr-text); font: 11px var(--kmdr-font); }
+.kmdr-ssh-fields input:focus { border-color: rgba(73,201,135,.55); }
+.kmdr-field-row { display: flex; gap: 8px; }
+.kmdr-field-row label:first-child { flex: 1; }
+.kmdr-field-row .kmdr-port { width: 76px; }
+.kmdr-switch-row { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.kmdr-switch-row > span { display: flex; flex-direction: column; }
+.kmdr-switch-row strong { color: var(--kmdr-text); font-size: 12px; }
+.kmdr-switch-row small { color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-switch-row input { position: absolute; opacity: 0; }
+.kmdr-switch-row i { position: relative; width: 36px; height: 20px; border-radius: 10px; background: #354157; transition: background .2s; }
+.kmdr-switch-row i::after { content: ""; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; border-radius: 50%; background: white; transition: transform .2s; }
+.kmdr-switch-row input:checked + i { background: var(--kmdr-accent-dark); }
+.kmdr-switch-row input:checked + i::after { transform: translateX(16px); }
+.kmdr-settings-actions { display: flex; gap: 8px; padding: 14px 17px 7px; }
+.kmdr-button { flex: 1; padding: 8px 10px; border: 0; border-radius: 9px; cursor: pointer; font: 600 11px var(--kmdr-font); }
+.kmdr-button:disabled { opacity: .55; cursor: wait; }
+.kmdr-button-secondary { background: #253147; color: #bac5d5; }
+.kmdr-button-primary { background: var(--kmdr-accent-dark); color: white; }
+.kmdr-setting-status { min-height: 18px; padding: 0 17px 8px; color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-setting-status.kmdr-success { color: var(--kmdr-accent); }
+.kmdr-setting-status.kmdr-error { color: var(--kmdr-danger); }
+.kmdr-diagnostics-link { width: calc(100% - 34px); display: flex; justify-content: space-between; margin: 4px 17px 18px; padding: 10px 11px; border: 0; border-radius: 9px; background: transparent; color: var(--kmdr-muted); cursor: pointer; font: 11px var(--kmdr-font); text-align: left; }
+.kmdr-diagnostics-link:hover { background: rgba(255,255,255,.04); color: var(--kmdr-text); }
+.kmdr-log-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px 7px; color: var(--kmdr-muted); font-size: 10px; }
+.kmdr-log-toolbar button { border: 0; background: transparent; color: var(--kmdr-danger); cursor: pointer; font: 10px var(--kmdr-font); }
+.kmdr-log-list { padding: 0 10px 12px; }
+.kmdr-log { display: grid; grid-template-columns: 72px 1fr; gap: 7px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.kmdr-log time { color: #647086; font-size: 9px; }
+.kmdr-log p { margin: 0; overflow-wrap: anywhere; color: #9ca9bb; font: 9px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.kmdr-log-error p { color: #fda4af; }
+
+.kmdr-batch-btn { color: #299764 !important; font-weight: 700 !important; }
+.kmdr-batch-confirm { position: fixed; left: 50%; bottom: 24px; display: flex; align-items: center; gap: 10px; width: min(520px, calc(100vw - 32px)); padding: 11px 12px; border: 1px solid var(--kmdr-border); border-radius: 15px; background: rgba(17,24,39,.98); color: var(--kmdr-text); z-index: 2147483602; box-shadow: 0 18px 50px rgba(0,0,0,.42); opacity: 0; transform: translate(-50%, 12px); transition: .18s ease; }
+.kmdr-batch-confirm.kmdr-confirm-visible { opacity: 1; transform: translate(-50%, 0); }
+.kmdr-confirm-icon { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 34px; border-radius: 10px; background: rgba(73,201,135,.12); color: var(--kmdr-accent); font-size: 21px; }
+.kmdr-confirm-content { flex: 1; min-width: 0; }
+.kmdr-confirm-content strong { display: block; font-size: 12px; }
+.kmdr-confirm-content p { margin: 2px 0 0; overflow: hidden; color: var(--kmdr-muted); font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+.kmdr-confirm-cancel, .kmdr-confirm-submit { padding: 7px 11px; border: 0; border-radius: 8px; cursor: pointer; font: 600 10px var(--kmdr-font); }
+.kmdr-confirm-cancel { background: #283449; color: #aeb9c9; }
+.kmdr-confirm-submit { background: var(--kmdr-accent-dark); color: white; }
+
+.kmdr-toast { position: fixed; right: 22px; bottom: 84px; max-width: 330px; padding: 10px 14px; border: 1px solid var(--kmdr-border); border-radius: 11px; background: #1a2638; color: white; z-index: 2147483603; box-shadow: 0 12px 32px rgba(0,0,0,.35); opacity: 0; transform: translateY(8px); transition: .2s ease; font-size: 11px; }
+.kmdr-toast.kmdr-toast-show { opacity: 1; transform: none; }
+.kmdr-toast-success { border-left: 3px solid var(--kmdr-accent); }
+.kmdr-toast-error { border-left: 3px solid var(--kmdr-danger); }
+
+@keyframes kmdr-pulse { 50% { opacity: .45; box-shadow: 0 0 0 6px rgba(73,201,135,0); } }
+@media (max-width: 520px) {
+  #kmdr-panel { right: 14px; bottom: 14px; width: calc(100vw - 28px); max-height: calc(100vh - 28px); }
+  #kmdr-launcher { right: 14px; bottom: 14px; }
 }
-
-@keyframes kmdr-breathe {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
-    text-shadow: 0 0 0 rgba(76, 175, 80, 0);
-  }
-  50% {
-    box-shadow: 0 0 4px 1px rgba(76, 175, 80, 0.25);
-    text-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
-  }
+@media (prefers-reduced-motion: reduce) {
+  #kmdr-panel, #kmdr-launcher, .kmdr-toast, .kmdr-batch-confirm, .kmdr-progress-track i { transition: none; }
+  .kmdr-task-running .kmdr-status-dot { animation: none; }
 }

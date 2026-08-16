@@ -48,6 +48,8 @@
   .ssh-fields.show { display: block; }
   .ssh-fields label { display: block; margin-bottom: 6px; font-size: 11px; color: #aaa; }
   .ssh-fields input { margin-top: 2px; }
+  .ssh-hint { font-size: 10px; color: #888; margin-top: 6px; line-height: 1.4; }
+  .ssh-hint code { background: #2a2a3e; padding: 1px 4px; border-radius: 2px; }
   .btn {
     padding: 6px 14px; background: #4CAF50; color: #fff; border: none;
     border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;
@@ -104,12 +106,15 @@
     <label>主机地址 <input id="ssh-host" type="text" placeholder="192.168.1.100" /></label>
     <label>用户名 <input id="ssh-user" type="text" placeholder="nas" /></label>
     <label>端口 <input id="ssh-port" type="number" value="22" /></label>
+    <label>密钥文件 <input id="ssh-keyfile" type="text" placeholder="留空使用默认 ~/.ssh/id_rsa" /></label>
+    <label>kmdr 路径 <input id="ssh-kmdr-path" type="text" placeholder="留空=自动（通过 bash -l 加载 profile）" /></label>
+    <div class="ssh-hint">密钥有密码？先用 <code>ssh-add 密钥路径</code> 加入 ssh-agent</div>
   </div>
   <div class="setting-group">
-    <div class="setting-label">页面按钮劫持</div>
+    <div class="setting-label">批量下载按钮</div>
     <label class="toggle-label">
       <input id="hijack-enabled" type="checkbox" checked />
-      <span>在漫画详情页将「下載一/二」替换为 kmdr 下载按钮</span>
+      <span>在漫画详情页显示 kmdr 批量下载按钮</span>
     </label>
   </div>
   <div class="setting-actions">

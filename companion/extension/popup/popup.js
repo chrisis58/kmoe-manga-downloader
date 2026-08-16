@@ -76,6 +76,8 @@ connMode.addEventListener("change", () => {
     document.getElementById("ssh-host").value = conn.ssh.host || "";
     document.getElementById("ssh-user").value = conn.ssh.user || "";
     document.getElementById("ssh-port").value = conn.ssh.port || 22;
+    document.getElementById("ssh-keyfile").value = conn.ssh.keyFile || "";
+    document.getElementById("ssh-kmdr-path").value = conn.ssh.kmdrPath || "";
   }
   // Load hijack setting (default true)
   const hijackEl = document.getElementById("hijack-enabled");
@@ -93,6 +95,8 @@ document.getElementById("btn-save").addEventListener("click", async () => {
       host: document.getElementById("ssh-host").value.trim(),
       user: document.getElementById("ssh-user").value.trim(),
       port: parseInt(document.getElementById("ssh-port").value, 10) || 22,
+      keyFile: document.getElementById("ssh-keyfile").value.trim() || undefined,
+      kmdrPath: document.getElementById("ssh-kmdr-path").value.trim() || undefined,
     };
   }
   const hijackEnabled = document.getElementById("hijack-enabled").checked;
@@ -123,15 +127,46 @@ document.getElementById("btn-test").addEventListener("click", async () => {
   msgEl.textContent = "测试中...";
   msgEl.className = "status-msg";
 
-  const results = [];
+  // Build the actual target config from current form values
+  const mode = connMode.value;
+  let target = "local";
+  if (mode === "ssh") {
+    const keyFile = document.getElementById("ssh-keyfile").value.trim();
+    const kmdrPath = document.getElementById("ssh-kmdr-path").value.trim();
+    target = {
+      host: document.getElementById("ssh-host").value.trim(),
+      user: document.getElementById("ssh-user").value.trim(),
+      port: parseInt(document.getElementById("ssh-port").value, 10) || 22,
+    };
+    if (keyFile) target.keyFile = keyFile;
+    if (kmdrPath) target.kmdrPath = kmdrPath;
+  }
 
-  // Test 1: sendNativeMessage (one-shot)
+  const lines = [];
+  let allOk = true;
+
+  // Show current config
+  if (mode === "ssh") {
+    const host = target.host || "(未填写)";
+    const user = target.user || "(未填写)";
+    const keyInfo = target.keyFile ? ` 🔑${target.keyFile}` : "";
+    lines.push(`ℹ 目标: SSH ${user}@${host}:${target.port}${keyInfo}`);
+  } else {
+    lines.push("ℹ 目标: 本机");
+  }
+
+  function addResult(ok, msg) {
+    if (!ok) allOk = false;
+    lines.push(`${ok ? "✓" : "✗"} ${msg}`);
+  }
+
+  // Test 1: sendNativeMessage with actual connection config
   try {
     const result = await new Promise((resolve, reject) => {
       chrome.runtime.sendNativeMessage("com.kmdr.host", {
         action: "status",
         params: {},
-        target: "local",
+        target,
       }, (response) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
@@ -140,12 +175,15 @@ document.getElementById("btn-test").addEventListener("click", async () => {
         resolve(response);
       });
     });
-    results.push(`sendNativeMessage: ✓ code=${result.code}`);
+    const ok = result.code === 0;
+    const cmdHint = result.data?._cmd ? ` → ${result.data._cmd}` : "";
+    const errHint = !ok && result.msg ? ` — ${result.msg}` : "";
+    addResult(ok, `kmdr(send): code=${result.code}${cmdHint}${errHint}`);
   } catch (e) {
-    results.push(`sendNativeMessage: ✗ ${e.message}`);
+    addResult(false, `kmdr(send): ${e.message}`);
   }
 
-  // Test 2: connectNative (persistent port — keepassxc-browser style)
+  // Test 2: connectNative with actual connection config
   try {
     const result = await new Promise((resolve, reject) => {
       let settled = false;
@@ -165,7 +203,7 @@ document.getElementById("btn-test").addEventListener("click", async () => {
             reject(new Error(err));
           }
         });
-        port.postMessage({ action: "status", params: {}, target: "local" });
+        port.postMessage({ action: "status", params: {}, target });
       } catch (e) {
         if (!settled) {
           settled = true;
@@ -173,12 +211,15 @@ document.getElementById("btn-test").addEventListener("click", async () => {
         }
       }
     });
-    results.push(`connectNative: ✓ code=${result.code}`);
+    const ok = result.code === 0;
+    const cmdHint = result.data?._cmd ? ` → ${result.data._cmd}` : "";
+    const errHint = !ok && result.msg ? ` — ${result.msg}` : "";
+    addResult(ok, `kmdr(connect): code=${result.code}${cmdHint}${errHint}`);
   } catch (e) {
-    results.push(`connectNative: ✗ ${e.message}`);
+    addResult(false, `kmdr(connect): ${e.message}`);
   }
 
-  // Test 3: echo host (sendNativeMessage)
+  // Test 3: echo host (sendNativeMessage, always local — verifies NMH protocol)
   try {
     const result = await new Promise((resolve, reject) => {
       chrome.runtime.sendNativeMessage("com.kmdr.echo_test", {
@@ -193,12 +234,12 @@ document.getElementById("btn-test").addEventListener("click", async () => {
         resolve(response);
       });
     });
-    results.push(`echo(send): ✓ msg="${result.msg}"`);
+    addResult(result.code === 0, `echo(send): msg="${result.msg}"`);
   } catch (e) {
-    results.push(`echo(send): ✗ ${e.message}`);
+    addResult(false, `echo(send): ${e.message}`);
   }
 
-  // Test 4: echo host (connectNative)
+  // Test 4: echo host (connectNative, always local — verifies NMH protocol)
   try {
     const result = await new Promise((resolve, reject) => {
       let settled = false;
@@ -226,13 +267,12 @@ document.getElementById("btn-test").addEventListener("click", async () => {
         }
       }
     });
-    results.push(`echo(connect): ✓ msg="${result.msg}"`);
+    addResult(result.code === 0, `echo(connect): msg="${result.msg}"`);
   } catch (e) {
-    results.push(`echo(connect): ✗ ${e.message}`);
+    addResult(false, `echo(connect): ${e.message}`);
   }
 
-  const allOk = results.every((r) => r.includes("✓"));
-  msgEl.innerHTML = results.join("<br>");
+  msgEl.innerHTML = lines.join("<br>");
   msgEl.className = allOk ? "status-msg" : "status-msg error";
 });
 

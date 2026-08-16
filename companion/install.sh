@@ -1,74 +1,136 @@
 #!/usr/bin/env bash
 # Install kmdr companion native messaging host (Linux/macOS)
+# Dev builds: use install-dev.sh instead
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_DIR="$HOME/.local/share/kmdr-companion"
-HOST_BIN="$INSTALL_DIR/native_host"
-MANIFEST_TEMPLATE="$SCRIPT_DIR/manifest-template.json"
+REPO_OWNER="chrisis58"
+REPO_NAME="kmoe-manga-downloader"
+SKIP_DOWNLOAD=false
 
-# Detect OS and set manifest dir
+usage() {
+  echo "Usage: $0"
+  echo "  For local development builds, use install-dev.sh"
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-download) SKIP_DOWNLOAD=true; shift ;;
+    -h|--help) usage ;;
+    *) shift ;;
+  esac
+done
+
+# ── Detect OS/arch ────────────────────────────────────────────────
+
 case "$(uname -s)" in
-    Linux*)
-        # Support Chrome, Chromium, and Edge
-        if [ -d "$HOME/.config/microsoft-edge" ]; then
-            MANIFEST_DIR="$HOME/.config/microsoft-edge/NativeMessagingHosts"
-        elif [ -d "$HOME/.config/google-chrome" ]; then
-            MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
-        elif [ -d "$HOME/.config/chromium" ]; then
-            MANIFEST_DIR="$HOME/.config/chromium/NativeMessagingHosts"
-        else
-            MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
-        fi
-        ;;
-    Darwin*)
-        MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
-        # Also support Edge on macOS
-        if [ -d "$HOME/Library/Application Support/Microsoft Edge" ]; then
-            MANIFEST_DIR="$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
-        fi
-        ;;
-    *)
-        echo "Unsupported OS: $(uname -s)"
-        exit 1
-        ;;
+  Linux*)  OS="linux" ;;
+  Darwin*) OS="darwin" ;;
+  *) echo "Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
 
-# Create install directory
+case "$(uname -m)" in
+  x86_64|amd64) ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+
+# ── Browser manifest directory ────────────────────────────────────
+
+case "$(uname -s)" in
+  Linux*)
+    if [ -d "$HOME/.config/microsoft-edge" ]; then
+      MANIFEST_DIR="$HOME/.config/microsoft-edge/NativeMessagingHosts"
+    elif [ -d "$HOME/.config/google-chrome" ]; then
+      MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
+    elif [ -d "$HOME/.config/chromium" ]; then
+      MANIFEST_DIR="$HOME/.config/chromium/NativeMessagingHosts"
+    else
+      MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
+    fi
+    ;;
+  Darwin*)
+    if [ -d "$HOME/Library/Application Support/Microsoft Edge" ]; then
+      MANIFEST_DIR="$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
+    else
+      MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+    fi
+    ;;
+esac
+
+# ── Create install dir ────────────────────────────────────────────
+
 mkdir -p "$INSTALL_DIR"
 
-# Install Python native host
-echo "Installing native host..."
-cp "$SCRIPT_DIR/native_host.py" "$HOST_BIN"
+HOST_BIN="$INSTALL_DIR/native_host"
+
+# ── Download / verify binary ──────────────────────────────────────
+
+if [ "$SKIP_DOWNLOAD" = false ]; then
+  echo "Downloading native host..."
+  ASSET="native_host-${OS}-${ARCH}"
+  RELEASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/${ASSET}"
+  echo "  ${RELEASE_URL}"
+
+  if command -v curl &>/dev/null; then
+    curl -fsSL "$RELEASE_URL" -o "$HOST_BIN" || {
+      echo "  ERROR: Download failed."
+      echo "  For local development, use: ./install-dev.sh"
+      exit 1
+    }
+  elif command -v wget &>/dev/null; then
+    wget -q "$RELEASE_URL" -O "$HOST_BIN" || {
+      echo "  ERROR: Download failed."
+      echo "  For local development, use: ./install-dev.sh"
+      exit 1
+    }
+  else
+    echo "  ERROR: curl or wget required to download."
+    exit 1
+  fi
+else
+  echo "Using existing binary: $HOST_BIN"
+fi
+
+if [ ! -f "$HOST_BIN" ]; then
+  echo "  ERROR: $HOST_BIN not found"
+  exit 1
+fi
+
 chmod +x "$HOST_BIN"
 echo "  OK: $HOST_BIN"
 
-# Create manifest directory
+# ── Extension ID ──────────────────────────────────────────────────
+
 mkdir -p "$MANIFEST_DIR"
 
-# Prompt for extension ID if needed
 EXT_ID=""
 if [ -f "$SCRIPT_DIR/extension/manifest.json" ]; then
-    echo ""
-    echo "Check your browser's extensions page for the extension ID."
-    echo "It should be a 32-character string like: nhoopgfjhdholjmgklgbijmofpgbifhf"
+  echo ""
+  echo "Check your browser's extensions page for the extension ID."
+  echo "It should be a 32-character string like: nhoopgfjhdholjmgklgbijmofpgbifhf"
 fi
 
 while [ -z "$EXT_ID" ] || [ ${#EXT_ID} -ne 32 ]; do
-    read -p "Enter the 32-char extension ID: " EXT_ID
+  read -p "Enter the 32-char extension ID: " EXT_ID
 done
 
-# Generate manifest with correct path
+# ── Manifest ──────────────────────────────────────────────────────
+
 MANIFEST_FILE="$MANIFEST_DIR/com.kmdr.host.json"
-python3 -c "
-import json
-with open('$MANIFEST_TEMPLATE') as f:
-    m = json.load(f)
-m['path'] = '$HOST_BIN'
-m['allowed_origins'] = ['chrome-extension://$EXT_ID']
-with open('$MANIFEST_FILE', 'w') as f:
-    json.dump(m, f, indent=2)
-"
+cat > "$MANIFEST_FILE" << JSONEOF
+{
+  "name": "com.kmdr.host",
+  "description": "Kmoe Manga Downloader Native Messaging Host",
+  "path": "$HOST_BIN",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://$EXT_ID/"]
+}
+JSONEOF
+
+# ── Done ──────────────────────────────────────────────────────────
 
 echo ""
 echo "✓ Native messaging host installed"
