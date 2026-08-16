@@ -1,4 +1,5 @@
 import asyncio
+import os
 from argparse import Namespace
 from typing import Callable
 
@@ -18,6 +19,7 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
             PICKERS,
             POOL_MANAGER,
             SESSION_MANAGER,
+            TASK_MANAGER,
         )
 
     log("[Lifecycle:Start] 启动 kmdr, 版本", __version__)
@@ -28,10 +30,8 @@ async def main(args: Namespace, fallback: Callable[[], None] = lambda: print("NO
         info(f"[green]{__version__}[/green]")
         emit(version=__version__)
 
-    elif args.command == "progress":
-        from kmdr.core.task_query import query_task_status
-
-        query_task_status(args.task_id, args.wait)
+    elif args.command in ("task", "progress"):
+        TASK_MANAGER.get(args).operate()
 
     elif args.command == "config":
         CONFIGURER.get(args).operate()
@@ -91,7 +91,7 @@ def main_sync(args: Namespace, fallback: Callable[[], None] = lambda: print("NOT
 
 
 def entry_point():
-    from kmdr.core.console import emit, exception, info, in_toolcall_mode, log
+    from kmdr.core.console import emit, exception, in_toolcall_mode, info, log
     from kmdr.core.defaults import argument_parser, post_init
     from kmdr.core.error import KmdrError
 
@@ -113,11 +113,17 @@ def entry_point():
                 info("[green]后台任务已启动[/green]")
                 info(f"任务 ID: {task_id}")
                 info(f"进程 PID: {pid}")
-                info(f"查询命令: kmdr progress {task_id}")
+                info(f"查询命令: kmdr task status {task_id}")
             return
 
         main_coro = main(args, parser.print_help)
-        asyncio.run(main_coro)
+        task_id = os.environ.get("KMDR_TASK_ID")
+        if task_id and args.command == "download":
+            from kmdr.core.background import run_with_cancel_monitor
+
+            asyncio.run(run_with_cancel_monitor(main_coro, task_id))
+        else:
+            asyncio.run(main_coro)
     except KmdrError as e:
         info(f"[red]错误: {e}[/red]")
         emit(e)

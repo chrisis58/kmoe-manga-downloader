@@ -40,6 +40,14 @@ class PoolManager(CredentialPoolContext, TerminalContext):
     async def operate(self) -> None: ...
 
 
+class TaskManager(TerminalContext):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abstractmethod
+    def operate(self) -> None: ...
+
+
 class SessionManager(SessionContext, ConfigContext, TerminalContext):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,3 +126,4 @@ DOWNLOADER = Registry[Downloader]("Downloader", True)
 CONFIGURER = Registry[Configurer]("Configurer")
 POOL_MANAGER = Registry[PoolManager]("PoolManager")
 CATALOGERS = Registry[Cataloger]("Cataloger", True)
+TASK_MANAGER = Registry[TaskManager]("TaskManager")

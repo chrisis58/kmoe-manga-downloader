@@ -126,9 +126,20 @@ def argument_parser():
     pool_update.add_argument("-n", "--note", type=str, help="更新备注信息")
     pool_update.add_argument("-o", "--order", type=int, help="更新账号优先级，数值越小优先级越高")
 
-    progress_parser = subparsers.add_parser("progress", help="查询后台下载任务进度")
+    task_parser = subparsers.add_parser("task", help="管理后台任务")
+    task_subparsers = task_parser.add_subparsers(title="任务操作", dest="task_command", required=True)
+
+    task_status = task_subparsers.add_parser("status", help="查询后台任务状态")
+    task_status.add_argument("task_id", type=str, help="后台任务的 ID")
+    task_status.add_argument("--wait", type=int, default=0, choices=range(0, 61), metavar="SECONDS", help="阻塞等待时间（秒），最大 60 秒")
+
+    task_cancel = task_subparsers.add_parser("cancel", help="取消后台任务")
+    task_cancel.add_argument("task_id", type=str, help="后台任务的 ID")
+
+    progress_parser = subparsers.add_parser("progress", help=argparse.SUPPRESS)
     progress_parser.add_argument("task_id", type=str, help="后台任务的 ID（时间戳格式，如 20260415_143000）")
     progress_parser.add_argument("--wait", type=int, default=0, choices=range(0, 61), metavar="SECONDS", help="阻塞等待时间（秒），任务完成则提前返回，默认 0（立即返回），最大 60 秒")
+    progress_parser.set_defaults(task_command="status")
 
     apply_argparse_patch(parser)
 

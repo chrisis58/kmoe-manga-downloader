@@ -5,3 +5,4 @@ from .downloader import *
 from .lister import *
 from .picker import *
 from .pool import *
+from .task import *
