@@ -5,7 +5,8 @@ from kmdr.core.background import get_cancel_path, get_log_dir
 from kmdr.core.bases import TASK_MANAGER, TaskManager
 from kmdr.core.console import emit, info
 from kmdr.core.error import TaskNotFoundError
-from kmdr.core.task_query import _parse_log_file
+
+from .query import parse_log_file
 
 
 @TASK_MANAGER.register(hasattrs=frozenset({"task_id"}), hasvalues={"task_command": "cancel"})
@@ -19,7 +20,7 @@ class TaskCanceller(TaskManager):
         if not log_path.exists():
             raise TaskNotFoundError(self._task_id)
 
-        _, final_result = _parse_log_file(str(log_path))
+        _, final_result = parse_log_file(str(log_path))
         if final_result is not None:
             data = final_result.get("data") or {}
             state = data.get("state", "completed" if final_result.get("code", 0) == 0 else "failed")

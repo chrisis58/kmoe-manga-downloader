@@ -1,5 +1,6 @@
 from kmdr.core.bases import TASK_MANAGER, TaskManager
-from kmdr.core.task_query import query_task_status
+
+from .query import query_task_status
 
 
 @TASK_MANAGER.register(hasattrs=frozenset({"task_id"}), hasvalues={"task_command": "status"})

@@ -1,12 +1,12 @@
 import json
 import os
-import tempfile
 import time
 from pathlib import Path
 from typing import Optional
 
-from .console import emit, in_toolcall_mode, info
-from .error import KmdrError, TaskNotFoundError
+from kmdr.core.background import get_log_dir
+from kmdr.core.console import emit, in_toolcall_mode, info
+from kmdr.core.error import KmdrError, TaskNotFoundError
 
 
 def query_task_status(task_id: str, wait: int = 0):
@@ -15,14 +15,14 @@ def query_task_status(task_id: str, wait: int = 0):
     :param task_id: 任务 ID（时间戳格式，如 20260415_143000）
     :param wait: 阻塞等待时间（秒），任务完成则立即返回，默认 0（立即返回）
     """
-    log_dir = os.path.join(tempfile.gettempdir(), "kmdr")
+    log_dir = get_log_dir()
     log_path = os.path.join(log_dir, f"kmdr_{task_id}.log")
 
     if not Path(log_path).exists():
         raise TaskNotFoundError(task_id)
 
     # 第一次读取日志
-    volumes_status, final_result = _parse_log_file(log_path)
+    volumes_status, final_result = parse_log_file(log_path)
 
     if final_result is not None:
         # 任务已完成，立即返回
@@ -41,7 +41,7 @@ def query_task_status(task_id: str, wait: int = 0):
 
     while time.time() - start_time < wait:
         time.sleep(check_interval)
-        volumes_status, final_result = _parse_log_file(log_path)
+        volumes_status, final_result = parse_log_file(log_path)
 
         if final_result is not None:
             # 任务完成，立即返回
@@ -52,7 +52,7 @@ def query_task_status(task_id: str, wait: int = 0):
     _handle_progress(volumes_status)
 
 
-def _parse_log_file(log_path: str) -> tuple[dict, Optional[dict]]:
+def parse_log_file(log_path: str) -> tuple[dict, Optional[dict]]:
     """解析日志文件，返回 volumes_status 和 final_result"""
     volumes_status = {}
     final_result = None
