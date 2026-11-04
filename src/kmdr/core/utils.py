@@ -95,6 +95,7 @@ def async_retry(
 
             for attempt in range(attempts):
                 try:
+                    debug(f"尝试第 {attempt + 1}/{attempts} 次调用 {func.__name__}...")
                     return await func(*args, **kwargs)
                 except aiohttp.ClientResponseError as e:
                     debug("请求状态异常:", e.status)
