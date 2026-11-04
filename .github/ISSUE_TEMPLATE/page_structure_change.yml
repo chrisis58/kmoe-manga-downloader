@@ -1,0 +1,27 @@
+name: 页面结构变动 / 解析失败
+description: 提交版本和错误信息，反馈页面解析异常
+title: "[页面结构变动] "
+labels: ['bug']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请提供应用版本，并复制程序提示的完整错误或警告信息。
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本
+      description: 请粘贴 `kmdr version` 的输出。
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: 完整错误信息
+      description: 请直接粘贴程序的错误或警告原文，保留括号内的错误标识。
+      render: text
+    validations:
+      required: true

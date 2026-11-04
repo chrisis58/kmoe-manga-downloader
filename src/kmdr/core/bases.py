@@ -65,7 +65,10 @@ class Authenticator(SessionContext, ConfigContext, TerminalContext):
 
                 # 保存凭证信息
                 if self._auto_save:
-                    self._configurer.save_credential(cred, as_primary=True)
+                    try:
+                        self._configurer.save_credential(cred, as_primary=True)
+                    except OSError as e:
+                        info(f"[yellow]保存凭证失败，本次仍使用已获取的凭证继续：{e}[/yellow]")
                 return cred
             except LoginError:
                 info("[red]认证失败。请检查您的登录凭据或会话 cookie。[/red]")
@@ -80,9 +83,7 @@ class Lister(SessionContext, TerminalContext):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    async def list(
-        self, awaitable_cred: Callable[[], Awaitable[Credential]]
-    ) -> tuple[BookInfo, list[VolInfo]]: ...
+    async def list(self, awaitable_cred: Callable[[], Awaitable[Credential]]) -> tuple[BookInfo, list[VolInfo]]: ...
 
 
 class Picker(TerminalContext):
@@ -110,7 +111,7 @@ class Downloader(SessionContext, TerminalContext):
 
         total_size = sum(v.size or 0 for v in volumes)
         avai = self._avai_quota(cred)
-        if avai < total_size:
+        if avai is not None and avai < total_size:
             if self._console.is_interactive:
                 should_continue = Confirm.ask(
                     f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
@@ -139,9 +140,9 @@ class Downloader(SessionContext, TerminalContext):
             await asyncio.sleep(0.01)
             raise
 
-    def _avai_quota(self, cred: Credential) -> float:
+    def _avai_quota(self, cred: Credential) -> Optional[float]:
         """计算并返回指定 Credential 的可用额度（单位：MB）"""
-        return cred.quota_remaining
+        return cred.quota_remaining if cred.quota_known else None
 
     @abstractmethod
     async def _download(self, cred: Credential, book: BookInfo, volume: VolInfo, quota_deduct_callback: Optional[Callable[[bool], None]] = None):
