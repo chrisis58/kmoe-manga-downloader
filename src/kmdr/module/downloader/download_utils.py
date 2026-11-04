@@ -30,6 +30,14 @@ _HEAD_SEMAPHORE: Optional[asyncio.Semaphore] = None
 """定义的用于 HEAD 请求的信号量，限制并发数量以避免触发服务器限流。"""
 
 
+def _run_callback(callback: Callable) -> None:
+    """下载后回调失败不改变已完成的下载结果。"""
+    try:
+        callback()
+    except Exception as e:
+        info(f"[yellow]下载已完成，但回调执行失败：{e}[/yellow]")
+
+
 def _get_head_request_semaphore() -> asyncio.Semaphore:
     """惰性初始化 HEAD 请求信号量。"""
     global _HEAD_SEMAPHORE
@@ -166,7 +174,7 @@ async def download_file(
                     progress.update(task_id, status=STATUS.COMPLETED.value)
 
                 if callback:
-                    callback()
+                    _run_callback(callback)
 
 
 async def download_file_multipart(
@@ -305,7 +313,7 @@ async def download_file_multipart(
             filename=filename,
             retry_times=retry_times,
             headers=headers,
-            callback=callback,
+            callback=None,  # 由外层统一执行，避免降级为普通下载时重复回调
             task_id=task_id,
             resumable=False,
         )
@@ -317,9 +325,12 @@ async def download_file_multipart(
 
             cleanup_tasks = [aio_os.remove(p) for p in part_paths if await aio_os.path.exists(p)]
             if cleanup_tasks:
-                await asyncio.gather(*cleanup_tasks)
+                results = await asyncio.gather(*cleanup_tasks, return_exceptions=True)
+                for result in results:
+                    if isinstance(result, Exception):
+                        info(f"[yellow]下载已完成，但清理分片失败：{result}[/yellow]")
             if callback:
-                callback()
+                _run_callback(callback)
         else:
             if task_id is not None and state_manager is not None:
                 await state_manager.request_status_update(part_id=StateManager.PARENT_ID, status=STATUS.FAILED)

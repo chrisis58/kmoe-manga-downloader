@@ -152,6 +152,9 @@ class Credential:
 
     note: Optional[str] = None
 
+    quota_known: bool = True
+    """额度是否已成功解析；未知时由下载接口判断额度是否充足。"""
+
     @property
     def is_vip(self) -> bool:
         return self.vip_quota is not None
@@ -198,6 +201,7 @@ class Credential:
         yield "vip_quota", self.vip_quota
         yield "order", self.order
         yield "status", self.status
+        yield "quota_known", self.quota_known
 
         if self.note:
             yield "note", self.note

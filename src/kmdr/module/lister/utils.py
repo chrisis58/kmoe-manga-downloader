@@ -8,7 +8,7 @@ from yarl import URL
 
 from kmdr.core import BookInfo, Credential, VolInfo, VolumeType
 from kmdr.core.console import debug, info
-from kmdr.core.error import ContentBlockedError
+from kmdr.core.error import ContentBlockedError, HtmlResolveError
 from kmdr.core.utils import async_retry, extract_cookies
 
 
@@ -79,7 +79,11 @@ async def __do_extract(
 
 
 def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[BookInfo]) -> BookInfo:
-    book_name = book_page.find("font", class_="text_bglight_big").text
+    book_name_tag = book_page.find("font", class_="text_bglight_big")
+    if book_name_tag is None:
+        raise HtmlResolveError("书籍详情页未找到书名元素 font.text_bglight_big", code="BOOK_NAME_MISSING")
+
+    book_name = book_name_tag.text
 
     if "為符合要求，此書內容已屏蔽" in book_name:
         raise ContentBlockedError(
@@ -87,7 +91,13 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
             solution=["kmdr config -s proxy=<your_proxy>  # 设置可用的代理地址"],
         )
 
-    id = book_page.find("input", attrs={"name": "bookid"})["value"]
+    bookid_tag = book_page.find("input", attrs={"name": "bookid"})
+    if bookid_tag is None:
+        raise HtmlResolveError("书籍详情页未找到 input[name=bookid]", code="BOOK_ID_INPUT_MISSING")
+
+    id = bookid_tag.get("value")
+    if not isinstance(id, str) or not id.strip():
+        raise HtmlResolveError("书籍详情页 bookid 的 value 属性为空或无效", code="BOOK_ID_VALUE_INVALID")
 
     return BookInfo(
         id=id,
@@ -107,29 +117,61 @@ async def __extract_volumes(session: Session, book_page: BeautifulSoup, cookies:
         if match:
             break
     if not match:
-        info("[yellow]获取卷标识失败，可能是页面结构发生变化。请检查网站是否更新，或联系开发者：\nhttps://github.com/chrisis58/kmoe-manga-downloader/issues[/yellow]")
-        return []
+        raise HtmlResolveError("书籍详情页脚本中未找到 Kmoe.book 卷标识", code="BOOK_HASH_MISSING")
     book_hash = match.group(1)
 
     async with session.get(url=f"/data_book.php?h={book_hash}", cookies=cookies) as response:
         response.raise_for_status()
 
-        result = await response.json(content_type=None)
-        voldata = result.get("voldata", [])
+        try:
+            result = await response.json(content_type=None)
+        except ValueError as e:
+            raise HtmlResolveError("data_book.php 响应不是有效 JSON", code="VOLUME_JSON_INVALID") from e
 
-        volume_data = [
-            VolInfo(
-                id=x[0],
-                extra_info=__extract_extra_info(x[1]),
-                is_last=x[2] == "1",
-                vol_type=__extract_volume_type(x[3]),
-                index=int(x[4]),
-                pages=int(x[6]),
-                name=x[5],
-                size=float(x[11]),
+        if not isinstance(result, dict):
+            raise HtmlResolveError("data_book.php 响应的 JSON 顶层不是对象", code="VOLUME_RESPONSE_INVALID")
+
+        voldata = result.get("voldata")
+        if not isinstance(voldata, list):
+            raise HtmlResolveError("data_book.php 响应中缺少有效的 voldata 列表", code="VOLUME_LIST_INVALID")
+
+        volume_data = []
+        for row_index, row in enumerate(voldata, 1):
+            if not isinstance(row, list) or len(row) < 12:
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录不是列表或不足 12 个字段", code="VOLUME_ROW_INVALID")
+            if not isinstance(row[0], str) or not row[0].strip():
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录的卷 ID（字段 0）为空或无效", code="VOLUME_ID_INVALID")
+            if not isinstance(row[5], str) or not row[5].strip():
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录的卷名（字段 5）为空或无效", code="VOLUME_NAME_INVALID")
+            try:
+                pages = int(row[6])
+            except (TypeError, ValueError):
+                pages = 0
+                info(f"[yellow]第 {row_index} 条卷记录缺少有效页数，仍可下载。[/yellow]")
+            try:
+                vol_type = __extract_volume_type(row[3])
+            except (TypeError, ValueError) as e:
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录的卷类型（字段 3）无法识别", code="VOLUME_TYPE_INVALID") from e
+            try:
+                index = int(row[4])
+            except (TypeError, ValueError) as e:
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录的卷索引（字段 4）不是整数", code="VOLUME_INDEX_INVALID") from e
+            try:
+                size = float(row[11])
+            except (TypeError, ValueError) as e:
+                raise HtmlResolveError(f"voldata 第 {row_index} 条记录的卷大小（字段 11）不是数值", code="VOLUME_SIZE_INVALID") from e
+            volume_data.append(
+                VolInfo(
+                    id=row[0],
+                    extra_info=__extract_extra_info(row[1]),
+                    is_last=row[2] == "1",
+                    vol_type=vol_type,
+                    index=index,
+                    pages=pages,
+                    name=row[5],
+                    size=size,
+                )
             )
-            for x in voldata
-        ]
 
         return volume_data
 

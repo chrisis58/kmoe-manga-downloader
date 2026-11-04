@@ -89,6 +89,20 @@ class RangeNotSupportedError(KmdrError):
         )
 
 
+class HtmlResolveError(KmdrError):
+    """使用稳定标识区分解析失败的位置，标识也会保留在降级警告中。"""
+
+    def __init__(self, message: str, *, code: str):
+        self.code = code
+        super().__init__(f"({code}) {message}", None)
+
+    def __str__(self):
+        return (
+            f"页面内容解析失败：{self.message}。\n请复制以上错误信息，联系开发者：\n"
+            "https://github.com/chrisis58/kmoe-manga-downloader/issues/new?template=page_structure_change.yml"
+        )
+
+
 class NotInteractableError(KmdrError):
     def __init__(self, message):
         super().__init__(message)
@@ -112,11 +126,13 @@ class NoCandidateCredentialError(KmdrError):
     def __str__(self):
         return f"没有可用的凭证：{self.message}"
 
+
 class ContentBlockedError(KmdrError):
     """
     内容被屏蔽错误，可能是以下两种原因：
     1. 无法在当前网络环境访问，如 https://kxx.moe/c/13663.htm
     2. 需要登录后才能访问，如 https://kzo.moe/c/0f496f.htm
     """
+
     def __init__(self, message, solution: Optional[list[str]] = None):
         super().__init__(message, solution)

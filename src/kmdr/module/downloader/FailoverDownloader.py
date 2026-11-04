@@ -17,7 +17,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
     """实现了故障转移的下载器，根据用户选择的下载方法，委托给具体的下载器实现。"""
 
     def __init__(self, method: int, num_workers: int = 8, per_cred_ratio: float = 1.0, *args, **kwargs):
-        super().__init__(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+        super().__init__(*args, num_workers=num_workers, per_cred_ratio=per_cred_ratio, **kwargs)
 
         if not (0.0 < per_cred_ratio <= 1.0):
             info("每个凭证分配的任务比例 `per_cred_ratio` 必须在 (0.0, 1.0] 范围内，已自动调整为默认值 1.0")
@@ -34,12 +34,12 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
         if method == 2:
             from .DirectDownloader import DirectDownloader
 
-            self._delegate: Downloader = DirectDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+            self._delegate: Downloader = DirectDownloader(*args, num_workers=num_workers, per_cred_ratio=per_cred_ratio, **kwargs)
         else:
             # 默认使用 ReferViaDownloader
             from .ReferViaDownloader import ReferViaDownloader
 
-            self._delegate: Downloader = ReferViaDownloader(num_workers=num_workers, per_cred_ratio=per_cred_ratio, *args, **kwargs)
+            self._delegate: Downloader = ReferViaDownloader(*args, num_workers=num_workers, per_cred_ratio=per_cred_ratio, **kwargs)
 
     async def download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
         with self._console.status("同步凭证池状态..."):
@@ -60,11 +60,17 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             await super().download(cred, book, volumes)
         finally:
             # 持久化更新后的凭证池状态
-            self._configurer.update()
+            try:
+                self._configurer.update()
+            except OSError as e:
+                info(f"[yellow]保存凭证池失败：{e}[/yellow]")
 
-    def _avai_quota(self, cred: Credential) -> float:
+    def _avai_quota(self, cred: Credential) -> Optional[float]:
         """计算当前凭证池中，包含指定凭证在内的可用额度总和。"""
-        pooled_avai = sum(pc.quota_remaining for pc in self._pool.active_creds if pc.username != cred.username)
+        candidates = [pc for pc in self._pool.active_creds if pc.username != cred.username]
+        if not cred.quota_known or any(not pc.quota_known for pc in candidates):
+            return None
+        pooled_avai = sum(pc.quota_remaining for pc in candidates)
         return cred.quota_remaining + pooled_avai
 
     async def _download(
@@ -84,10 +90,10 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
             async with pooled_cred.download_semaphore:
                 attempts += 1
 
-                if pooled_cred.quota_remaining < required_size:
+                if pooled_cred.inner.quota_known and pooled_cred.quota_remaining < required_size:
                     await self.__refresh_cred(pooled_cred, self._refresh_semaphore)
                     # 如果当前凭证余额不足以支付下载，跳过
-                    if pooled_cred.quota_remaining < required_size:
+                    if pooled_cred.inner.quota_known and pooled_cred.quota_remaining < required_size:
                         debug("账号", pooled_cred.username, "余额不足，跳过。需要", required_size, "MB，剩余", pooled_cred.quota_remaining, "MB")
                         continue
 
@@ -116,6 +122,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                         return
 
                 except QuotaExceededError:
+                    pooled_cred.status = CredentialStatus.QUOTA_EXCEEDED
                     info(f"[yellow]账号 {pooled_cred.username} 提示额度不足，正在同步状态...[/yellow]")
 
                     # 在判断是否额度全部用尽前，先尝试同步状态
@@ -125,7 +132,7 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                         info(f"账号 {pooled_cred.username} 状态已变更为 {pooled_cred.status}，跳过。")
                         continue
 
-                    if pooled_cred.quota_remaining < 0.1:
+                    if not pooled_cred.inner.quota_known or pooled_cred.quota_remaining < 0.1:
                         pooled_cred.status = CredentialStatus.QUOTA_EXCEEDED
                     else:
                         info(f"账号 {pooled_cred.username} 更新后余额 {pooled_cred.quota_remaining:.2f}MB，仍不足以支付 ({required_size:.2f}MB)")
@@ -169,9 +176,11 @@ class FailoverDownloader(Downloader, CredentialPoolContext):
                     )
 
                 pooled_cred.update_cred(new_info, force=True)
-                debug("账号", pooled_cred.username, "同步完成。剩余额度:", pooled_cred.quota_remaining, "MB")
+                remaining = f"{pooled_cred.quota_remaining:.2f} MB" if pooled_cred.inner.quota_known else "未知"
+                debug("账号", pooled_cred.username, "同步完成。剩余额度:", remaining)
                 return
-        except Exception as e:
-            info(f"同步账号 {pooled_cred.username} 失败")
+        except LoginError:
             pooled_cred.status = CredentialStatus.INVALID
-            raise e
+            info(f"账号 {pooled_cred.username} 登录失效，跳过。")
+        except Exception as e:
+            info(f"[yellow]同步账号 {pooled_cred.username} 失败，保留原有状态继续：{e}[/yellow]")
