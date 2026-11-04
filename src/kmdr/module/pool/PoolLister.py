@@ -1,6 +1,7 @@
 import asyncio
 import random
 from datetime import datetime
+from typing import Optional
 
 from rich import box
 from rich.live import Live
@@ -9,6 +10,7 @@ from rich.table import Table
 
 from kmdr.core.bases import POOL_MANAGER, PoolManager
 from kmdr.core.console import debug, emit, info
+from kmdr.core.error import LoginError
 from kmdr.core.session import KmdrSessionManager
 from kmdr.core.structure import Credential, CredentialStatus
 
@@ -31,8 +33,8 @@ class PoolLister(PoolManager):
         debug("需要刷新的凭证数：", len(candidates))
         if not candidates:
             self._console.print(self._generate_table())
-            total_quota = sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)
-            info("剩余可用总额度: ", str(total_quota), " MB")
+            total_quota = self._total_quota()
+            info("剩余可用总额度: ", str(total_quota) if total_quota is not None else "未知", " MB")
             emit(total_quota=total_quota, pool=self._pool.pool)
             return
 
@@ -50,9 +52,9 @@ class PoolLister(PoolManager):
                     self._updating_users.remove(updated_cred.username)
                     live.update(self._generate_table())
 
-        total_quota = sum(c.quota_remaining for c in self._pool.pool if c.status == CredentialStatus.ACTIVE)
+        total_quota = self._total_quota()
 
-        info("剩余可用总额度: ", str(total_quota), " MB")
+        info("剩余可用总额度: ", str(total_quota) if total_quota is not None else "未知", " MB")
         emit(total_quota=total_quota, pool=self._pool.pool)
         try:
             self._configurer.update()
@@ -65,6 +67,12 @@ class PoolLister(PoolManager):
             return "-"
         dt = datetime.fromtimestamp(timestamp)
         return dt.strftime("%Y-%m-%d %H:%M")
+
+    def _total_quota(self) -> Optional[float]:
+        credentials = [c for c in self._pool.pool if c.status == CredentialStatus.ACTIVE]
+        if any(not c.quota_known for c in credentials):
+            return None
+        return sum(c.quota_remaining for c in credentials)
 
     def _format_status(self, status: CredentialStatus) -> str:
         if status == CredentialStatus.ACTIVE:
@@ -103,14 +111,14 @@ class PoolLister(PoolManager):
             if cred.username in self._updating_users:
                 status_renderable = Spinner("dots", text="更新中...", style="yellow")
                 last_update_renderable = Spinner("dots", text=f" {time_str}", style="yellow")
-                quota_str = Spinner("dots", text=f"{cred.quota_remaining:.1f} MB", style="yellow")
+                quota_str = Spinner("dots", text=f"{cred.quota_remaining:.1f} MB" if cred.quota_known else "未知", style="yellow")
                 quota_refresh_str = Spinner("dots", text="加载中...", style="yellow")
             else:
                 status_renderable = self._format_status(cred.status)
                 last_update_renderable = time_str
-                quota_str = f"{cred.quota_remaining:.1f} MB"
-                quota_refresh_str = f"{cred.user_quota.reset_day} 日"
-                if cred.vip_quota:
+                quota_str = f"{cred.quota_remaining:.1f} MB" if cred.quota_known else "未知"
+                quota_refresh_str = f"{cred.user_quota.reset_day} 日" if cred.quota_known else "未知"
+                if cred.vip_quota and cred.quota_known:
                     quota_refresh_str += f" / {cred.vip_quota.reset_day} 日(VIP)"
 
             table.add_row(
@@ -150,11 +158,14 @@ class PoolLister(PoolManager):
                 cred.level = new_cred.level
                 cred.nickname = new_cred.nickname
                 cred.cookies = new_cred.cookies
+                cred.quota_known = new_cred.quota_known
 
                 return cred
 
-            except Exception as e:
+            except LoginError:
                 cred.status = CredentialStatus.INVALID
-                info(f"[red]更新用户 {cred.username} 失败[/red]")
-                debug(f"更新用户 {cred.username} 失败: {e}")
+                info(f"[red]用户 {cred.username} 登录失效[/red]")
+                return cred
+            except Exception as e:
+                info(f"[yellow]更新用户 {cred.username} 失败，保留原有状态：{e}[/yellow]")
                 return cred
