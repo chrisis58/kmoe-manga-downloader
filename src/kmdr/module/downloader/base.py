@@ -47,7 +47,7 @@ class BaseDownloader(Downloader):
 
         total_size = sum(v.size or 0 for v in volumes)
         avai = self._avai_quota(cred)
-        if avai < total_size:
+        if avai is not None and avai < total_size:
             if is_interactive():
                 should_continue = Confirm.ask(
                     f"[red]警告：当前下载所需额度约为 {total_size:.2f} MB，当前剩余额度 {avai:.2f} MB，可能无法正常完成下载。是否继续下载？[/red]",
@@ -89,12 +89,11 @@ class BaseDownloader(Downloader):
                 skipped=tracker.skipped,
             )
 
-    def _avai_quota(self, cred: Credential) -> float:
+    def _avai_quota(self, cred: Credential) -> Optional[float]:
         """计算并返回指定 Credential 的可用额度（单位：MB）"""
-        return cred.quota_remaining
+        return cred.quota_remaining if cred.quota_known else None
 
     async def _explain_download(self, cred: Credential, book: BookInfo, volumes: list[VolInfo]):
-
         from os import path
 
         import aiofiles.os as aio_os
@@ -116,11 +115,12 @@ class BaseDownloader(Downloader):
         if in_toolcall_mode():
             estimate_size = sum(v.size or 0 for v in to_download)
             target_path = path.abspath(destination)
+            available_quota = self._avai_quota(cred)
 
             emit(
                 book=book.name,
                 estimate_quota_usage_mb=round(estimate_size, 2),
-                avai_quota_mb=round(self._avai_quota(cred), 2),
+                avai_quota_mb=round(available_quota, 2) if available_quota is not None else None,
                 format=self._format.name,
                 target_path=target_path,
                 to_download=[{"name": v.name, "size": v.size} for v in to_download],
@@ -143,7 +143,9 @@ class BaseDownloader(Downloader):
             summary_grid.add_column(ratio=1)
 
             col1_md = f"- **下载格式**: `{self._format.name}`\n- **需要下载**: `{len(to_download)}` 卷\n- **跳过现存**: `{len(skipped)}` 卷"
-            col2_md = f"- **预估消耗**: `{estimate_size:.2f} MB`\n- **剩余配额**: `{self._avai_quota(cred):.2f} MB`"
+            available_quota = self._avai_quota(cred)
+            quota_text = f"{available_quota:.2f} MB" if available_quota is not None else "未知"
+            col2_md = f"- **预估消耗**: `{estimate_size:.2f} MB`\n- **剩余配额**: `{quota_text}`"
 
             summary_grid.add_row(Markdown(col1_md), Markdown(col2_md))
             self._console.print(summary_grid)

@@ -103,6 +103,10 @@ class CredentialPool:
             if cred.status == CredentialStatus.DISABLED:
                 continue
 
+            if not cred.quota_known:
+                candidates.append(cred)
+                continue
+
             if cred.user_quota.update_at < time.time() - 3 * 3600 * 24:
                 candidates.append(cred)
                 continue
@@ -279,17 +283,20 @@ class PooledCredential:
         self._cred.status = cred.status
         self._cred.level = cred.level
         self._cred.nickname = cred.nickname
+        self._cred.quota_known = cred.quota_known
 
         if force or cred.user_quota.update_at >= self._cred.user_quota.update_at:
             self._cred.user_quota = cred.user_quota
 
-        if self._cred.vip_quota and cred.vip_quota:
-            if force or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
-                self._cred.vip_quota = cred.vip_quota
+        if cred.vip_quota is None:
+            if cred.quota_known:
+                self._cred.vip_quota = None
+        elif force or self._cred.vip_quota is None or cred.vip_quota.update_at >= self._cred.vip_quota.update_at:
+            self._cred.vip_quota = cred.vip_quota
 
     def reserve(self, size_mb: float) -> Optional[int]:
         """预留指定大小的额度，成功返回句柄，失败返回 None"""
-        if self.quota_remaining >= size_mb:
+        if not self._cred.quota_known or self.quota_remaining >= size_mb:
             handle = _handle_counter.__next__()
             self._reserved_map[handle] = size_mb
             self._reserved += size_mb
