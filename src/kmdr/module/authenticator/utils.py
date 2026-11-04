@@ -55,7 +55,7 @@ async def check_status(
         script = soup.find("script", language="javascript")
 
         if script:
-            var_define = extract_var_define(script.text[:100])
+            var_define = extract_var_define(script.text)
 
             is_vip = int(var_define.get("is_vip", "0"))
             user_level = int(var_define.get("user_level", "0"))
