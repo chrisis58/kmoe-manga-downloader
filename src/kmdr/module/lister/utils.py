@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from yarl import URL
 
 from kmdr.core import BookInfo, Credential, VolInfo, VolumeType
-from kmdr.core.console import debug
+from kmdr.core.console import debug, info
 from kmdr.core.error import ContentBlockedError
 from kmdr.core.utils import async_retry, extract_cookies
 
@@ -137,6 +137,7 @@ async def __extract_volumes(session: Session, book_page: BeautifulSoup, cookies:
         if match:
             break
     if not match:
+        info("[yellow]获取卷标识失败，可能是页面结构发生变化。请检查网站是否更新，或联系开发者：\nhttps://github.com/chrisis58/kmoe-manga-downloader/issues[/yellow]")
         return []
     book_hash = match.group(1)
 
