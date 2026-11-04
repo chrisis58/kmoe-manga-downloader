@@ -42,7 +42,7 @@ async function sendToHost(message) {
 
       // Log the response
       const respSummary = response.code === 0
-        ? `code=${response.code} data=${JSON.stringify(response.data).substring(0, 200)}`
+        ? `code=${response.code} data=${JSON.stringify(response.data)}`
         : `code=${response.code} msg=${response.msg}`;
       console.log("[kmdr bg] ←", message.action, `(${elapsed}ms)`, respSummary);
       addLog("info", `← ${message.action} (${elapsed}ms) ${respSummary}`);

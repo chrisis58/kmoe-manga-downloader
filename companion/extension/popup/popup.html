@@ -3,130 +3,194 @@
 <head>
 <meta charset="UTF-8">
 <style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f6f8;
+    --surface: rgba(255, 255, 255, 0.9);
+    --surface-solid: #ffffff;
+    --surface-muted: #f8fafc;
+    --border: #e2e8f0;
+    --border-soft: rgba(255, 255, 255, 0.82);
+    --text: #0f172a;
+    --muted: #64748b;
+    --subtle: #94a3b8;
+    --accent: #0f172a;
+    --accent-hover: #334155;
+    --success: #16845b;
+    --danger: #dc4c64;
+    --shadow: 0 18px 48px rgba(15, 23, 42, 0.09);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    width: 380px;
-    min-height: 400px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    width: 392px;
+    min-height: 440px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 13px;
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 54%, #ffffff 100%);
+    color: var(--text);
+  }
+  button, input, select { font: inherit; }
+  button, .tab, .toggle-label { -webkit-tap-highlight-color: transparent; }
+  .app-header {
+    display: flex; align-items: center; gap: 11px; padding: 18px 18px 14px;
+  }
+  .app-mark {
+    width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 38px;
+    border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 13px;
+    background: rgba(255,255,255,.84); color: var(--text);
+    box-shadow: 0 8px 20px rgba(15,23,42,.08); font: 700 20px Georgia, serif;
+  }
+  .app-title { min-width: 0; }
+  .app-title strong { display: block; font-size: 15px; line-height: 20px; letter-spacing: .01em; }
+  .app-title span { display: block; color: var(--muted); font-size: 10px; line-height: 15px; }
+  .shell {
+    margin: 0 12px 12px; overflow: hidden; border: 1px solid var(--border-soft);
+    border-radius: 20px; background: var(--surface); box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
   }
   /* Tabs */
-  #tabs { display: flex; background: #16213e; border-bottom: 1px solid #333; }
-  .tab {
-    flex: 1; text-align: center; padding: 10px; cursor: pointer;
-    font-size: 13px; color: #888; border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
+  #tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    margin: 10px; padding: 4px; border-radius: 13px; background: #edf1f5;
   }
-  .tab:hover { color: #ccc; }
-  .tab.active { color: #4CAF50; border-bottom-color: #4CAF50; }
+  .tab {
+    text-align: center; padding: 8px 10px; cursor: pointer; border-radius: 10px;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    transition: color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); background: white; box-shadow: 0 2px 8px rgba(15,23,42,.09); }
   /* Panels */
-  .panel { display: none; padding: 12px; max-height: 420px; overflow-y: auto; }
+  .panel { display: none; padding: 4px 14px 16px; max-height: 410px; overflow-y: auto; }
   .panel.active { display: block; }
+  .panel::-webkit-scrollbar { width: 5px; }
+  .panel::-webkit-scrollbar-thumb { border-radius: 5px; background: #cbd5e1; }
   /* Download tab */
   .task-item {
-    background: #16213e; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+    padding: 12px; margin-bottom: 8px; border: 1px solid var(--border);
+    border-radius: 14px; background: var(--surface-solid);
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
   }
-  .task-header { display: flex; align-items: center; gap: 6px; }
+  .task-item:hover { border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.06); }
+  .task-header { display: flex; align-items: center; gap: 8px; }
   .task-book { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .task-status { font-size: 14px; }
-  .task-vols { font-size: 11px; color: #999; margin-top: 2px; }
-  .task-progress { margin-top: 4px; }
-  .progress-row { display: flex; align-items: center; gap: 4px; font-size: 10px; margin-top: 2px; }
-  .progress-bar { flex: 1; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
-  .progress-fill { height: 100%; background: #4CAF50; border-radius: 2px; }
-  .empty { text-align: center; color: #888; padding: 30px 0; font-size: 13px; }
+  .task-status { font-size: 13px; }
+  .task-vols { font-size: 10px; color: var(--muted); margin: 5px 0 0 21px; line-height: 1.5; }
+  .task-progress { margin: 8px 0 0 21px; }
+  .progress-row { display: grid; grid-template-columns: minmax(70px, 1fr) 1.5fr 30px; align-items: center; gap: 7px; color: var(--muted); font-size: 9px; margin-top: 5px; }
+  .progress-row > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .progress-row > span:last-child { color: var(--success); text-align: right; font-weight: 600; }
+  .progress-bar { height: 4px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #1f9a6c, #43bd88); border-radius: inherit; transition: width .3s ease; }
+  .empty { text-align: center; color: var(--muted); padding: 62px 16px; font-size: 12px; }
+  .empty::before { content: "↓"; width: 42px; height: 42px; display: grid; place-items: center; margin: 0 auto 12px; border-radius: 14px; background: #f1f5f9; color: var(--subtle); font-size: 21px; }
   /* Settings tab */
-  .setting-group { margin-bottom: 14px; }
-  .setting-label { font-size: 11px; color: #999; margin-bottom: 4px; }
+  .setting-group { margin-bottom: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.72); }
+  .setting-label { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 7px; letter-spacing: .05em; text-transform: uppercase; }
   .setting-group select, .setting-group input {
-    width: 100%; padding: 6px 8px; background: #0f0f23; color: #e0e0e0;
-    border: 1px solid #444; border-radius: 4px; font-size: 12px;
+    width: 100%; padding: 8px 10px; background: white; color: var(--text); outline: none;
+    border: 1px solid #cbd5e1; border-radius: 10px; font-size: 11px;
+    transition: border-color .18s ease, box-shadow .18s ease;
   }
+  .setting-group select:focus, .setting-group input:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,.16); }
   .ssh-fields { display: none; margin-top: 8px; }
   .ssh-fields.show { display: block; }
-  .ssh-fields label { display: block; margin-bottom: 6px; font-size: 11px; color: #aaa; }
-  .ssh-fields input { margin-top: 2px; }
-  .ssh-hint { font-size: 10px; color: #888; margin-top: 6px; line-height: 1.4; }
-  .ssh-hint code { background: #2a2a3e; padding: 1px 4px; border-radius: 2px; }
+  .ssh-fields label { display: block; margin-bottom: 8px; font-size: 10px; color: var(--muted); }
+  .ssh-fields input { margin-top: 4px; }
+  .ssh-hint { font-size: 9px; color: var(--subtle); margin-top: 6px; line-height: 1.5; }
+  .ssh-hint code { background: #eef2f6; color: #475569; padding: 2px 5px; border-radius: 4px; }
   .btn {
-    padding: 6px 14px; background: #4CAF50; color: #fff; border: none;
-    border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;
+    padding: 8px 15px; background: var(--accent); color: #fff; border: 1px solid var(--accent);
+    border-radius: 11px; cursor: pointer; font-size: 11px; font-weight: 650;
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
   }
-  .btn:hover { background: #43A047; }
+  .btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); transform: translateY(-1px); }
   .btn-secondary {
-    background: #333; color: #ccc;
+    background: white; color: #334155; border-color: #cbd5e1;
   }
-  .btn-secondary:hover { background: #444; }
-  .setting-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-  .status-msg { font-size: 11px; color: #4CAF50; }
-  .status-msg.error { color: #f44336; }
+  .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+  .setting-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .status-msg { flex-basis: 100%; font-size: 10px; line-height: 1.55; color: var(--success); overflow-wrap: anywhere; }
+  .status-msg:empty { display: none; }
+  .status-msg.error { color: var(--danger); }
   .toggle-label {
-    display: flex; align-items: center; gap: 8px; font-size: 12px;
-    color: #aaa; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; font-size: 11px;
+    color: #475569; cursor: pointer; line-height: 1.45;
   }
-  .toggle-label input[type="checkbox"] { accent-color: #4CAF50; }
+  .toggle-label input[type="checkbox"] { width: 15px; height: 15px; flex: 0 0 15px; accent-color: var(--accent); }
   /* Log tab */
-  .log-entry { padding: 6px 0; border-bottom: 1px solid #222; font-size: 11px; }
-  .log-time { color: #666; margin-right: 6px; font-family: monospace; font-size: 11px; min-width: 70px; }
+  .log-entry { padding: 8px 4px; border-bottom: 1px solid #edf1f5; font-size: 10px; }
+  .log-time { color: var(--subtle); margin-right: 7px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; min-width: 58px; }
   .log-level { font-weight: 600; margin-right: 8px; }
-  .log-level.error { color: #f44336; }
-  .log-level.info { color: #4CAF50; }
-  .log-msg { color: #ccc; word-break: break-all; flex: 1; }
-  .log-entry { display: flex; padding: 4px 0; border-bottom: 1px solid #2a2a3e; }
-  .log-entry.log-error { background: rgba(244,67,54,0.05); }
-  .log-entry.log-response .log-msg { color: #81C784; }
-  .log-entry.log-request .log-msg { color: #64B5F6; }
+  .log-level.error { color: var(--danger); }
+  .log-level.info { color: var(--success); }
+  .log-msg { color: #475569; word-break: break-word; flex: 1; line-height: 1.5; }
+  .log-entry { display: flex; }
+  .log-entry.log-error { margin: 0 -4px; padding-left: 8px; padding-right: 8px; border-radius: 8px; background: rgba(220,76,100,.06); }
+  .log-entry.log-response .log-msg { color: var(--success); }
+  .log-entry.log-request .log-msg { color: #2563a8; }
+  @media (prefers-reduced-motion: reduce) {
+    .tab, .task-item, .btn, .progress-fill { transition: none; }
+  }
 </style>
 </head>
 <body>
 
-<div id="tabs">
-  <div class="tab active" data-tab="downloads">下载</div>
-  <div class="tab" data-tab="settings">设置</div>
-  <div class="tab" data-tab="logs">日志</div>
-</div>
+<header class="app-header">
+  <div class="app-mark">K</div>
+  <div class="app-title">
+    <strong>kmdr Companion</strong>
+    <span>本地漫画下载控制台</span>
+  </div>
+</header>
 
-<!-- Downloads panel -->
-<div id="panel-downloads" class="panel active">
-  <div id="task-list"><div class="empty">暂无下载任务</div></div>
-</div>
+<div class="shell">
+  <div id="tabs">
+    <div class="tab active" data-tab="downloads">下载</div>
+    <div class="tab" data-tab="settings">设置</div>
+    <div class="tab" data-tab="logs">日志</div>
+  </div>
 
-<!-- Settings panel -->
-<div id="panel-settings" class="panel">
-  <div class="setting-group">
-    <div class="setting-label">连接目标</div>
-    <select id="conn-mode">
-      <option value="local">本机</option>
-      <option value="ssh">SSH 远程服务器</option>
-    </select>
+  <!-- Downloads panel -->
+  <div id="panel-downloads" class="panel active">
+    <div id="task-list"><div class="empty">暂无下载任务</div></div>
   </div>
-  <div id="ssh-fields" class="ssh-fields">
-    <label>主机地址 <input id="ssh-host" type="text" placeholder="192.168.1.100" /></label>
-    <label>用户名 <input id="ssh-user" type="text" placeholder="nas" /></label>
-    <label>端口 <input id="ssh-port" type="number" value="22" /></label>
-    <label>密钥文件 <input id="ssh-keyfile" type="text" placeholder="留空使用默认 ~/.ssh/id_rsa" /></label>
-    <label>kmdr 路径 <input id="ssh-kmdr-path" type="text" placeholder="留空=自动（通过 bash -l 加载 profile）" /></label>
-    <div class="ssh-hint">密钥有密码？先用 <code>ssh-add 密钥路径</code> 加入 ssh-agent</div>
-  </div>
-  <div class="setting-group">
-    <div class="setting-label">批量下载按钮</div>
-    <label class="toggle-label">
-      <input id="hijack-enabled" type="checkbox" checked />
-      <span>在漫画详情页显示 kmdr 批量下载按钮</span>
-    </label>
-  </div>
-  <div class="setting-actions">
-    <button id="btn-save" class="btn">保存</button>
-    <button id="btn-test" class="btn btn-secondary">测试连接</button>
-    <span id="status-msg" class="status-msg"></span>
-  </div>
-</div>
 
-<!-- Logs panel -->
-<div id="panel-logs" class="panel">
-  <div id="log-list"><div class="empty">暂无日志</div></div>
+  <!-- Settings panel -->
+  <div id="panel-settings" class="panel">
+    <div class="setting-group">
+      <div class="setting-label">连接目标</div>
+      <select id="conn-mode">
+        <option value="local">本机</option>
+        <option value="ssh">SSH 远程服务器</option>
+      </select>
+      <div id="ssh-fields" class="ssh-fields">
+        <label>主机地址 <input id="ssh-host" type="text" placeholder="192.168.1.100" /></label>
+        <label>用户名 <input id="ssh-user" type="text" placeholder="nas" /></label>
+        <label>端口 <input id="ssh-port" type="number" value="22" /></label>
+        <label>密钥文件 <input id="ssh-keyfile" type="text" placeholder="留空使用默认 ~/.ssh/id_rsa" /></label>
+        <label>kmdr 路径 <input id="ssh-kmdr-path" type="text" placeholder="留空=自动（通过 bash -l 加载 profile）" /></label>
+        <div class="ssh-hint">密钥有密码？先用 <code>ssh-add 密钥路径</code> 加入 ssh-agent</div>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">页面集成</div>
+      <label class="toggle-label">
+        <input id="hijack-enabled" type="checkbox" checked />
+        <span>在漫画详情页显示 kmdr 批量下载按钮</span>
+      </label>
+    </div>
+    <div class="setting-actions">
+      <button id="btn-save" class="btn">保存设置</button>
+      <button id="btn-test" class="btn btn-secondary">测试连接</button>
+      <span id="status-msg" class="status-msg"></span>
+    </div>
+  </div>
+
+  <!-- Logs panel -->
+  <div id="panel-logs" class="panel">
+    <div id="log-list"><div class="empty">暂无日志</div></div>
+  </div>
 </div>
 
 <script src="popup.js"></script>

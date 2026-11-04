@@ -272,8 +272,9 @@
     try {
       const result = await send({ type: "GET_LOGS" });
       const logs = result?.data?.logs || [];
-      root.innerHTML = `<div class="kmdr-log-toolbar"><span>最近 ${logs.length} 条</span><button type="button" class="kmdr-clear-logs">清空</button></div>
+      root.innerHTML = `<div class="kmdr-log-toolbar"><span>最近 ${logs.length} 条</span><div class="kmdr-log-actions"><button type="button" class="kmdr-export-logs" ${logs.length ? "" : "disabled"}>导出</button><button type="button" class="kmdr-clear-logs" ${logs.length ? "" : "disabled"}>清空</button></div></div>
         <div class="kmdr-log-list">${logs.length ? logs.map((entry) => `<div class="kmdr-log kmdr-log-${entry.level}"><time>${formatTime(entry.time)}</time><p>${escapeHtml(entry.message)}</p></div>`).join("") : '<div class="kmdr-empty"><strong>没有诊断日志</strong></div>'}</div>`;
+      $(".kmdr-export-logs", panel).addEventListener("click", () => exportLogs(logs));
       $(".kmdr-clear-logs", panel).addEventListener("click", async () => {
         await send({ type: "CLEAR_LOGS" });
         refreshLogs();
@@ -281,6 +282,25 @@
     } catch (error) {
       root.innerHTML = `<div class="kmdr-empty"><strong>日志读取失败</strong><p>${escapeHtml(error.message)}</p></div>`;
     }
+  }
+
+  function exportLogs(logs) {
+    const lines = logs
+      .slice()
+      .reverse()
+      .map((entry) => `[${entry.time || "unknown"}] [${String(entry.level || "info").toUpperCase()}] ${entry.message || ""}`);
+    const content = `kmdr Companion 诊断日志\n导出时间: ${new Date().toISOString()}\n日志数量: ${logs.length}\n\n${lines.join("\n")}`;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    anchor.href = url;
+    anchor.download = `kmdr-companion-${timestamp}.log`;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   // ── Page batch download integration ───────────────────────────
