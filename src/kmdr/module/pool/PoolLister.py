@@ -159,6 +159,7 @@ class PoolLister(PoolManager):
                 cred.level = new_cred.level
                 cred.nickname = new_cred.nickname
                 cred.cookies = new_cred.cookies
+                cred.quota_known = new_cred.quota_known
 
                 return cred
 

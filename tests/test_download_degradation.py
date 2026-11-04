@@ -4,7 +4,7 @@ import asyncio
 from argparse import Namespace
 from dataclasses import asdict
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -100,7 +100,7 @@ def test_credential_save_failure_does_not_abort_authentication(monkeypatch):
     authenticator._configurer = MagicMock()
     authenticator._configurer.save_credential.side_effect = OSError("只读目录")
     cred = credential()
-    monkeypatch.setattr(authenticator, "_authenticate", AsyncMock(return_value=cred))
+    monkeypatch.setattr(authenticator, "_authenticate", AsyncMock(return_value=cred, __name__="_authenticate"))
     assert asyncio.run(authenticator.authenticate()) is cred
 
 
@@ -140,7 +140,7 @@ def test_pool_refresh_only_invalidates_login_errors(monkeypatch, error):
     cred = credential()
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(side_effect=error))
     monkeypatch.setattr(asyncio, "sleep", AsyncMock())
-    asyncio.run(lister._check_and_update_single(MagicMock(), cred, asyncio.Semaphore(1)))
+    asyncio.run(lister._check_and_update_single(MagicMock(), cred, MagicMock()))
     assert cred.status == (CredentialStatus.INVALID if isinstance(error, LoginError) else CredentialStatus.ACTIVE)
     assert cred.user_quota.total == 100
 
@@ -149,7 +149,8 @@ def failover_for(monkeypatch, credentials):
     configurer = MagicMock()
     configurer.config.cred_pool = credentials
     pool = CredentialPool(configurer)
-    downloader = FailoverDownloader(method=2)
+    with patch("asyncio.Semaphore", return_value=MagicMock()):
+        downloader = FailoverDownloader(method=2)
     downloader._configurer = configurer
     downloader._session = MagicMock()
     monkeypatch.setattr("kmdr.core.context._lazy_cred_pool", pool)
@@ -277,7 +278,7 @@ def test_callback_failure_preserves_completed_file_without_retry(monkeypatch, tm
         download = download_utils.download_file_multipart
     else:
         download = download_utils.download_file
-    asyncio.run(download(session, asyncio.Semaphore(1), progress, "https://example.com/book", str(tmp_path), "book.epub", callback=callback))
+    asyncio.run(download(session, MagicMock(), progress, "https://example.com/book", str(tmp_path), "book.epub", callback=callback))
     assert (tmp_path / "book.epub").read_bytes() == b"book"
     assert session.get.call_count == 1
     callback.assert_called_once()
@@ -311,3 +312,13 @@ def test_profile_network_failure_still_reaches_main_download(monkeypatch):
     assert args[0].cookies == {"token": "test"}
     assert not args[0].quota_known
     assert args[1:] == (BOOK, [VOLUME])
+
+
+def test_pool_status_refresh_updates_unknown_quota_flag(monkeypatch):
+    existing = credential()
+    refreshed = credential(total=0, known=False)
+    lister = PoolLister()
+    monkeypatch.setattr(auth_utils, "check_status", AsyncMock(return_value=refreshed))
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+    asyncio.run(lister._check_and_update_single(MagicMock(), existing, MagicMock()))
+    assert not existing.quota_known
