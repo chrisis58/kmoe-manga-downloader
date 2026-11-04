@@ -130,7 +130,7 @@ def __extract_book_info(url: str, book_page: BeautifulSoup, book_info: Optional[
 
 
 async def __extract_volumes(session: Session, book_page: BeautifulSoup, cookies: dict[str, str]) -> list[VolInfo]:
-    pattern = re.compile(r'data_book\(\s*"(\w+)"\s*\)')
+    pattern = re.compile(r'Kmoe\.book\(\s*"([^"]+)"\s*\)')
     match = None
     for script in book_page.find_all("script"):
         match = pattern.search(script.text)
