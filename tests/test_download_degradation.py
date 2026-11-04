@@ -311,3 +311,13 @@ def test_profile_network_failure_still_reaches_main_download(monkeypatch):
     assert args[0].cookies == {"token": "test"}
     assert not args[0].quota_known
     assert args[1:] == (BOOK, [VOLUME])
+
+
+def test_pool_status_refresh_updates_unknown_quota_flag(monkeypatch):
+    existing = credential()
+    refreshed = credential(total=0, known=False)
+    lister = PoolLister()
+    monkeypatch.setattr(auth_utils, "check_status", AsyncMock(return_value=refreshed))
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+    asyncio.run(lister._check_and_update_single(MagicMock(), existing, asyncio.Semaphore(1)))
+    assert not existing.quota_known
