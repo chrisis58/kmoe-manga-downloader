@@ -3,6 +3,7 @@
 import asyncio
 from argparse import Namespace
 from dataclasses import asdict
+from functools import wraps
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -33,6 +34,16 @@ BOOK_PAGE = '<font class="text_bglight_big">测试书籍</font><input name="book
 VOLUME_ROW = ["vol-id", "0", "0", "單行本", "1", "第一卷", "20", "", "", "", "", "10"]
 BOOK = BookInfo("1", "测试书籍", "/c/1.htm", "", "", "")
 VOLUME = VolInfo("vol-id", "无", False, VolumeType.VOLUME, 1, "第一卷", 20, 10.0)
+
+
+def run_async_test(test):
+    """让测试中的异步对象在运行中的事件循环内创建，兼容 Python 3.9。"""
+
+    @wraps(test)
+    def run(*args, **kwargs):
+        return asyncio.run(test(*args, **kwargs))
+
+    return run
 
 
 def credential(username="user", total=100.0, known=True):
@@ -100,7 +111,7 @@ def test_credential_save_failure_does_not_abort_authentication(monkeypatch):
     authenticator._configurer = MagicMock()
     authenticator._configurer.save_credential.side_effect = OSError("只读目录")
     cred = credential()
-    monkeypatch.setattr(authenticator, "_authenticate", AsyncMock(return_value=cred))
+    monkeypatch.setattr(authenticator, "_authenticate", AsyncMock(return_value=cred, __name__="_authenticate"))
     assert asyncio.run(authenticator.authenticate()) is cred
 
 
@@ -135,12 +146,13 @@ def test_pool_refresh_updates_quota_certainty_and_vip_membership():
 @pytest.mark.parametrize(
     "error", [HtmlResolveError("页面变化", code="TEST_PARSE_FAILURE"), aiohttp.ClientConnectionError("断线"), LoginError("失效")]
 )
-def test_pool_refresh_only_invalidates_login_errors(monkeypatch, error):
+@run_async_test
+async def test_pool_refresh_only_invalidates_login_errors(monkeypatch, error):
     lister = PoolLister()
     cred = credential()
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(side_effect=error))
     monkeypatch.setattr(asyncio, "sleep", AsyncMock())
-    asyncio.run(lister._check_and_update_single(MagicMock(), cred, asyncio.Semaphore(1)))
+    await lister._check_and_update_single(MagicMock(), cred, asyncio.Semaphore(1))
     assert cred.status == (CredentialStatus.INVALID if isinstance(error, LoginError) else CredentialStatus.ACTIVE)
     assert cred.user_quota.total == 100
 
@@ -157,32 +169,35 @@ def failover_for(monkeypatch, credentials):
     return downloader, pool
 
 
-def test_refresh_failure_does_not_block_next_pool_candidate(monkeypatch):
+@run_async_test
+async def test_refresh_failure_does_not_block_next_pool_candidate(monkeypatch):
     first, second = credential("first", total=0), credential("second")
     downloader, _ = failover_for(monkeypatch, [first, second])
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(side_effect=HtmlResolveError("页面变化", code="TEST_PARSE_FAILURE")))
-    asyncio.run(downloader._download(first, BOOK, VOLUME))
+    await downloader._download(first, BOOK, VOLUME)
     assert downloader._delegate._download.await_args.args[0] is second
     assert first.status == CredentialStatus.ACTIVE
 
 
-def test_server_quota_error_still_switches_accounts_when_refresh_fails(monkeypatch):
+@run_async_test
+async def test_server_quota_error_still_switches_accounts_when_refresh_fails(monkeypatch):
     first, second = credential("first", total=0, known=False), credential("second")
     downloader, _ = failover_for(monkeypatch, [first, second])
     downloader._delegate._download.side_effect = [QuotaExceededError("额度不足"), None]
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(side_effect=HtmlResolveError("页面变化", code="TEST_PARSE_FAILURE")))
-    asyncio.run(downloader._download(first, BOOK, VOLUME))
+    await downloader._download(first, BOOK, VOLUME)
     assert downloader._delegate._download.await_count == 2
     assert first.status == CredentialStatus.QUOTA_EXCEEDED
 
 
-def test_unknown_quota_and_pool_save_failure_do_not_block_download(monkeypatch):
+@run_async_test
+async def test_unknown_quota_and_pool_save_failure_do_not_block_download(monkeypatch):
     cred = credential(total=0, known=False)
     downloader, _ = failover_for(monkeypatch, [cred])
     downloader._configurer.update.side_effect = OSError("只读目录")
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(side_effect=HtmlResolveError("页面变化", code="TEST_PARSE_FAILURE")))
     monkeypatch.setattr("kmdr.core.bases.Confirm.ask", MagicMock(side_effect=AssertionError("未知额度不应询问余额不足")))
-    asyncio.run(downloader.download(cred, BOOK, [VOLUME]))
+    await downloader.download(cred, BOOK, [VOLUME])
     downloader._delegate._download.assert_awaited_once()
 
 
@@ -262,7 +277,8 @@ def test_unrecognized_follow_page_is_not_empty_list():
 
 
 @pytest.mark.parametrize("multipart", [False, True])
-def test_callback_failure_preserves_completed_file_without_retry(monkeypatch, tmp_path, multipart):
+@run_async_test
+async def test_callback_failure_preserves_completed_file_without_retry(monkeypatch, tmp_path, multipart):
     session, response = http_session()
     response.headers = {"content-length": "4"}
 
@@ -277,7 +293,7 @@ def test_callback_failure_preserves_completed_file_without_retry(monkeypatch, tm
         download = download_utils.download_file_multipart
     else:
         download = download_utils.download_file
-    asyncio.run(download(session, asyncio.Semaphore(1), progress, "https://example.com/book", str(tmp_path), "book.epub", callback=callback))
+    await download(session, asyncio.Semaphore(1), progress, "https://example.com/book", str(tmp_path), "book.epub", callback=callback)
     assert (tmp_path / "book.epub").read_bytes() == b"book"
     assert session.get.call_count == 1
     callback.assert_called_once()
@@ -313,11 +329,12 @@ def test_profile_network_failure_still_reaches_main_download(monkeypatch):
     assert args[1:] == (BOOK, [VOLUME])
 
 
-def test_pool_status_refresh_updates_unknown_quota_flag(monkeypatch):
+@run_async_test
+async def test_pool_status_refresh_updates_unknown_quota_flag(monkeypatch):
     existing = credential()
     refreshed = credential(total=0, known=False)
     lister = PoolLister()
     monkeypatch.setattr(auth_utils, "check_status", AsyncMock(return_value=refreshed))
     monkeypatch.setattr(asyncio, "sleep", AsyncMock())
-    asyncio.run(lister._check_and_update_single(MagicMock(), existing, asyncio.Semaphore(1)))
+    await lister._check_and_update_single(MagicMock(), existing, asyncio.Semaphore(1))
     assert not existing.quota_known
