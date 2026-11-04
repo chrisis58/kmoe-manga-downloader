@@ -9,9 +9,11 @@ KMDR 异常定义与状态码
 - [1x] 基础/本地/参数解析错误：发生于工具初始化阶段，或者用户传入的命令参数有逻辑冲突（如 InitializationError, ArgsResolveError）。
 - [2x] 身份/凭证/配额错误：发生于与账密相关的事务交互中（如 LoginError, QuotaExceededError, NoCandidateCredentialError）。
 - [3x] 重定向/路由错误：遭遇站点强制重定向（如 RedirectError）。
-- [4x] 用户输入/外部操作受限：因终端条件不足、查询的目标不存在、或内容被和谐（如 ValidationError, EmptyResultError, NotInteractableError, ContentBlockedError）。
+- [4x] 用户输入/外部操作受限：因终端条件不足、查询的目标不存在、或内容被和谐
+       （如 ValidationError, EmptyResultError, NotInteractableError, ContentBlockedError）。
 - [5x] 服务端/网络传输异常：因源站点宕机网络不通畅，或者网站的资源本身不支持某下载范式（如 ResponseError, RangeNotSupportedError）。
 - [50] (保留给 console.py)：用于抛出非 KmdrError 的预期外的原生系统崩溃信息（如底层的 KeyError、IndexError）。
+- [53] 页面解析错误：保留消息中的唯一标识，便于定位页面或接口结构变化。
 """
 
 
@@ -118,6 +120,22 @@ class RangeNotSupportedError(KmdrError):
             f"不支持分片下载：{self.message} (Content-Range: {self.content_range})"
             if self.content_range is not None
             else f"不支持分片下载：{self.message}"
+        )
+
+
+class HtmlResolveError(KmdrError):
+    """使用稳定标识区分解析失败的位置，标识也会保留在降级警告中。"""
+
+    code: int = 53
+
+    def __init__(self, message: str, *, code: str):
+        self.parse_code = code
+        super().__init__(f"({code}) {message}", None)
+
+    def __str__(self):
+        return (
+            f"页面内容解析失败：{self.message}。\n请复制以上错误信息，联系开发者：\n"
+            "https://github.com/chrisis58/kmoe-manga-downloader/issues/new?template=page_structure_change.yml"
         )
 
 
